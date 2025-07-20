@@ -1,0 +1,9 @@
+# Folder Virtual Environment
+/venv
+
+# File Cache Python
+__pycache__/
+*.pyc
+
+# File Konfigurasi dan Rahasia
+config/settings.py

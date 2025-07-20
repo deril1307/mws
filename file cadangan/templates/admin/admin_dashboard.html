@@ -1,0 +1,229 @@
+{% extends "shared/base.html" %} {% block title %}Admin Dashboard - Sistem Aircraft Maintenance{% endblock %} {# Makro untuk merender daftar MWS diimpor di sini #} {% from "components/tracking_list.html" import render_tracking_list %} {%
+block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+  /* [PENYEMPURNAAN] Transisi untuk modal, kartu, dan sorotan "urgent" */
+  #delete-modal {
+    transition: opacity 0.3s ease-in-out;
+  }
+  .card-hover {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  }
+  .card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+  .is-urgent {
+    border: 2px solid #ef4444;
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+  }
+</style>
+
+<div class="min-h-screen bg-gray-50">
+  <div class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center py-4">
+        <div class="flex items-center">
+          <div class="bg-blue-600 p-3 rounded-lg mr-4"><i class="fas fa-user-shield text-white text-xl"></i></div>
+          <div>
+            <h1 class="text-xl sm:text-2xl font-bold text-gray-800">Admin Dashboard</h1>
+          </div>
+        </div>
+
+        <div class="relative">
+          <button id="user-menu-button" class="flex items-center space-x-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <div class="flex flex-col items-start">
+              <span class="font-medium text-sm text-gray-800">{{ user.name }}</span>
+              <span class="text-xs text-gray-500">{{ user.position }}</span>
+            </div>
+            <i id="user-menu-chevron" class="fas fa-chevron-down text-xs text-gray-600 transition-transform duration-200"></i>
+          </button>
+          <div id="user-menu" class="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg py-1 z-50 hidden ring-1 ring-black ring-opacity-5" style="transition: opacity 0.2s ease-out, transform 0.2s ease-out">
+            <div class="px-4 py-3">
+              <p class="text-sm font-semibold text-gray-900">{{ user.name }}</p>
+              <p class="text-sm text-gray-500 truncate">{{ user.position }}</p>
+            </div>
+            <div class="border-t border-gray-100"></div>
+            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profil</a>
+            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Pengaturan</a>
+            <div class="border-t border-gray-100"></div>
+            <a href="{{ url_for('logout') }}" onclick="return confirmLogout()" class="block w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-50">Logout</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div class="bg-white p-6 rounded-xl shadow-sm border mb-8">
+      <h3 class="text-lg font-semibold text-gray-800 mb-4">Menu</h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <a href="{{ url_for('create_mws') }}" class="block p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors duration-200 text-center focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <div class="flex flex-col items-center justify-center h-full">
+            <div class="p-3 bg-blue-200 rounded-full mb-2">
+              <i class="fas fa-plus-circle text-blue-600 text-xl"></i>
+            </div>
+            <p class="font-semibold text-blue-800">Buat MWS Baru</p>
+            <p class="text-xs text-blue-600">Tambah Work Sheet</p>
+          </div>
+        </a>
+
+        <a href="{{ url_for('manage_users') }}" class="block p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors duration-200 text-center focus:outline-none focus:ring-2 focus:ring-green-500">
+          <div class="flex flex-col items-center justify-center h-full">
+            <div class="p-3 bg-green-200 rounded-full mb-2">
+              <i class="fas fa-users-cog text-green-600 text-xl"></i>
+            </div>
+            <p class="font-semibold text-green-800">Kelola Tim</p>
+            <p class="text-xs text-green-600">Manajemen Pengguna</p>
+          </div>
+        </a>
+
+        <div class="p-4 bg-purple-50 rounded-lg flex flex-col items-center justify-center">
+          <div class="p-3 bg-purple-200 rounded-full mb-2">
+            <i class="fas fa-signature text-purple-600 text-xl"></i>
+          </div>
+          <p class="font-semibold text-purple-800">Prepared By</p>
+          {% set unsigned_parts_count = parts.values()|selectattr('preparedBy', 'equalto', '')|list|length %}
+          <div class="mt-1 bg-white w-full text-center py-1 rounded-lg">
+            <span class="text-md font-bold {% if unsigned_parts_count > 0 %}text-yellow-600{% else %}text-green-600{% endif %}">{{ unsigned_parts_count }}</span>
+            <span class="text-xs text-gray-600"> Menunggu Tanda Tangan</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {{ render_tracking_list(parts, users, user) }} {% include 'components/status_chart.html' with context %}
+  </div>
+</div>
+
+<div id="delete-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 hidden opacity-0">
+  <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+    <div class="mt-3 text-center">
+      <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+        <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
+      </div>
+      <h3 class="text-lg leading-6 font-medium text-gray-900 mt-2">Hapus MWS?</h3>
+      <div class="mt-2 px-7 py-3">
+        <p class="text-sm text-gray-500">Apakah Anda yakin ingin menghapus MWS untuk <strong id="part-to-delete-name" class="font-bold"></strong>? Tindakan ini tidak dapat dibatalkan.</p>
+      </div>
+      <div class="items-center px-4 py-3 space-x-4">
+        <button id="cancel-delete-button" class="px-4 py-2 bg-gray-200 text-gray-800 text-base font-medium rounded-md w-auto shadow-sm hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 transition-colors">Batal</button>
+        <button id="confirm-delete-button" class="px-4 py-2 bg-red-600 text-white text-base font-medium rounded-md w-auto shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors">Ya, Hapus</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function confirmLogout() {
+    return confirm("Apakah Anda yakin ingin logout?");
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    // -- Dropdown Menu --
+    const userMenuButton = document.getElementById("user-menu-button");
+    const userMenu = document.getElementById("user-menu");
+    const userMenuChevron = document.getElementById("user-menu-chevron");
+
+    if (userMenuButton && userMenu) {
+      userMenuButton.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const isHidden = userMenu.classList.toggle("hidden");
+        userMenu.classList.toggle("opacity-0", isHidden);
+        userMenuChevron.classList.toggle("rotate-180", !isHidden);
+      });
+
+      document.addEventListener("click", (event) => {
+        if (!userMenu.classList.contains("hidden") && !userMenuButton.contains(event.target)) {
+          userMenu.classList.add("hidden", "opacity-0");
+          userMenuChevron.classList.remove("rotate-180");
+        }
+      });
+    }
+
+    // -- Delete Modal Logic --
+    const deleteModal = document.getElementById("delete-modal");
+    const confirmDeleteButton = document.getElementById("confirm-delete-button");
+    const cancelDeleteButton = document.getElementById("cancel-delete-button");
+    const partToDeleteName = document.getElementById("part-to-delete-name");
+    let partIdToDelete = null;
+
+    window.showDeleteModal = function (partId, partName) {
+      partIdToDelete = partId;
+      partToDeleteName.textContent = partName;
+      if (deleteModal) {
+        deleteModal.classList.remove("hidden");
+        // [UX] Efek fade-in
+        requestAnimationFrame(() => {
+          deleteModal.classList.remove("opacity-0");
+        });
+      }
+    };
+
+    const hideDeleteModal = () => {
+      if (deleteModal) {
+        deleteModal.classList.add("opacity-0");
+        setTimeout(() => deleteModal.classList.add("hidden"), 300);
+      }
+    };
+
+    cancelDeleteButton?.addEventListener("click", hideDeleteModal);
+
+    confirmDeleteButton?.addEventListener("click", () => {
+      if (partIdToDelete) {
+        fetch(`/delete_mws/${partIdToDelete}`, { method: "DELETE" })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.success) {
+              location.reload();
+            } else {
+              alert("Gagal menghapus: " + data.error);
+            }
+          })
+          .catch((err) => console.error(err));
+      }
+      hideDeleteModal();
+    });
+
+    // -- Urgent Button & Sorting Logic --
+    const partsContainer = document.getElementById("parts-container");
+    if (partsContainer) {
+      // Simpan urutan asli saat halaman dimuat
+      Array.from(partsContainer.children).forEach((card, index) => {
+        card.dataset.originalOrder = index;
+      });
+
+      // Gunakan event delegation agar lebih efisien
+      partsContainer.addEventListener("click", function (event) {
+        const urgentBtn = event.target.closest(".urgent-btn");
+        if (!urgentBtn) return;
+
+        const partCard = urgentBtn.closest(".part-card");
+        partCard.classList.toggle("is-urgent");
+
+        const isUrgent = partCard.classList.contains("is-urgent");
+        urgentBtn.textContent = isUrgent ? "CANCEL URGENT" : "URGENT!";
+        urgentBtn.className = isUrgent
+          ? "urgent-btn px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg transition-colors"
+          : "urgent-btn px-3 py-2 bg-yellow-400 hover:bg-yellow-500 text-yellow-800 text-xs font-bold rounded-lg transition-colors";
+
+        sortParts();
+      });
+
+      function sortParts() {
+        const partCards = Array.from(partsContainer.children);
+        partCards.sort((a, b) => {
+          const aIsUrgent = a.classList.contains("is-urgent");
+          const bIsUrgent = b.classList.contains("is-urgent");
+          if (aIsUrgent !== bIsUrgent) {
+            return aIsUrgent ? -1 : 1;
+          }
+          return parseInt(a.dataset.originalOrder) - parseInt(b.dataset.originalOrder);
+        });
+        partCards.forEach((card) => partsContainer.appendChild(card));
+      }
+    }
+  });
+</script>
+{% endblock %}

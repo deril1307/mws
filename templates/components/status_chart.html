@@ -1,0 +1,231 @@
+<div class="mt-8 grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+  {% set total_parts = parts|length %} {% set completed_parts = parts.values()|selectattr('status', 'equalto', 'completed')|list|length %} {% set in_progress_parts = parts.values()|selectattr('status', 'equalto', 'in_progress')|list|length
+  %} {% set pending_parts = parts.values()|selectattr('status', 'equalto', 'pending')|list|length %}
+
+  <div class="bg-white p-5 rounded-xl shadow-sm border flex items-center card-hover">
+    <div class="p-3 bg-blue-100 rounded-lg mr-4"><i class="fas fa-clipboard-list text-blue-600 text-xl"></i></div>
+    <div>
+      <p class="text-sm font-medium text-gray-600">Total WS</p>
+      <p id="total-ws-stat" class="text-2xl font-bold text-gray-900">{{ total_parts }}</p>
+    </div>
+  </div>
+  <div class="bg-white p-5 rounded-xl shadow-sm border flex items-center card-hover">
+    <div class="p-3 bg-green-100 rounded-lg mr-4"><i class="fas fa-check-circle text-green-600 text-xl"></i></div>
+    <div>
+      <p class="text-sm font-medium text-gray-600">WS Finish</p>
+      <p id="completed-ws-stat" class="text-2xl font-bold text-gray-900">{{ completed_parts }}</p>
+    </div>
+  </div>
+  <div class="bg-white p-5 rounded-xl shadow-sm border flex items-center card-hover">
+    <div class="p-3 bg-yellow-100 rounded-lg mr-4"><i class="fas fa-clock text-yellow-600 text-xl"></i></div>
+    <div>
+      <p class="text-sm font-medium text-gray-600">WS In Progress</p>
+      <p id="inprogress-ws-stat" class="text-2xl font-bold text-gray-900">{{ in_progress_parts }}</p>
+    </div>
+  </div>
+  <div class="bg-white p-5 rounded-xl shadow-sm border flex items-center card-hover">
+    <div class="p-3 bg-gray-200 rounded-lg mr-4"><i class="fas fa-pause-circle text-gray-600 text-xl"></i></div>
+    <div>
+      <p class="text-sm font-medium text-gray-600">WS Pending</p>
+      <p id="pending-ws-stat" class="text-2xl font-bold text-gray-900">{{ pending_parts }}</p>
+    </div>
+  </div>
+</div>
+
+<div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-8">
+  <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-4">
+    <h2 class="text-xl font-semibold text-gray-800 flex items-center mb-4 md:mb-0">
+      <i class="fas fa-chart-pie mr-3 text-green-600"></i>Grafik Status
+      <span id="customer-chart-label" class="ml-2 text-sm font-normal text-gray-500"></span>
+    </h2>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+    <div style="height: 300px; position: relative">
+      <canvas id="mwsStatusChart"></canvas>
+    </div>
+    <div style="height: 300px; position: relative">
+      <canvas id="mwsStatusBarChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+      // MODIFIKASI: Registrasikan plugin datalabels secara global untuk semua chart
+      Chart.register(ChartDataLabels);
+
+      const originalData = {
+          {% for part_id, part in parts.items() %}
+          "{{ part_id }}": {
+              customer: "{{ part.customer }}",
+              status: "{{ part.status }}",
+              is_urgent: {{ part.is_urgent|lower }},
+              steps: {{ part.steps|length if part.steps else 0 }}
+          }{% if not loop.last %},{% endif %}
+          {% endfor %}
+      };
+
+      const chartLabels = ['Menunggu', 'Dikerjakan', 'Selesai'];
+      const chartColors = ['rgb(209, 213, 219)', 'rgb(251, 191, 36)', 'rgb(16, 185, 129)'];
+
+      const initialStats = calculateCustomerStats('');
+      let chartData = [initialStats.pending, initialStats.inProgress, initialStats.completed];
+
+      let mwsStatusChart, mwsStatusBarChart;
+
+      function calculateCustomerStats(customerName = '') {
+          let customerPending = 0;
+          let customerInProgress = 0;
+          let customerCompleted = 0;
+          let customerTotal = 0;
+
+          Object.values(originalData).forEach(part => {
+              if (customerName === '' || part.customer === customerName) {
+                  customerTotal++;
+                  if (part.status === 'pending') customerPending++;
+                  else if (part.status === 'in_progress') customerInProgress++;
+                  else if (part.status === 'completed') customerCompleted++;
+              }
+          });
+
+          return {
+              total: customerTotal,
+              pending: customerPending,
+              inProgress: customerInProgress,
+              completed: customerCompleted
+          };
+      }
+
+      function updateStatistics(stats) {
+          document.getElementById('total-ws-stat').textContent = stats.total;
+          document.getElementById('pending-ws-stat').textContent = stats.pending;
+          document.getElementById('inprogress-ws-stat').textContent = stats.inProgress;
+          document.getElementById('completed-ws-stat').textContent = stats.completed;
+      }
+
+      function updateCharts(stats) {
+          const newData = [stats.pending, stats.inProgress, stats.completed];
+
+          if (mwsStatusChart) {
+              mwsStatusChart.data.datasets[0].data = newData;
+              mwsStatusChart.update('none');
+          }
+
+          if (mwsStatusBarChart) {
+              mwsStatusBarChart.data.datasets[0].data = newData;
+              mwsStatusBarChart.update('none');
+          }
+      }
+
+      function updateCustomerLabel(customerName) {
+          const label = document.getElementById('customer-chart-label');
+          if (customerName) {
+              label.textContent = `- ${customerName}`;
+              label.classList.add('text-blue-600', 'font-medium');
+          } else {
+              label.textContent = '';
+              label.classList.remove('text-blue-600', 'font-medium');
+          }
+      }
+
+      // Initialize Doughnut Chart
+      const ctxDoughnut = document.getElementById('mwsStatusChart');
+      if (ctxDoughnut) {
+          mwsStatusChart = new Chart(ctxDoughnut, {
+              type: 'doughnut',
+              data: {
+                  labels: chartLabels,
+                  datasets: [{
+                      label: 'Status Tugas',
+                      data: chartData,
+                      backgroundColor: chartColors,
+                      hoverOffset: 4
+                  }]
+              },
+              options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                      legend: {
+                        position: 'top'
+                      },
+                      // MODIFIKASI: Menambahkan konfigurasi untuk menampilkan angka di dalam doughnut
+                      datalabels: {
+                          display: true,
+                          color: '#fff', // Warna teks angka
+                          font: {
+                              weight: 'bold',
+                              size: 14,
+                          },
+                          // Fungsi untuk memformat angka (hanya tampil jika > 0)
+                          formatter: (value, context) => {
+                              return value > 0 ? value : null;
+                          }
+                      }
+                  },
+                  animation: { duration: 400 }
+              }
+          });
+      }
+
+      // Initialize Bar Chart
+      const ctxBar = document.getElementById('mwsStatusBarChart');
+      if (ctxBar) {
+          mwsStatusBarChart = new Chart(ctxBar, {
+              type: 'bar',
+              data: {
+                  labels: chartLabels,
+                  datasets: [{
+                      label: 'Jumlah Work Sheet',
+                      data: chartData,
+                      backgroundColor: chartColors,
+                      borderColor: chartColors,
+                      borderWidth: 1
+                  }]
+              },
+              options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  scales: {
+                    y: {
+                      beginAtZero: true,
+                      ticks: {
+                        stepSize: 1
+                      }
+                    }
+                  },
+                  plugins: {
+                    legend: {
+                      display: false
+                    },
+                    // MODIFIKASI: Menambahkan konfigurasi untuk menampilkan angka di atas bar
+                    datalabels: {
+                        display: true,
+                        anchor: 'end', // Posisi angka di ujung atas bar
+                        align: 'top', // Rata atas
+                        color: '#4A5568', // Warna teks angka (abu-abu tua)
+                        font: {
+                            weight: 'bold'
+                        },
+                        formatter: (value, context) => {
+                            return value > 0 ? value : null;
+                        }
+                    }
+                  },
+                  animation: { duration: 400 }
+              }
+          });
+      }
+
+      window.filterChartsByCustomer = function(customerName) {
+          const stats = calculateCustomerStats(customerName);
+          updateStatistics(stats);
+          updateCharts(stats);
+          updateCustomerLabel(customerName);
+      };
+  });
+</script>

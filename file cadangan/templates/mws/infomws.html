@@ -1,0 +1,31 @@
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-semibold text-gray-800">Informasi MWS</h2>
+        {% if user.role in ['admin', 'superadmin'] %}
+        <div>
+            <button id="edit-mws-btn" onclick="toggleEditMode(true)" class="text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors">
+                <i class="fas fa-pencil-alt mr-1"></i> Edit Informasi
+            </button>
+            <button id="finish-mws-btn" onclick="saveMwsInfo('{{ part_id }}')" class="hidden text-sm font-medium text-green-600 hover:text-green-800 transition-colors">
+                <i class="fas fa-check mr-1"></i> Selesai
+            </button>
+        </div>
+        {% endif %}
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4 text-sm">
+        <div><label class="block font-semibold text-gray-700 mb-1">Tittle</label><p class="text-gray-900 mws-info-view">{{ part.tittle }}</p><input type="text" data-field="tittle" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.tittle }}"></div>
+        <div><label class="block font-semibold text-gray-700 mb-1">Part Number</label><p class="text-gray-900 mws-info-view">{{ part.partNumber }}</p><input type="text" data-field="partNumber" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.partNumber }}"></div>
+        <div><label class="block font-semibold text-gray-700 mb-1">Ref</label><p class="text-gray-900 mws-info-view">{{ part.ref }}</p><input type="text" data-field="ref" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.ref }}"></div>
+        <div><label class="block font-semibold text-gray-700 mb-1">Jenis Pekerjaan</label> <p class="text-gray-900 mws-info-view">{{ part.jobType or 'N/A' }}</p><input type="text" data-field="jobType" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.jobType or '' }}"></div>
+        <div><label class="block font-semibold text-gray-700 mb-1">Customer</label><p class="text-gray-900 mws-info-view">{{ part.customer }}</p><input type="text" data-field="customer" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.customer }}"></div>
+        <div><label class="block font-semibold text-gray-700 mb-1">A/C Type</label><p class="text-gray-900 mws-info-view">{{ part.acType }}</p><input type="text" data-field="acType" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.acType }}"></div>
+        <div><label class="block font-semibold text-gray-700 mb-1">Serial Number</label><p class="text-gray-900 mws-info-view">{{ part.serialNumber }}</p><input type="text" data-field="serialNumber" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.serialNumber }}"></div>
+        <div><label class="block font-semibold text-gray-700 mb-1">WBS No.</label><p class="text-gray-900 mws-info-view">{{ part.wbsNo }}</p><input type="text" data-field="wbsNo" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.wbsNo }}"></div>
+        <div><label class="block font-semibold text-gray-700 mb-1">Worksheet No.</label><p class="text-gray-900 mws-info-view">{{ part.worksheetNo }}</p><input type="text" data-field="worksheetNo" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.worksheetNo }}"></div>
+        <div><label class="block font-semibold text-gray-700 mb-1">IWO No.</label><p class="text-gray-900 mws-info-view">{{ part.iwoNo }}</p><input type="text" data-field="iwoNo" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.iwoNo }}"></div>
+        <div><label class="block font-semibold text-gray-700 mb-1">Shop Area</label><p class="text-gray-900 mws-info-view">{{ part.shopArea }}</p><input type="text" data-field="shopArea" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.shopArea }}"></div>
+        <div><label class="block font-semibold text-gray-700 mb-1">Revision</label><p class="text-gray-900 mws-info-view">{{ part.revision }}</p><input type="text" data-field="revision" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.revision }}"></div>
+        <div><label class="block font-semibold text-gray-700 mb-1">Target Date</label><p class="text-gray-900 mws-info-view">{{ part.targetDate }}</p><input type="date" data-field="targetDate" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.targetDate }}"></div>
+    </div>
+    {% if user.role in ['admin', 'superadmin'] %}<div class="mt-6 pt-4 border-t border-gray-200"><label class="block text-sm font-semibold text-gray-700 mb-2">Tugaskan ke Mechanic</label><select onchange="assignPart('{{ part_id }}', this.value)" class="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"><option value="">Pilih Mechanic</option>{% for nik, user_data in users.items() %}{% if user_data.role == 'mechanic' %}<option value="{{ nik }}" {% if part.assignedTo == nik %}selected{% endif %}>{{ user_data.name }} ({{ nik }})</option>{% endif %}{% endfor %}</select></div>{% endif %}
+</div>
