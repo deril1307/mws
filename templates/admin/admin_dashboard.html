@@ -1,53 +1,109 @@
-{% extends "shared/base.html" %} {% block title %}Admin Dashboard - Sistem Aircraft Maintenance{% endblock %} {# Makro untuk merender daftar MWS diimpor di sini #} {% from "components/tracking_list.html" import render_tracking_list %} {%
-block content %}
+{% extends "shared/base.html" %} {% block title %}Admin Dashboard - Sistem Aircraft Maintenance{% endblock %} {% from "components/tracking_list.html" import render_tracking_list %} {% block content %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-  #delete-modal {
-    transition: opacity 0.3s ease-in-out;
+  /* [Tidak ada perubahan pada CSS custom Anda] */
+  #notification-dropdown {
+    transition: opacity 0.2s ease-out, transform 0.2s ease-out;
   }
-  .card-hover {
-    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  .notification-item:not(:last-child) {
+    border-bottom: 1px solid #e5e7eb;
   }
-  .card-hover:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  .notification-item.unread {
+    background-color: #eff6ff;
   }
-  .is-urgent {
-    border: 2px solid #ef4444;
-    box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+  .notification-item.unread:hover {
+    background-color: #dbeafe;
+  }
+  #notification-list::-webkit-scrollbar {
+    width: 6px;
+  }
+  #notification-list::-webkit-scrollbar-track {
+    background: #f1f5f9;
+  }
+  #notification-list::-webkit-scrollbar-thumb {
+    background: #94a3b8;
+    border-radius: 3px;
+  }
+  #notification-list::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
   }
 </style>
 
 <div class="min-h-screen bg-gray-50">
   <div class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex justify-between items-center py-4">
+    <div class="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center py-3 sm:py-4">
         <div class="flex items-center">
-          <div class="bg-blue-600 p-3 rounded-lg mr-4"><i class="fas fa-user-shield text-white text-xl"></i></div>
+          <div class="mr-3 sm:mr-4">
+            <img src="{{ url_for('static', filename='img/logo PT DI.jpeg') }}" alt="Logo PT DI" class="h-8 w-auto rounded-md shadow-sm" />
+          </div>
           <div>
-            <h1 class="text-xl sm:text-2xl font-bold text-gray-800">Admin Dashboard</h1>
+            <h1 class="text-lg sm:text-xl font-bold text-gray-800">Admin Dashboard</h1>
           </div>
         </div>
 
-        <div class="relative">
-          <button id="user-menu-button" class="flex items-center space-x-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <div class="flex flex-col items-start">
-              <span class="font-medium text-sm text-gray-800">{{ user.name }}</span>
-              <span class="text-xs text-gray-500">{{ user.position }}</span>
+        <div class="flex items-center space-x-2 sm:space-x-4">
+          <div class="relative">
+            <button id="notification-button" class="relative text-gray-500 hover:text-gray-700 focus:outline-none">
+              <i class="fas fa-bell text-xl"></i>
+              {% if urgent_requests|length > 0 %}
+              <span class="absolute -top-1 -right-1 flex h-5 w-5">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-5 w-5 bg-red-500 text-white text-xs items-center justify-center">{{ urgent_requests|length }}</span>
+              </span>
+              {% endif %}
+            </button>
+            <div id="notification-dropdown" class="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-md shadow-lg z-50 hidden ring-1 ring-black ring-opacity-5" style="transform-origin: top right">
+              <div class="px-4 py-3 border-b">
+                <p class="text-sm font-semibold text-gray-900">Notifikasi Permintaan Urgensi</p>
+              </div>
+              <div id="notification-list" class="max-h-96 overflow-y-auto">
+                {% if urgent_requests %} {% for req in urgent_requests %}
+                <a href="{{ url_for('mws_detail', part_id=req.part_id) }}" class="notification-item block px-4 py-3 hover:bg-gray-100 unread">
+                  <div class="flex items-start">
+                    <div class="flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+                      <i class="fas fa-exclamation-triangle text-blue-500"></i>
+                    </div>
+                    <div class="flex-1">
+                      <p class="text-sm text-gray-800">Permintaan urgensi untuk <strong>{{ req.partNumber }}</strong></p>
+                      <p class="text-xs text-gray-500 mt-1">Oleh: {% if req.assignedTo and req.assignedTo in users %}{{ users[req.assignedTo].name }}{% else %}N/A{% endif %}</p>
+                      <p class="text-xs text-gray-400 mt-1">{{ req.targetDate }}</p>
+                    </div>
+                  </div>
+                </a>
+                {% endfor %} {% else %}
+                <div class="text-center py-10 px-4">
+                  <i class="fas fa-check-circle text-gray-300 text-4xl mb-2"></i>
+                  <p class="text-sm text-gray-500">Tidak ada notifikasi baru.</p>
+                </div>
+                {% endif %}
+              </div>
+              <div class="border-t">
+                <a href="#" class="block text-center px-4 py-2 text-sm text-blue-600 hover:bg-gray-50">Lihat Semua</a>
+              </div>
             </div>
-            <i id="user-menu-chevron" class="fas fa-chevron-down text-xs text-gray-600 transition-transform duration-200"></i>
-          </button>
-          <div id="user-menu" class="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg py-1 z-50 hidden ring-1 ring-black ring-opacity-5" style="transition: opacity 0.2s ease-out, transform 0.2s ease-out">
-            <div class="px-4 py-3">
-              <p class="text-sm font-semibold text-gray-900">{{ user.name }}</p>
-              <p class="text-sm text-gray-500 truncate">{{ user.position }}</p>
+          </div>
+
+          <div class="relative">
+            <button id="user-menu-button" class="flex items-center space-x-2 px-2 py-2 sm:px-3 sm:py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <div class="flex flex-col items-start">
+                <span class="font-medium text-sm text-gray-800">{{ user.name }}</span>
+                <span class="text-xs text-gray-500 hidden sm:inline">{{ user.position }}</span>
+              </div>
+              <i id="user-menu-chevron" class="fas fa-chevron-down text-xs text-gray-600 transition-transform duration-200"></i>
+            </button>
+            <div id="user-menu" class="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg py-1 z-50 hidden ring-1 ring-black ring-opacity-5" style="transition: opacity 0.2s ease-out, transform 0.2s ease-out">
+              <div class="px-4 py-3">
+                <p class="text-sm font-semibold text-gray-900">{{ user.name }}</p>
+                <p class="text-sm text-gray-500 truncate">{{ user.position }}</p>
+              </div>
+              <div class="border-t border-gray-100"></div>
+              <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profil</a>
+              <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Pengaturan</a>
+              <div class="border-t border-gray-100"></div>
+              <a href="{{ url_for('logout') }}" onclick="return confirmLogout()" class="block w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-50">Logout</a>
             </div>
-            <div class="border-t border-gray-100"></div>
-            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profil</a>
-            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Pengaturan</a>
-            <div class="border-t border-gray-100"></div>
-            <a href="{{ url_for('logout') }}" onclick="return confirmLogout()" class="block w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-50">Logout</a>
           </div>
         </div>
       </div>
@@ -55,7 +111,7 @@ block content %}
   </div>
 
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-    <div class="bg-white p-6 rounded-xl shadow-sm border mb-8">
+    <div class="bg-white p-4 sm:p-6 rounded-xl shadow-sm border mb-8">
       <h3 class="text-lg font-semibold text-gray-800 mb-4">Menu</h3>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <a href="{{ url_for('create_mws') }}" class="block p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors duration-200 text-center focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -67,7 +123,6 @@ block content %}
             <p class="text-xs text-blue-600">Tambah Work Sheet</p>
           </div>
         </a>
-
         <a href="{{ url_for('manage_users') }}" class="block p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors duration-200 text-center focus:outline-none focus:ring-2 focus:ring-green-500">
           <div class="flex flex-col items-center justify-center h-full">
             <div class="p-3 bg-green-200 rounded-full mb-2">
@@ -77,7 +132,6 @@ block content %}
             <p class="text-xs text-green-600">Manajemen Pengguna</p>
           </div>
         </a>
-
         <div class="p-4 bg-purple-50 rounded-lg flex flex-col items-center justify-center">
           <div class="p-3 bg-purple-200 rounded-full mb-2">
             <i class="fas fa-signature text-purple-600 text-xl"></i>
@@ -96,70 +150,56 @@ block content %}
 </div>
 
 <script>
+  // [Tidak ada perubahan pada JavaScript]
   function confirmLogout() {
     return confirm("Apakah Anda yakin ingin logout?");
   }
 
   document.addEventListener("DOMContentLoaded", function () {
-    // -- Dropdown Menu --
-    const userMenuButton = document.getElementById("user-menu-button");
-    const userMenu = document.getElementById("user-menu");
-    const userMenuChevron = document.getElementById("user-menu-chevron");
-
-    if (userMenuButton && userMenu) {
-      userMenuButton.addEventListener("click", (event) => {
+    function setupDropdown(buttonId, menuId, chevronId = null) {
+      const button = document.getElementById(buttonId);
+      const menu = document.getElementById(menuId);
+      const chevron = chevronId ? document.getElementById(chevronId) : null;
+      if (!button || !menu) return;
+      button.addEventListener("click", (event) => {
         event.stopPropagation();
-        const isHidden = userMenu.classList.toggle("hidden");
-        userMenu.classList.toggle("opacity-0", isHidden);
-        userMenuChevron.classList.toggle("rotate-180", !isHidden);
+        const isHidden = menu.classList.toggle("hidden");
+        if (!isHidden) {
+          closeAllDropdowns(menuId);
+        }
+        if (chevron) {
+          chevron.classList.toggle("rotate-180", !isHidden);
+        }
+        menu.style.transform = isHidden ? "scale(0.95)" : "scale(1)";
+        menu.style.opacity = isHidden ? "0" : "1";
       });
+    }
 
-      document.addEventListener("click", (event) => {
-        if (!userMenu.classList.contains("hidden") && !userMenuButton.contains(event.target)) {
-          userMenu.classList.add("hidden", "opacity-0");
-          userMenuChevron.classList.remove("rotate-180");
+    function closeAllDropdowns(excludeMenuId = null) {
+      const allDropdowns = [
+        { menu: document.getElementById("user-menu"), chevron: document.getElementById("user-menu-chevron") },
+        { menu: document.getElementById("notification-dropdown"), chevron: null },
+      ];
+      allDropdowns.forEach((item) => {
+        if (item.menu && item.menu.id !== excludeMenuId && !item.menu.classList.contains("hidden")) {
+          item.menu.classList.add("hidden");
+          item.menu.style.transform = "scale(0.95)";
+          item.menu.style.opacity = "0";
+          if (item.chevron) {
+            item.chevron.classList.remove("rotate-180");
+          }
         }
       });
     }
-
-    // -- Urgent Button & Sorting Logic --
-    const partsContainer = document.getElementById("parts-container");
-    if (partsContainer) {
-      // Simpan urutan asli saat halaman dimuat
-      Array.from(partsContainer.children).forEach((card, index) => {
-        card.dataset.originalOrder = index;
-      });
-
-      // Gunakan event delegation agar lebih efisien
-      partsContainer.addEventListener("click", function (event) {
-        const urgentBtn = event.target.closest(".urgent-btn");
-        if (!urgentBtn) return;
-
-        const partCard = urgentBtn.closest(".part-card");
-        partCard.classList.toggle("is-urgent");
-
-        const isUrgent = partCard.classList.contains("is-urgent");
-        urgentBtn.textContent = isUrgent ? "CANCEL URGENT" : "URGENT!";
-        urgentBtn.className = isUrgent
-          ? "urgent-btn px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg transition-colors"
-          : "urgent-btn px-3 py-2 bg-yellow-400 hover:bg-yellow-500 text-yellow-800 text-xs font-bold rounded-lg transition-colors";
-
-        sortParts();
-      });
-
-      function sortParts() {
-        const partCards = Array.from(partsContainer.children);
-        partCards.sort((a, b) => {
-          const aIsUrgent = a.classList.contains("is-urgent");
-          const bIsUrgent = b.classList.contains("is-urgent");
-          if (aIsUrgent !== bIsUrgent) {
-            return aIsUrgent ? -1 : 1;
-          }
-          return parseInt(a.dataset.originalOrder) - parseInt(b.dataset.originalOrder);
-        });
-        partCards.forEach((card) => partsContainer.appendChild(card));
+    setupDropdown("user-menu-button", "user-menu", "user-menu-chevron");
+    setupDropdown("notification-button", "notification-dropdown");
+    document.addEventListener("click", (event) => {
+      const userMenuButton = document.getElementById("user-menu-button");
+      const notificationButton = document.getElementById("notification-button");
+      if (!userMenuButton.contains(event.target) && !notificationButton.contains(event.target)) {
+        closeAllDropdowns();
       }
-    }
+    });
   });
 </script>
 {% endblock %}

@@ -1,68 +1,107 @@
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-  <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-    <h3 class="text-lg font-semibold text-gray-800 mb-4">Tanggal Pengerjaan</h3>
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+    <h3 class="text-lg font-semibold text-gray-800 mb-4 pb-4 border-b">Tanggal Pengerjaan</h3>
     <div class="space-y-4">
       <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1">Start Date</label>{% if user.role == 'mechanic' and part.assignedTo == user.nik %}<input
-          type="date"
-          value="{{ part.startDate }}"
-          onchange="updateDates('{{ part_id }}', 'startDate', this.value)"
-          class="w-full px-3 py-2 border border-gray-300 rounded-lg"
-        />{% else %}<input type="date" value="{{ part.startDate }}" disabled class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50" />{% endif %}
+        <label class="block text-sm font-bold text-gray-700 mb-1">Start Date</label>
+        {% if user.role == 'mechanic' and part.assignedTo == user.nik %}
+        <input type="date" value="{{ part.startDate }}" onchange="updateDates('{{ part_id }}', 'startDate', this.value)" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+        {% else %}
+        <input type="date" value="{{ part.startDate }}" disabled class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed" />
+        {% endif %}
       </div>
       <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1">Finish Date</label>{% if user.role == 'mechanic' and part.assignedTo == user.nik %}<input
-          type="date"
-          value="{{ part.finishDate }}"
-          onchange="updateDates('{{ part_id }}', 'finishDate', this.value)"
-          class="w-full px-3 py-2 border border-gray-300 rounded-lg"
-        />{% else %}<input type="date" value="{{ part.finishDate }}" disabled class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50" />{% endif %}
+        <label class="block text-sm font-bold text-gray-700 mb-1">Finish Date</label>
+        {% if user.role == 'mechanic' and part.assignedTo == user.nik %}
+        <input type="date" value="{{ part.finishDate }}" onchange="updateDates('{{ part_id }}', 'finishDate', this.value)" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+        {% else %}
+        <input type="date" value="{{ part.finishDate }}" disabled class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed" />
+        {% endif %}
       </div>
     </div>
   </div>
-  <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-    <h3 class="text-lg font-semibold text-gray-800 mb-4">Tanda Tangan Digital</h3>
-    <div class="space-y-3">
-      <div class="p-3 rounded-lg {% if part.preparedBy %}border-green-200 bg-green-50{% else %}border-gray-200 bg-gray-50{% endif %} border">
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+    <h3 class="text-lg font-semibold text-gray-800 mb-4 pb-4 border-b">Tanda Tangan Digital</h3>
+    <div class="space-y-4">
+      <div class="p-4 rounded-lg border transition-colors duration-300 {% if part.preparedBy %}border-green-400 bg-green-50 shadow-inner{% else %}border-gray-200 bg-gray-50{% endif %}">
         <div class="flex justify-between items-center">
           <div>
             <h4 class="font-semibold text-gray-800">Prepared By</h4>
             {% if part.preparedBy %}
-            <p class="text-sm text-gray-600">{{ users[part.preparedBy].name if part.preparedBy in users else part.preparedBy }} - <span class="text-xs text-gray-500">{{ part.preparedDate }}</span></p>
+            <div class="flex items-center mt-1">
+              <i class="fas fa-user-check text-green-600 mr-2"></i>
+              <p class="text-sm text-gray-700 font-medium">{{ users[part.preparedBy].name if part.preparedBy in users else part.preparedBy }}</p>
+            </div>
+            <p class="text-xs text-gray-500 mt-1 ml-6">{{ part.preparedDate }}</p>
             {% else %}
-            <p class="text-sm text-gray-500 italic">Menunggu tanda tangan...</p>
+            <p class="text-sm text-gray-500 italic mt-1">Menunggu tanda tangan Admin...</p>
             {% endif %}
           </div>
-          {% if user.role == 'admin' and not part.preparedBy %}<button onclick="signDocument('{{ part_id }}', 'prepared')" class="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm font-medium">Sign</button>{% elif
-          part.preparedBy %}<i class="fas fa-check-circle text-green-500"></i>{% endif %}
+          {% if user.role == 'admin' and not part.preparedBy %}
+          <button
+            onclick="signDocument('{{ part_id }}', 'prepared')"
+            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium shadow hover:shadow-md transform hover:-translate-y-0.5 transition-all duration-200"
+          >
+            <i class="fas fa-signature mr-1"></i> Sign
+          </button>
+          {% elif part.preparedBy %}
+          <i class="fas fa-check-circle text-2xl text-green-500"></i>
+          {% endif %}
         </div>
       </div>
-      <div class="p-3 rounded-lg {% if part.approvedBy %}border-green-200 bg-green-50{% else %}border-gray-200 bg-gray-50{% endif %} border">
+
+      <div class="p-4 rounded-lg border transition-colors duration-300 {% if part.approvedBy %}border-green-400 bg-green-50 shadow-inner{% else %}border-gray-200 bg-gray-50{% endif %}">
         <div class="flex justify-between items-center">
           <div>
             <h4 class="font-semibold text-gray-800">Approved By</h4>
             {% if part.approvedBy %}
-            <p class="text-sm text-gray-600">{{ users[part.approvedBy].name if part.approvedBy in users else part.approvedBy }} - <span class="text-xs text-gray-500">{{ part.approvedDate }}</span></p>
+            <div class="flex items-center mt-1">
+              <i class="fas fa-user-check text-green-600 mr-2"></i>
+              <p class="text-sm text-gray-700 font-medium">{{ users[part.approvedBy].name if part.approvedBy in users else part.approvedBy }}</p>
+            </div>
+            <p class="text-xs text-gray-500 mt-1 ml-6">{{ part.approvedDate }}</p>
             {% else %}
-            <p class="text-sm text-gray-500 italic">Menunggu tanda tangan...</p>
+            <p class="text-sm text-gray-500 italic mt-1">Menunggu tanda tangan Superadmin...</p>
             {% endif %}
           </div>
-          {% if user.role == 'superadmin' and not part.approvedBy %}<button onclick="signDocument('{{ part_id }}', 'approved')" class="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm font-medium">Sign</button>{% elif
-          part.approvedBy %}<i class="fas fa-check-circle text-green-500"></i>{% endif %}
+          {% if user.role == 'superadmin' and not part.approvedBy %}
+          <button
+            onclick="signDocument('{{ part_id }}', 'approved')"
+            class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium shadow hover:shadow-md transform hover:-translate-y-0.5 transition-all duration-200"
+          >
+            <i class="fas fa-signature mr-1"></i> Sign
+          </button>
+          {% elif part.approvedBy %}
+          <i class="fas fa-check-circle text-2xl text-green-500"></i>
+          {% endif %}
         </div>
       </div>
-      <div class="p-3 rounded-lg {% if part.verifiedBy %}border-green-200 bg-green-50{% else %}border-gray-200 bg-gray-50{% endif %} border">
+
+      <div class="p-4 rounded-lg border transition-colors duration-300 {% if part.verifiedBy %}border-green-400 bg-green-50 shadow-inner{% else %}border-gray-200 bg-gray-50{% endif %}">
         <div class="flex justify-between items-center">
           <div>
             <h4 class="font-semibold text-gray-800">Verified By</h4>
             {% if part.verifiedBy %}
-            <p class="text-sm text-gray-600">{{ users[part.verifiedBy].name if part.verifiedBy in users else part.verifiedBy }} - <span class="text-xs text-gray-500">{{ part.verifiedDate }}</span></p>
+            <div class="flex items-center mt-1">
+              <i class="fas fa-user-check text-green-600 mr-2"></i>
+              <p class="text-sm text-gray-700 font-medium">{{ users[part.verifiedBy].name if part.verifiedBy in users else part.verifiedBy }}</p>
+            </div>
+            <p class="text-xs text-gray-500 mt-1 ml-6">{{ part.verifiedDate }}</p>
             {% else %}
-            <p class="text-sm text-gray-500 italic">Menunggu tanda tangan...</p>
+            <p class="text-sm text-gray-500 italic mt-1">Menunggu tanda tangan Quality...</p>
             {% endif %}
           </div>
-          {% if user.role == 'quality2' and not part.verifiedBy %}<button onclick="signDocument('{{ part_id }}', 'verified')" class="px-3 py-1 bg-purple-500 hover:bg-purple-600 text-white rounded text-sm font-medium">Sign</button>{% elif
-          part.verifiedBy %}<i class="fas fa-check-circle text-green-500"></i>{% endif %}
+          {% if user.role == 'quality2' and not part.verifiedBy %}
+          <button
+            onclick="signDocument('{{ part_id }}', 'verified')"
+            class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium shadow hover:shadow-md transform hover:-translate-y-0.5 transition-all duration-200"
+          >
+            <i class="fas fa-signature mr-1"></i> Sign
+          </button>
+          {% elif part.verifiedBy %}
+          <i class="fas fa-check-circle text-2xl text-green-500"></i>
+          {% endif %}
         </div>
       </div>
     </div>

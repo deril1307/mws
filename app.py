@@ -80,6 +80,32 @@ def create_database_tables():
     with app.app_context():
         db.create_all()
 
+def update_mws_status(mws_part):
+    """Update MWS status based on steps completion"""
+    all_steps = MwsStep.query.filter_by(mws_part_id=mws_part.id).all()
+    
+    if not all_steps:
+        mws_part.status = 'pending'
+        mws_part.currentStep = 0
+        return
+    
+    completed_steps = [s for s in all_steps if s.status == 'completed']
+    in_progress_steps = [s for s in all_steps if s.status == 'in_progress']
+    
+    if len(completed_steps) == len(all_steps):
+        mws_part.status = 'completed'
+        mws_part.currentStep = len(all_steps)
+    elif in_progress_steps or completed_steps:
+        mws_part.status = 'in_progress'
+        # Set currentStep to the first in_progress step, or the next step after last completed
+        if in_progress_steps:
+            mws_part.currentStep = min(s.no for s in in_progress_steps)
+        else:
+            mws_part.currentStep = max(s.no for s in completed_steps) + 1 if completed_steps else 1
+    else:
+        mws_part.status = 'pending'
+        mws_part.currentStep = 1  # First step for pending status
+
 def render_error_page(error):
     """Fungsi generik untuk menampilkan halaman error."""
     error_map = {
@@ -207,17 +233,23 @@ def admin_dashboard():
         for part in parts:
             parts_dict[part.part_id] = part.to_dict()
         
+        # --- PERUBAHAN DI SINI ---
+        # Saring MWS yang memiliki permintaan urgensi yang belum disetujui
+        urgent_requests = MwsPart.query.filter_by(urgent_request=True, is_urgent=False).all()
+        
         users = get_users_from_db()
         return render_template('admin/admin_dashboard.html', 
                              user=session['user'], 
                              parts=parts_dict, 
-                             users=users)
+                             users=users,
+                             urgent_requests=urgent_requests) # Kirim data notifikasi ke template
     except Exception as e:
         print(f"Error in admin dashboard: {e}")
         return render_template('admin/admin_dashboard.html', 
                              user=session['user'], 
                              parts={}, 
-                             users={})
+                             users={},
+                             urgent_requests=[]) # Kirim list kosong jika ada error
 
 @app.route('/mechanic-dashboard')
 def mechanic_dashboard():
@@ -301,17 +333,22 @@ def superadmin_dashboard():
         for part in parts:
             parts_dict[part.part_id] = part.to_dict()
         
+        urgent_requests = MwsPart.query.filter_by(urgent_request=True, is_urgent=False).all()
+        
         users = get_users_from_db()
         return render_template('superadmin/superadmin_dashboard.html', 
-                             user=session['user'], 
-                             parts=parts_dict, 
-                             users=users)
+                               user=session['user'], 
+                               parts=parts_dict, 
+                               users=users,
+                               urgent_requests=urgent_requests) 
+                               
     except Exception as e:
         print(f"Error in superadmin dashboard: {e}")
         return render_template('superadmin/superadmin_dashboard.html', 
-                             user=session['user'], 
-                             parts={}, 
-                             users={})
+                               user=session['user'], 
+                               parts={}, 
+                               users={},
+                               urgent_requests=[]) 
 
 # =====================================================================
 # ROUTE MANAJEMEN PENGGUNA (ADMIN & SUPERADMIN)
@@ -506,6 +543,9 @@ def create_mws_post():
             step.set_details(step_data['details'])
             db.session.add(step)
         
+        # Set initial currentStep to 1 for new MWS
+        new_mws.currentStep = 1
+        
         db.session.commit()
         return jsonify({'success': True, 'partId': part_id})
         
@@ -642,6 +682,10 @@ def insert_step(part_id):
         new_step.set_details([])
         
         db.session.add(new_step)
+        
+        # Update MWS status when adding new step
+        update_mws_status(mws_part)
+        
         db.session.commit()
         
         return jsonify({'success': True})
@@ -713,6 +757,9 @@ def delete_step(part_id, step_no):
         
         for step in remaining_steps:
             step.no -= 1
+        
+        # Update MWS status after deleting step
+        update_mws_status(mws_part)
         
         db.session.commit()
         return jsonify({'success': True})
@@ -802,16 +849,14 @@ def update_step_status():
             step.completedBy = user['nik']
             step.completedDate = datetime.now().strftime('%Y-%m-%d')
             
-            # Check if all steps are completed
-            all_steps = MwsStep.query.filter_by(mws_part_id=mws_part.id).all()
-            if all(s.status == 'completed' for s in all_steps):
-                mws_part.status = 'completed'
-                
         elif new_status == 'in_progress':
             if mws_part.status == 'pending':
                 mws_part.status = 'in_progress'
             if step_no > mws_part.currentStep:
                 mws_part.currentStep = step_no
+        
+        # Update overall MWS status
+        update_mws_status(mws_part)
         
         db.session.commit()
         return jsonify({'success': True})
@@ -999,7 +1044,9 @@ def sign_document():
         user = session['user']
         part_id = request.json.get('partId')
         sign_type = request.json.get('type')
-        
+        print(f"User attempting to sign: {user}")
+        print(f"Signature type requested: '{sign_type}' for Part ID: {part_id}")
+
         mws_part = MwsPart.query.filter_by(part_id=part_id).first()
         if not mws_part:
             return jsonify({'error': 'Part not found'}), 404
@@ -1016,9 +1063,11 @@ def sign_document():
             mws_part.verifiedBy = user['nik']
             mws_part.verifiedDate = current_date
         else:
+            print(f"AUTHORIZATION FAILED: User role '{user['role']}' is not authorized for signature type '{sign_type}'.")
             return jsonify({'error': 'Unauthorized for this signature type'}), 403
         
         db.session.commit()
+        print("Signature successful!") # 
         return jsonify({'success': True})
         
     except Exception as e:
@@ -1060,8 +1109,9 @@ def start_timer():
         if not step:
             return jsonify({'success': False, 'error': 'Langkah kerja tidak ditemukan'}), 404
         
-        if step.status != 'pending':
-            return jsonify({'success': False, 'error': 'Timer hanya bisa dimulai pada langkah kerja yang berstatus "pending"'}), 400
+        # --- PERUBAHAN DI SINI ---
+        # Pengecekan 'step.status != pending' dihapus agar lebih fleksibel.
+        # Frontend sudah mengontrol kapan tombol bisa ditekan.
         
         if step.timer_start_time:
             return jsonify({'success': False, 'error': 'Timer sudah berjalan untuk langkah ini'}), 400
@@ -1148,16 +1198,29 @@ def set_urgent_status(part_id):
         if not mws_part:
             return jsonify({'success': False, 'error': 'Part tidak ditemukan'}), 404
         
+        # Kondisi untuk mekanik meminta urgensi
         if action == 'request' and user['role'] == 'mechanic':
             mws_part.urgent_request = True
+        
+        # --- PERBAIKAN DI SINI ---
+        # Kondisi baru untuk mekanik membatalkan permintaan urgensi
+        elif action == 'cancel_request' and user['role'] == 'mechanic':
+            mws_part.urgent_request = False
+        
+        # Kondisi untuk admin/superadmin menyetujui permintaan
         elif action == 'approve' and user['role'] in ['admin', 'superadmin']:
             mws_part.is_urgent = True
             mws_part.urgent_request = False
+            
+        # Kondisi untuk admin/superadmin mengubah status urgen (menjadikan/membatalkan)
         elif action == 'toggle' and user['role'] in ['admin', 'superadmin']:
             mws_part.is_urgent = not mws_part.is_urgent
+            # Pastikan permintaan juga di-reset jika ada
             mws_part.urgent_request = False
+            
+        # Jika tidak ada kondisi yang cocok, tolak aksi
         else:
-            return jsonify({'success': False, 'error': 'Aksi tidak diizinkan'}), 403
+            return jsonify({'success': False, 'error': 'Aksi tidak diizinkan untuk peran Anda.'}), 403
         
         db.session.commit()
         return jsonify({'success': True, 'message': 'Status urgensi berhasil diperbarui.'})
@@ -1166,7 +1229,6 @@ def set_urgent_status(part_id):
         db.session.rollback()
         print(f"Error setting urgent status: {e}")
         return jsonify({'success': False, 'error': 'Database error'}), 500
-
 # =====================================================================
 # ROUTE UNTUK CETAK MWS
 # =====================================================================
