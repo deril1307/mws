@@ -40,12 +40,15 @@
     </h2>
   </div>
 
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
     <div style="height: 300px; position: relative">
       <canvas id="mwsStatusChart"></canvas>
     </div>
     <div style="height: 300px; position: relative">
       <canvas id="mwsStatusBarChart"></canvas>
+    </div>
+    <div style="height: 300px; position: relative">
+      <canvas id="mwsUrgencyChart"></canvas>
     </div>
   </div>
 </div>
@@ -55,7 +58,6 @@
 
 <script>
   document.addEventListener("DOMContentLoaded", function () {
-      // MODIFIKASI: Registrasikan plugin datalabels secara global untuk semua chart
       Chart.register(ChartDataLabels);
 
       const originalData = {
@@ -69,20 +71,23 @@
           {% endfor %}
       };
 
-      const chartLabels = ['Menunggu', 'Dikerjakan', 'Selesai'];
-      const chartColors = ['rgb(209, 213, 219)', 'rgb(251, 191, 36)', 'rgb(16, 185, 129)'];
-
+      // -- Variabel untuk Chart 1 & 2 --
+      const statusChartLabels = ['Menunggu', 'Dikerjakan', 'Selesai'];
+      const statusChartColors = ['rgb(209, 213, 219)', 'rgb(251, 191, 36)', 'rgb(16, 185, 129)'];
       const initialStats = calculateCustomerStats('');
-      let chartData = [initialStats.pending, initialStats.inProgress, initialStats.completed];
+      let statusChartData = [initialStats.pending, initialStats.inProgress, initialStats.completed];
 
-      let mwsStatusChart, mwsStatusBarChart;
+      // -- Variabel untuk Chart 3 (BARU) --
+      const urgencyChartLabels = ['Urgent', 'Reguler'];
+      const urgencyChartColors = ['rgb(220, 38, 38)', 'rgb(59, 130, 246)'];
+      const initialUrgencyStats = calculateUrgencyStats('');
+      let urgencyChartData = [initialUrgencyStats.urgent, initialUrgencyStats.regular];
 
+      let mwsStatusChart, mwsStatusBarChart, mwsUrgencyChart; // Tambahkan variabel chart baru
+
+      // -- Perhitungan Data Chart 1 & 2 --
       function calculateCustomerStats(customerName = '') {
-          let customerPending = 0;
-          let customerInProgress = 0;
-          let customerCompleted = 0;
-          let customerTotal = 0;
-
+          let customerPending = 0, customerInProgress = 0, customerCompleted = 0, customerTotal = 0;
           Object.values(originalData).forEach(part => {
               if (customerName === '' || part.customer === customerName) {
                   customerTotal++;
@@ -91,13 +96,19 @@
                   else if (part.status === 'completed') customerCompleted++;
               }
           });
+          return { total: customerTotal, pending: customerPending, inProgress: customerInProgress, completed: customerCompleted };
+      }
 
-          return {
-              total: customerTotal,
-              pending: customerPending,
-              inProgress: customerInProgress,
-              completed: customerCompleted
-          };
+      // -- Perhitungan Data Chart 3: Urgensi (BARU) --
+      function calculateUrgencyStats(customerName = '') {
+          let urgentCount = 0, regularCount = 0;
+          Object.values(originalData).forEach(part => {
+              if (customerName === '' || part.customer === customerName) {
+                  if (part.is_urgent) urgentCount++;
+                  else regularCount++;
+              }
+          });
+          return { urgent: urgentCount, regular: regularCount };
       }
 
       function updateStatistics(stats) {
@@ -109,15 +120,22 @@
 
       function updateCharts(stats) {
           const newData = [stats.pending, stats.inProgress, stats.completed];
-
           if (mwsStatusChart) {
               mwsStatusChart.data.datasets[0].data = newData;
               mwsStatusChart.update('none');
           }
-
           if (mwsStatusBarChart) {
               mwsStatusBarChart.data.datasets[0].data = newData;
               mwsStatusBarChart.update('none');
+          }
+      }
+
+      // -- Fungsi untuk update Chart 3 (BARU) --
+      function updateUrgencyChart(stats) {
+          const newData = [stats.urgent, stats.regular];
+          if (mwsUrgencyChart) {
+              mwsUrgencyChart.data.datasets[0].data = newData;
+              mwsUrgencyChart.update('none');
           }
       }
 
@@ -132,39 +150,23 @@
           }
       }
 
-      // Initialize Doughnut Chart
+      // -- Inisialisasi Chart 1: Status (Doughnut) --
       const ctxDoughnut = document.getElementById('mwsStatusChart');
       if (ctxDoughnut) {
           mwsStatusChart = new Chart(ctxDoughnut, {
               type: 'doughnut',
               data: {
-                  labels: chartLabels,
-                  datasets: [{
-                      label: 'Status Tugas',
-                      data: chartData,
-                      backgroundColor: chartColors,
-                      hoverOffset: 4
-                  }]
+                  labels: statusChartLabels,
+                  datasets: [{ label: 'Status Pengerjaan', data: statusChartData, backgroundColor: statusChartColors, hoverOffset: 4 }]
               },
               options: {
-                  responsive: true,
-                  maintainAspectRatio: false,
+                  responsive: true, maintainAspectRatio: false,
                   plugins: {
-                      legend: {
-                        position: 'top'
-                      },
-                      // MODIFIKASI: Menambahkan konfigurasi untuk menampilkan angka di dalam doughnut
+                      legend: { position: 'top' },
+                      title: { display: true, text: 'Berdasarkan Statistik Customer' }, // Menambahkan judul
                       datalabels: {
-                          display: true,
-                          color: '#fff', // Warna teks angka
-                          font: {
-                              weight: 'bold',
-                              size: 14,
-                          },
-                          // Fungsi untuk memformat angka (hanya tampil jika > 0)
-                          formatter: (value, context) => {
-                              return value > 0 ? value : null;
-                          }
+                          display: true, color: '#fff', font: { weight: 'bold', size: 14 },
+                          formatter: (value) => (value > 0 ? value : null)
                       }
                   },
                   animation: { duration: 400 }
@@ -172,59 +174,62 @@
           });
       }
 
-      // Initialize Bar Chart
+      // -- Inisialisasi Chart 2: Status (Bar) --
       const ctxBar = document.getElementById('mwsStatusBarChart');
       if (ctxBar) {
           mwsStatusBarChart = new Chart(ctxBar, {
               type: 'bar',
               data: {
-                  labels: chartLabels,
-                  datasets: [{
-                      label: 'Jumlah Work Sheet',
-                      data: chartData,
-                      backgroundColor: chartColors,
-                      borderColor: chartColors,
-                      borderWidth: 1
-                  }]
+                  labels: statusChartLabels,
+                  datasets: [{ label: 'Jumlah Work Sheet', data: statusChartData, backgroundColor: statusChartColors, borderWidth: 1 }]
               },
               options: {
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  scales: {
-                    y: {
-                      beginAtZero: true,
-                      ticks: {
-                        stepSize: 1
-                      }
-                    }
-                  },
+                  responsive: true, maintainAspectRatio: false,
+                  scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
                   plugins: {
-                    legend: {
-                      display: false
-                    },
-                    // MODIFIKASI: Menambahkan konfigurasi untuk menampilkan angka di atas bar
-                    datalabels: {
-                        display: true,
-                        anchor: 'end', // Posisi angka di ujung atas bar
-                        align: 'top', // Rata atas
-                        color: '#4A5568', // Warna teks angka (abu-abu tua)
-                        font: {
-                            weight: 'bold'
-                        },
-                        formatter: (value, context) => {
-                            return value > 0 ? value : null;
-                        }
-                    }
+                      legend: { display: false },
+                      title: { display: true, text: 'Berdasarkan Statistik Customer' },
+                      datalabels: {
+                          display: true, anchor: 'end', align: 'top', color: '#4A5568', font: { weight: 'bold' },
+                          formatter: (value) => (value > 0 ? value : null)
+                      }
                   },
                   animation: { duration: 400 }
               }
           });
       }
 
+
+      const ctxUrgency = document.getElementById('mwsUrgencyChart');
+      if (ctxUrgency) {
+          mwsUrgencyChart = new Chart(ctxUrgency, {
+              type: 'doughnut',
+              data: {
+                  labels: urgencyChartLabels,
+                  datasets: [{ label: 'Status Urgensi', data: urgencyChartData, backgroundColor: urgencyChartColors, hoverOffset: 4 }]
+              },
+              options: {
+                  responsive: true, maintainAspectRatio: false,
+                  plugins: {
+                      legend: { position: 'top' },
+                      title: { display: true, text: 'Berdasarkan Urgensi' }, // Menambahkan judul
+                      datalabels: {
+                          display: true, color: '#fff', font: { weight: 'bold', size: 14 },
+                          formatter: (value) => (value > 0 ? value : null)
+                      }
+                  },
+                  animation: { duration: 400 }
+              }
+          });
+      }
+
+      // -- Fungsi Filter Global
       window.filterChartsByCustomer = function(customerName) {
-          const stats = calculateCustomerStats(customerName);
-          updateStatistics(stats);
-          updateCharts(stats);
+          const statusStats = calculateCustomerStats(customerName);
+          const urgencyStats = calculateUrgencyStats(customerName);
+          updateStatistics(statusStats);
+          updateCharts(statusStats);
+          updateUrgencyChart(urgencyStats);
           updateCustomerLabel(customerName);
       };
   });

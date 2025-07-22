@@ -3,6 +3,8 @@
 from . import db
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
+# Tambahkan import datetime
+from datetime import datetime, timezone
 
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
@@ -14,6 +16,7 @@ class User(UserMixin, db.Model):
     role = db.Column(db.String(50))
     position = db.Column(db.String(100))
     description = db.Column(db.Text)
+    last_seen = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     def set_password(self, password_to_hash):
         self.password = generate_password_hash(password_to_hash)
@@ -47,7 +50,8 @@ class User(UserMixin, db.Model):
             'name': self.name,
             'role': self.role,
             'position': self.position,
-            'description': self.description
+            'description': self.description,
+            'last_seen': self.last_seen.isoformat() if self.last_seen else None
         }
 
     def __repr__(self):

@@ -9,3 +9,5 @@ __pycache__/
 .env
 
 file_cadangan/
+
+vercel.json

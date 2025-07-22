@@ -1,0 +1,103 @@
+{% extends "shared/base.html" %} {% block title %}Profil Saya - {{ user.name }}{% endblock %} {% block content %}
+<div class="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+  <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+    <!-- Bagian Header Profil -->
+    <div class="p-6 sm:p-8 bg-gray-50 border-b border-gray-200">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex items-center">
+          <span class="inline-flex items-center justify-center h-16 w-16 rounded-full bg-blue-100 text-blue-600 ring-4 ring-white">
+            <i class="fas fa-user-tie text-3xl"></i>
+          </span>
+          <div class="ml-5">
+            <h1 class="text-2xl font-bold text-gray-900">{{ user.name }}</h1>
+            <p class="text-md text-gray-600">{{ user.position }}</p>
+          </div>
+        </div>
+        <!-- Tombol Kembali ke Dashboard -->
+        <div class="mt-4 sm:mt-0">
+          <a
+            href="{{ url_for('dashboard') }}"
+            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            <i class="fas fa-arrow-left mr-2"></i>
+            Kembali ke Dashboard
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bagian Detail Informasi -->
+    <div class="p-6 sm:p-8">
+      <h2 class="text-lg font-semibold text-gray-800 mb-4">Detail Akun</h2>
+      <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+        <div class="sm:col-span-1">
+          <dt class="text-sm font-medium text-gray-500">NIK (Nomor Induk Karyawan)</dt>
+          <dd class="mt-1 text-sm text-gray-900">{{ user.nik }}</dd>
+        </div>
+        <div class="sm:col-span-1">
+          <dt class="text-sm font-medium text-gray-500">Peran (Role)</dt>
+          <dd class="mt-1 text-sm text-gray-900">
+            <span
+              class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {% if user.role == 'admin' %} bg-blue-100 text-blue-800 {% elif user.role == 'superadmin' %} bg-purple-100 text-purple-800 {% elif user.role == 'mechanic' %} bg-green-100 text-green-800 {% elif user.role in ['quality1', 'quality2'] %} bg-yellow-100 text-yellow-800 {% else %} bg-gray-100 text-gray-800 {% endif %}"
+            >
+              {{ user.role|capitalize }}
+            </span>
+          </dd>
+        </div>
+        <div class="sm:col-span-2">
+          <dt class="text-sm font-medium text-gray-500">Deskripsi</dt>
+          <dd class="mt-1 text-sm text-gray-900">{{ user.description or 'Tidak ada deskripsi.' }}</dd>
+        </div>
+      </dl>
+    </div>
+
+    <!-- Bagian Spesifik Berdasarkan Peran (Role) -->
+    <div class="border-t border-gray-200 p-6 sm:p-8">
+      <h2 class="text-lg font-semibold text-gray-800 mb-4">Hak Akses & Tanggung Jawab</h2>
+      <div class="bg-gray-50 p-4 rounded-lg">
+        {% if user.role in ['admin', 'superadmin'] %}
+        <div class="flex items-start">
+          <div class="flex-shrink-0">
+            <i class="fas fa-cogs text-xl text-gray-500"></i>
+          </div>
+          <div class="ml-4">
+            <p class="text-sm text-gray-700">Sebagai <strong>{{ user.role|capitalize }}</strong>, Anda memiliki akses untuk mengelola pengguna, membuat dan menugaskan Work Sheet (MWS), serta memonitor seluruh progres pekerjaan.</p>
+            <div class="mt-3">
+              <a href="{{ url_for('manage_users') }}" class="text-sm font-medium text-blue-600 hover:underline">Kelola Pengguna &rarr;</a>
+            </div>
+          </div>
+        </div>
+        {% elif user.role == 'mechanic' %}
+        <div class="flex items-start">
+          <div class="flex-shrink-0">
+            <i class="fas fa-tools text-xl text-gray-500"></i>
+          </div>
+          <div class="ml-4">
+            <p class="text-sm text-gray-700">Sebagai <strong>Mechanic</strong>, tanggung jawab utama Anda adalah mengerjakan Work Sheet (MWS) yang telah ditugaskan kepada Anda sesuai dengan langkah-langkah yang ditentukan.</p>
+            <div class="mt-3">
+              <a href="{{ url_for('mechanic_dashboard') }}" class="text-sm font-medium text-blue-600 hover:underline">Lihat Dashboard Saya &rarr;</a>
+            </div>
+          </div>
+        </div>
+        {% elif user.role in ['quality1', 'quality2'] %}
+        <div class="flex items-start">
+          <div class="flex-shrink-0">
+            <i class="fas fa-clipboard-check text-xl text-gray-500"></i>
+          </div>
+          <div class="ml-4">
+            <p class="text-sm text-gray-700">
+              Sebagai <strong>{{ user.role|capitalize }}</strong>, Anda bertanggung jawab untuk melakukan inspeksi dan verifikasi pada setiap langkah pekerjaan yang telah diselesaikan oleh mekanik untuk memastikan kualitas sesuai standar.
+            </p>
+            <div class="mt-3">
+              <a href="{{ url_for('role_dashboard') }}" class="text-sm font-medium text-blue-600 hover:underline">Lihat Dashboard Quality &rarr;</a>
+            </div>
+          </div>
+        </div>
+        {% else %}
+        <p class="text-sm text-gray-600">Anda tidak memiliki peran spesifik yang terdefinisi.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

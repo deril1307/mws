@@ -320,22 +320,7 @@
       .catch((e) => alert("Terjadi kesalahan jaringan."));
   }
 
-  function assignPart(partId, assignedTo) {
-    if (!assignedTo) return;
-    fetch("/assign_part", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          partId,
-          assignedTo
-        })
-      })
-      .then((r) => r.json())
-      .then((d) => (d.success ? location.reload() : alert("Error: " + d.error)))
-      .catch((e) => alert("Error"));
-  }
+  
 
   function updateDates(partId, field, value) {
     fetch("/update_dates", {
@@ -354,29 +339,7 @@
       .catch((e) => showNotification("Error", "error"));
   }
 
-  function signDocument(partId, type) {
-
-    if (!confirm("Apakah Anda yakin ingin menandatangani dokumen ini? Tindakan ini tidak dapat diurungkan.")) return;
-
-    console.log(`Sending to server: partId=${partId}, type=${type}`); 
-
-    fetch("/sign_document", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      // Data yang dikirim ke server sekarang akan benar
-      body: JSON.stringify({ partId: partId, type: type }),
-    })
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.success) {
-          showNotification("Dokumen berhasil ditandatangani.", "success");
-          location.reload();
-        } else {
-          showNotification("Error: " + d.error, "error");
-        }
-      })
-      .catch((e) => showNotification("Terjadi kesalahan jaringan.", "error"));
-  }
+  
 
   function addDetail(partId, stepNo) {
     const input = document.getElementById(`new-detail-input-${stepNo}`);

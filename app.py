@@ -1,6 +1,6 @@
 # type: ignore
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from flask_wtf.csrf import CSRFProtect, validate_csrf
 from wtforms import ValidationError
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
@@ -18,7 +18,7 @@ from models.step import MwsStep
 app = Flask(__name__)
 app.jinja_env.loader.searchpath = [
     'templates', 'templates/shared', 'templates/auth', 
-    'templates/admin', 'templates/mechanic', 'templates/quality', 'templates/mws'
+    'templates/admin', 'templates/mechanic', 'templates/quality', 'templates/mws', 'templates/profile'
 ]
 app.config.from_object(Config)
 db.init_app(app)
@@ -55,6 +55,16 @@ def inject_user():
     if current_user.is_authenticated:
         return {'user': current_user.to_dict()}
     return {'user': None}
+
+@app.before_request
+def before_request_callback():
+    """
+    Fungsi yang berjalan sebelum setiap request.
+    Digunakan untuk memperbarui waktu terakhir pengguna terlihat.
+    """
+    if current_user.is_authenticated:
+        current_user.last_seen = datetime.now(timezone.utc)
+        db.session.commit()
 
 # Template langkah kerja untuk berbagai jenis pekerjaan
 JOB_STEPS_TEMPLATES = {
@@ -245,15 +255,26 @@ def logout():
 # ROUTE DASHBOARD BERDASARKAN ROLE
 # =====================================================================
 
+@app.route('/profile')
+@login_required
+@limiter.limit("60 per minute")
+def view_profile():
+    """
+    Menampilkan halaman profil pengguna yang sedang login.
+    Data pengguna diambil dari `current_user` yang disediakan oleh Flask-Login
+    dan secara otomatis diteruskan ke template oleh context processor `inject_user`.
+    """
+    return render_template('profile/profile.html')
+
 @app.route('/dashboard')
 @login_required
-@limiter.limit("60 per minute")  # Limit dashboard access
+@limiter.limit("80 per minute")  # Limit dashboard access
 def dashboard():
     return redirect(url_for('role_dashboard'))
 
 @app.route('/role-dashboard')
 @login_required
-@limiter.limit("60 per minute")
+@limiter.limit("80 per minute")
 def role_dashboard():
     role = current_user.role
     dashboard_map = {
@@ -272,7 +293,7 @@ def role_dashboard():
 
 @app.route('/admin-dashboard')
 @require_role('admin')
-@limiter.limit("30 per minute")
+@limiter.limit("80 per minute")
 def admin_dashboard():
     try:
         parts = MwsPart.query.all()
@@ -297,7 +318,7 @@ def admin_dashboard():
 
 @app.route('/mechanic-dashboard')
 @require_role('mechanic')
-@limiter.limit("30 per minute")
+@limiter.limit("80 per minute")
 def mechanic_dashboard():
     try:
         parts = MwsPart.query.filter_by(assignedTo=current_user.nik).all()
@@ -314,7 +335,7 @@ def mechanic_dashboard():
 
 @app.route('/quality1-dashboard')
 @require_role('quality1')
-@limiter.limit("30 per minute")
+@limiter.limit("80 per minute")
 def quality1_dashboard():
     try:
         parts = MwsPart.query.all()
@@ -334,7 +355,7 @@ def quality1_dashboard():
 
 @app.route('/quality2-dashboard')
 @require_role('quality2')
-@limiter.limit("30 per minute")
+@limiter.limit("80 per minute")
 def quality2_dashboard():
     try:
         parts = MwsPart.query.all()
@@ -354,9 +375,10 @@ def quality2_dashboard():
 
 @app.route('/superadmin-dashboard')
 @require_role('superadmin')
-@limiter.limit("30 per minute")
+@limiter.limit("80 per minute")
 def superadmin_dashboard():
     try:
+        # Ambil data utama terlebih dahulu
         parts = MwsPart.query.all()
         parts_dict = {}
         for part in parts:
@@ -365,28 +387,55 @@ def superadmin_dashboard():
         urgent_requests = MwsPart.query.filter_by(urgent_request=True, is_urgent=False).all()
         
         users = get_users_from_db()
+
+        active_users_count = 0
+        try:
+            five_seconds_ago = datetime.now(timezone.utc) - timedelta(seconds=5)
+            active_users_count = User.query.filter(User.last_seen.isnot(None), User.last_seen > five_seconds_ago).count()
+        except Exception as e_active: 
+            print(f"GAGAL MENGHITUNG PENGGUNA AKTIF: {e_active}")
+            active_users_count = 0 
+        
+        # Render template dengan semua data yang berhasil diambil
         return render_template('superadmin/superadmin_dashboard.html', 
                                parts=parts_dict, 
                                users=users,
-                               urgent_requests=urgent_requests)
+                               urgent_requests=urgent_requests,
+                               active_users_count=active_users_count)
                                
-    except Exception as e:
-        print(f"Error in superadmin dashboard: {e}")
+    except Exception as e_main:
+        # Blok ini hanya akan terpicu jika ada error saat mengambil data parts atau users
+        print(f"Error pada data utama dashboard: {e_main}")
         return render_template('superadmin/superadmin_dashboard.html', 
                                parts={}, 
                                users={},
-                               urgent_requests=[])
+                               urgent_requests=[],
+                               active_users_count=0) # Default value jika error
+
 
 # =====================================================================
 # ROUTE MANAJEMEN PENGGUNA (ADMIN & SUPERADMIN) - DENGAN RATE LIMITING
 # =====================================================================
 
+# PERUBAHAN DIMULAI DI SINI
 @app.route('/admin/users')
 @require_role('admin', 'superadmin')
 @limiter.limit("25 per minute")
 def manage_users():
     users = get_users_from_db()
-    return render_template('user-management/manage_user.html', users=users)
+    
+    # Logika untuk mendapatkan pengguna aktif
+    active_users_niks = []
+    try:
+        # Menggunakan interval 30 detik
+        seconds_ago = datetime.now(timezone.utc) - timedelta(seconds=20)
+        active_users = User.query.filter(User.last_seen.isnot(None), User.last_seen > seconds_ago).all()
+        active_users_niks = [user.nik for user in active_users]
+    except Exception as e:
+        print(f"Gagal mengambil data pengguna aktif: {e}")
+
+    # Kirim daftar pengguna dan daftar NIK yang aktif ke template
+    return render_template('user-management/manage_user.html', users=users, active_users_niks=active_users_niks)
 
 
 @app.route('/users/<nik>')

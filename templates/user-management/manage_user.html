@@ -33,11 +33,47 @@
   </header>
 
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- PERUBAHAN: Menambahkan bagian kartu statistik -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <!-- Kartu Pengguna Aktif -->
+      <div class="bg-white p-5 rounded-xl shadow-sm border flex items-center">
+        <div class="p-3 bg-green-100 rounded-lg mr-4">
+          <i class="fas fa-wifi text-green-600 text-xl"></i>
+        </div>
+        <div>
+          <p class="text-sm font-medium text-gray-600">Pengguna Aktif</p>
+          <p class="text-2xl font-bold text-gray-900">{{ active_users_niks|length }}</p>
+        </div>
+      </div>
+      <!-- Kartu Pengguna Offline -->
+      <div class="bg-white p-5 rounded-xl shadow-sm border flex items-center">
+        <div class="p-3 bg-gray-200 rounded-lg mr-4">
+          <i class="fas fa-moon text-gray-600 text-xl"></i>
+        </div>
+        <div>
+          <p class="text-sm font-medium text-gray-600">Pengguna Offline</p>
+          <p class="text-2xl font-bold text-gray-900">{{ users|length - active_users_niks|length }}</p>
+        </div>
+      </div>
+      <!-- Kartu Total Pengguna -->
+      <div class="bg-white p-5 rounded-xl shadow-sm border flex items-center">
+        <div class="p-3 bg-indigo-100 rounded-lg mr-4">
+          <i class="fas fa-users text-indigo-600 text-xl"></i>
+        </div>
+        <div>
+          <p class="text-sm font-medium text-gray-600">Total Pengguna</p>
+          <p class="text-2xl font-bold text-gray-900">{{ users|length }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabel Pengguna -->
     <div class="bg-white rounded-lg shadow-md overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-sm text-left text-gray-600">
           <thead class="text-xs text-gray-700 uppercase bg-gray-50 border-b border-gray-200">
             <tr>
+              <th scope="col" class="px-6 py-3 font-medium">Status</th>
               <th scope="col" class="px-6 py-3 font-medium">NIK</th>
               <th scope="col" class="px-6 py-3 font-medium">Nama</th>
               <th scope="col" class="px-6 py-3 font-medium">Role</th>
@@ -49,6 +85,19 @@
             {% for nik, user_data in users.items() %} {% set is_superadmin = user.role == 'superadmin' %} {% set is_admin = user.role == 'admin' %} {% set viewable_by_superadmin = user_data.role in ['admin', 'mechanic', 'quality1',
             'quality2'] %} {% set viewable_by_admin = user_data.role in ['mechanic', 'quality1', 'quality2'] %} {% if (is_superadmin and viewable_by_superadmin) or (is_admin and viewable_by_admin) %}
             <tr class="bg-white border-b border-gray-200 hover:bg-gray-50 transition-colors">
+              <td class="px-6 py-4">
+                {% if nik in active_users_niks %}
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  <span class="h-2 w-2 bg-green-500 rounded-full mr-1.5"></span>
+                  Online
+                </span>
+                {% else %}
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                  <span class="h-2 w-2 bg-gray-400 rounded-full mr-1.5"></span>
+                  Offline
+                </span>
+                {% endif %}
+              </td>
               <td class="px-6 py-4 font-mono text-gray-900 whitespace-nowrap">{{ nik }}</td>
               <td class="px-6 py-4 text-gray-800 whitespace-nowrap">{{ user_data.name }}</td>
               <td class="px-6 py-4">
@@ -69,6 +118,7 @@
   </main>
 </div>
 
+<!-- Modal Tambah/Edit Pengguna (Tidak ada perubahan) -->
 <div id="user-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 overflow-y-auto h-full w-full z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
   <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
     <div class="fixed inset-0" aria-hidden="true"></div>
@@ -173,6 +223,7 @@
   </div>
 </div>
 
+<!-- Modal Hapus Pengguna (Tidak ada perubahan) -->
 <div id="delete-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 overflow-y-auto h-full w-full z-50 hidden" aria-labelledby="delete-modal-title" role="dialog" aria-modal="true">
   <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
     <div class="fixed inset-0" aria-hidden="true"></div>

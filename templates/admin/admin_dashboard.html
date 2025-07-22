@@ -136,10 +136,9 @@
                 <p class="text-sm text-gray-500 truncate">{{ user.position }}</p>
               </div>
               <div class="border-t border-gray-100"></div>
-              <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profil</a>
+              <a href="{{ url_for('view_profile') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profil</a>
               <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Pengaturan</a>
               <div class="border-t border-gray-100"></div>
-              <!-- PERUBAHAN 1: Menghapus onclick dan menambahkan ID -->
               <a href="{{ url_for('logout') }}" id="logout-button" class="block w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-50">Logout</a>
             </div>
           </div>
@@ -150,31 +149,31 @@
 
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
     <div class="bg-white p-4 sm:p-6 rounded-xl shadow-sm border mb-8">
-      <h3 class="text-lg font-semibold text-gray-800 mb-4">Menu</h3>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <a href="{{ url_for('create_mws') }}" class="block p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors duration-200 text-center focus:outline-none focus:ring-2 focus:ring-blue-500">
+      <h3 class="text-base sm:text-lg font-semibold text-gray-800 mb-4">Menu</h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+        <a href="{{ url_for('create_mws') }}" class="block p-3 sm:p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors duration-200 text-center focus:outline-none focus:ring-2 focus:ring-blue-500">
           <div class="flex flex-col items-center justify-center h-full">
-            <div class="p-3 bg-blue-200 rounded-full mb-2">
-              <i class="fas fa-plus-circle text-blue-600 text-xl"></i>
+            <div class="p-2 sm:p-3 bg-blue-200 rounded-full mb-2">
+              <i class="fas fa-plus-circle text-blue-600 text-lg sm:text-xl"></i>
             </div>
-            <p class="font-semibold text-blue-800">Buat MWS Baru</p>
+            <p class="font-semibold text-sm sm:text-base text-blue-800">Buat MWS Baru</p>
             <p class="text-xs text-blue-600">Tambah Work Sheet</p>
           </div>
         </a>
-        <a href="{{ url_for('manage_users') }}" class="block p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors duration-200 text-center focus:outline-none focus:ring-2 focus:ring-green-500">
+        <a href="{{ url_for('manage_users') }}" class="block p-3 sm:p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors duration-200 text-center focus:outline-none focus:ring-2 focus:ring-green-500">
           <div class="flex flex-col items-center justify-center h-full">
-            <div class="p-3 bg-green-200 rounded-full mb-2">
-              <i class="fas fa-users-cog text-green-600 text-xl"></i>
+            <div class="p-2 sm:p-3 bg-green-200 rounded-full mb-2">
+              <i class="fas fa-users-cog text-green-600 text-lg sm:text-xl"></i>
             </div>
-            <p class="font-semibold text-green-800">Kelola Tim</p>
+            <p class="font-semibold text-sm sm:text-base text-green-800">Kelola Tim</p>
             <p class="text-xs text-green-600">Manajemen Pengguna</p>
           </div>
         </a>
-        <div class="p-4 bg-purple-50 rounded-lg flex flex-col items-center justify-center">
-          <div class="p-3 bg-purple-200 rounded-full mb-2">
-            <i class="fas fa-signature text-purple-600 text-xl"></i>
+        <div class="p-3 sm:p-4 bg-purple-50 rounded-lg flex flex-col items-center justify-center">
+          <div class="p-2 sm:p-3 bg-purple-200 rounded-full mb-2">
+            <i class="fas fa-signature text-purple-600 text-lg sm:text-xl"></i>
           </div>
-          <p class="font-semibold text-purple-800">Prepared By</p>
+          <p class="font-semibold text-sm sm:text-base text-purple-800">Prepared By</p>
           {% set unsigned_parts_count = parts.values()|selectattr('preparedBy', 'equalto', '')|list|length %}
           <div class="mt-1 bg-white w-full text-center py-1 rounded-lg">
             <span class="text-md font-bold {% if unsigned_parts_count > 0 %}text-yellow-600{% else %}text-green-600{% endif %}">{{ unsigned_parts_count }}</span>
@@ -187,12 +186,8 @@
   </div>
 </div>
 
-<!-- PERUBAHAN 2: Menambahkan struktur HTML untuk modal logout -->
 <div id="logout-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
-  <!-- Latar belakang gelap -->
   <div id="logout-modal-overlay" class="absolute inset-0 bg-black bg-opacity-60 modal-overlay"></div>
-
-  <!-- Panel Modal -->
   <div id="logout-modal-panel" class="relative bg-white rounded-lg shadow-xl w-full max-w-md m-4 modal-panel">
     <div class="flex items-start justify-between p-5 border-b rounded-t">
       <h3 class="text-xl font-semibold text-gray-900">Konfirmasi Logout</h3>
@@ -264,7 +259,7 @@
       }
     });
 
-    // --- PERUBAHAN 3: JavaScript BARU untuk Modal Logout ---
+    // JavaScript untuk Modal Logout (Tidak ada perubahan)
     const logoutButton = document.getElementById("logout-button");
     const logoutModal = document.getElementById("logout-modal");
     const logoutModalOverlay = document.getElementById("logout-modal-overlay");
@@ -273,7 +268,7 @@
     const closeButton = document.getElementById("logout-modal-close-button");
 
     function showLogoutModal(e) {
-      e.preventDefault(); // Mencegah link berpindah halaman
+      e.preventDefault();
       logoutModal.classList.remove("hidden");
     }
 
@@ -290,7 +285,6 @@
     }
 
     function performLogout() {
-      // 1. Buat overlay putih untuk efek fade out
       const fadeOutDiv = document.createElement("div");
       fadeOutDiv.style.position = "fixed";
       fadeOutDiv.style.top = "0";
@@ -303,15 +297,13 @@
       fadeOutDiv.style.transition = "opacity 0.3s ease-in";
       document.body.appendChild(fadeOutDiv);
 
-      // 2. Mulai transisi opacity
       requestAnimationFrame(() => {
         fadeOutDiv.style.opacity = "1";
       });
 
-      // 3. Tunggu transisi selesai, lalu redirect
       setTimeout(() => {
         window.location.href = logoutButton.href;
-      }, 300); // Sesuaikan dengan durasi transisi
+      }, 300);
     }
 
     logoutButton.addEventListener("click", showLogoutModal);
