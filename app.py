@@ -492,54 +492,36 @@ def delete_user(nik):
 @require_role('admin', 'superadmin')
 @limiter.limit("30 per minute")
 def create_mws():
-    """
-    Menangani pembuatan MWS (Manufacturing Work Sheet).
-    - Metode GET: Menampilkan formulir untuk membuat MWS baru.
-    - Metode POST: Memproses data dari formulir, memvalidasi, dan menyimpannya ke database.
-    """
-    
-    # --- Penanganan untuk Metode POST ---
-    # Logika ini hanya akan berjalan ketika ada permintaan POST ke endpoint ini.
     if request.method == 'POST':
         try:
-            # 1. Validasi CSRF Token dari header permintaan
             csrf_token = request.headers.get('X-CSRFToken')
             validate_csrf(csrf_token)
         except ValidationError:
-            # Jika token tidak valid atau tidak ada, kembalikan error
             return jsonify({'success': False, 'error': 'CSRF token tidak valid atau hilang.'}), 400
-        
         try:
-            # 2. Ambil data JSON dari body permintaan
             req_data = request.get_json()
             if not req_data:
                 return jsonify({'success': False, 'error': 'Request body harus berupa JSON.'}), 400
-
-            # 3. Validasi field yang wajib diisi
             tittle_name = req_data.get('tittle_name')
             job_type = req_data.get('jobType')
             
             if not tittle_name or not job_type:
                 return jsonify({'success': False, 'error': 'Tittle dan Jenis Pekerjaan wajib diisi.'}), 400
             
-            # 4. Generate part_id secara atomik dan aman
-            # Menggunakan lock atau transaksi untuk mencegah race condition jika diperlukan,
-            # namun untuk kesederhanaan, kita hitung seperti ini.
-            # Untuk produksi, pertimbangkan sequence di database atau mekanisme locking.
+ 
             part_count = MwsPart.query.count() + 1
             part_id = f"MWS-{part_count:03d}"
             
-            # 5. Parsing tanggal dengan penanganan error
+          
             target_date = None
             if req_data.get('targetDate'):
                 try:
-                    # Konversi string tanggal ke objek date Python
+                 
                     target_date = datetime.strptime(req_data.get('targetDate'), '%Y-%m-%d').date()
                 except (ValueError, TypeError):
-                    # Abaikan jika format tanggal salah atau tipe tidak sesuai
+                 
                     pass
             
-            # 6. Buat instance MwsPart baru dengan data yang diterima
             new_mws = MwsPart(
                 part_id=part_id,
                 partNumber=req_data.get('partNumber', ''),
@@ -555,23 +537,20 @@ def create_mws():
                 shopArea=req_data.get('shopArea', ''),
                 revision=req_data.get('revision', '1'),
                 targetDate=target_date,
-                status='pending', # Status awal
-                currentStep=1 # Langsung set ke step 1
+                status='pending',
+                currentStep=1 
             )
             
             db.session.add(new_mws)
-            db.session.flush()  # Penting untuk mendapatkan new_mws.id sebelum commit
-            
-            # 7. Buat MwsStep berdasarkan template dari job_type
+            db.session.flush()  
             steps_template = JOB_STEPS_TEMPLATES.get(job_type, [])
             if not steps_template:
-                # Jika tidak ada template, rollback dan beri tahu user
                 db.session.rollback()
                 return jsonify({'success': False, 'error': f'Template langkah untuk jenis pekerjaan "{job_type}" tidak ditemukan.'}), 400
 
             for step_data in steps_template:
                 step = MwsStep(
-                    mws_part_id=new_mws.id, # Gunakan ID dari MWS yang baru dibuat
+                    mws_part_id=new_mws.id, 
                     no=step_data.get('no'),
                     description=step_data.get('description'),
                     status=step_data.get('status', 'pending'),
@@ -580,27 +559,14 @@ def create_mws():
                     tech=step_data.get('tech'),
                     insp=step_data.get('insp')
                 )
-                # Jika 'details' adalah JSON/dict, simpan dengan metode khusus
                 step.set_details(step_data.get('details', {}))
                 db.session.add(step)
-            
-            # 8. Commit semua perubahan ke database
             db.session.commit()
-            
-            # Kirim respons sukses bersama part_id yang baru dibuat
-            return jsonify({'success': True, 'partId': part_id}), 201 # 201 Created lebih cocok
-            
+            return jsonify({'success': True, 'partId': part_id}), 201 
         except Exception as e:
-            # Jika terjadi error apapun selama proses di atas, rollback sesi database
             db.session.rollback()
-            # Catat error untuk debugging
             app.logger.error(f"Error saat membuat MWS: {e}", exc_info=True)
-            # Kirim respons error umum ke klien
             return jsonify({'success': False, 'error': 'Terjadi kesalahan internal pada server.'}), 500
-
-    # --- Penanganan untuk Metode GET (Default) ---
-    # Jika permintaan bukan POST, maka diasumsikan GET.
-    # Kode ini akan merender template HTML yang berisi formulir.
     return render_template('mws/create_mws.html')
 
 @csrf.exempt
