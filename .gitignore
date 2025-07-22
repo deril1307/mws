@@ -5,5 +5,5 @@
 __pycache__/
 *.pyc
 
-# File Konfigurasi dan Rahasia
-config/settings.py
+
+.env

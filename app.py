@@ -3,6 +3,9 @@ from flask import Flask, render_template, request, redirect, url_for, session, j
 from datetime import datetime, timezone
 from flask_wtf.csrf import CSRFProtect, validate_csrf
 from wtforms import ValidationError
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import json
 
 from config.settings import Config
@@ -22,6 +25,36 @@ db.init_app(app)
 
 # CSRF Protection
 csrf = CSRFProtect(app)
+
+# Flask-Limiter Setup
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["1000 per hour", "100 per minute"],
+    storage_uri="memory://",
+    headers_enabled=True,
+    retry_after="http-date"
+)
+
+# Flask-Login Setup
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+login_manager.login_message = 'Silakan login untuk mengakses halaman ini.'
+login_manager.login_message_category = 'info'
+
+@login_manager.user_loader
+def load_user(nik):
+    """Load user by NIK for Flask-Login"""
+    return User.query.filter_by(nik=nik).first()
+
+# Make current_user available in templates as 'user' for backward compatibility
+@app.context_processor
+def inject_user():
+    """Inject current_user as 'user' in all templates for backward compatibility"""
+    if current_user.is_authenticated:
+        return {'user': current_user.to_dict()}
+    return {'user': None}
 
 # Template langkah kerja untuk berbagai jenis pekerjaan
 JOB_STEPS_TEMPLATES = {
@@ -111,6 +144,7 @@ def render_error_page(error):
     error_map = {
         403: ("Akses Ditolak", "Anda tidak memiliki izin untuk mengakses halaman ini."),
         404: ("Halaman Tidak Ditemukan", "Maaf, kami tidak dapat menemukan halaman yang Anda cari. Mungkin URL salah ketik."),
+        429: ("Terlalu Banyak Request", "Anda telah mengirim terlalu banyak request. Silakan tunggu sebentar sebelum mencoba lagi."),
         500: ("Terjadi Masalah di Server", "Tim kami telah diberitahu tentang masalah ini. Silakan coba lagi nanti.")
     }
     
@@ -123,6 +157,21 @@ def render_error_page(error):
         error_message=error_message
     ), error_code
 
+def require_role(*roles):
+    """Decorator untuk membatasi akses berdasarkan role"""
+    def decorator(f):
+        def decorated_function(*args, **kwargs):
+            if not current_user.is_authenticated:
+                return redirect(url_for('login'))
+            if current_user.role not in roles:
+                flash('Akses ditolak!', 'error')
+                return redirect(url_for('dashboard'))
+            return f(*args, **kwargs)
+        decorated_function.__name__ = f.__name__
+        return decorated_function
+    return decorator
+
+# Error handlers
 @app.errorhandler(403)
 def forbidden(e):
     return render_error_page(e)
@@ -131,12 +180,16 @@ def forbidden(e):
 def page_not_found(e):
     return render_error_page(e)
 
+@app.errorhandler(429)
+def ratelimit_handler(e):
+    return render_error_page(e)
+
 @app.errorhandler(500)
 def internal_server_error(e):
     return render_error_page(e)
 
 # =====================================================================
-# ROUTE UMUM (LANDING PAGE & AUTENTIKASI)
+# ROUTE UMUM (LANDING PAGE & AUTENTIKASI) - DENGAN RATE LIMITING
 # =====================================================================
 def get_users_from_db():
     """Mengambil semua user dari DB dan mengubahnya ke format dictionary."""
@@ -154,13 +207,14 @@ def get_users_from_db():
         print(f"Error getting users: {e}")
         return {}
     
-# Tambahkan decorator @app.route('/') di sini
 @app.route('/') 
 @app.route('/login', methods=['GET', 'POST'])
+@limiter.limit("20 per minute", methods=["POST"])  
 def login():
     # Cek jika user sudah login, arahkan ke dashboard
-    if 'user' in session:
-        return redirect(url_for('dashboard')) # Arahkan ke 'dashboard'
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+        
     if request.method == 'POST':
         nik = request.form.get('nik')
         password = request.form.get('password')
@@ -171,14 +225,7 @@ def login():
         try:
             user = User.query.filter_by(nik=nik).first()
             if user and user.check_password(password):
-                session['user'] = {
-                    'nik': user.nik, 
-                    'name': user.name, 
-                    'role': user.role,
-                    'position': user.position, 
-                    'description': user.description
-                }
-                # Pastikan redirect setelah login berhasil juga ke 'dashboard'
+                login_user(user, remember=False)
                 return jsonify({'success': True, 'redirect_url': url_for('dashboard')})
             return jsonify({'success': False, 'message': 'NIK atau password salah!'}), 401
         except Exception as e:
@@ -189,8 +236,9 @@ def login():
     return render_template('auth/login.html')
 
 @app.route('/logout')
+@login_required
 def logout():
-    session.pop('user', None)
+    logout_user()
     return redirect(url_for('login'))
 
 # =====================================================================
@@ -198,15 +246,16 @@ def logout():
 # =====================================================================
 
 @app.route('/dashboard')
+@login_required
+@limiter.limit("60 per minute")  # Limit dashboard access
 def dashboard():
     return redirect(url_for('role_dashboard'))
 
 @app.route('/role-dashboard')
+@login_required
+@limiter.limit("60 per minute")
 def role_dashboard():
-    if 'user' not in session:
-        return redirect(url_for('login'))
-    
-    role = session['user']['role']
+    role = current_user.role
     dashboard_map = {
         'admin': 'admin_dashboard',
         'mechanic': 'mechanic_dashboard',
@@ -222,63 +271,51 @@ def role_dashboard():
         return redirect(url_for('logout'))
 
 @app.route('/admin-dashboard')
+@require_role('admin')
+@limiter.limit("30 per minute")
 def admin_dashboard():
-    if 'user' not in session or session['user']['role'] != 'admin':
-        flash('Akses ditolak!', 'error')
-        return redirect(url_for('login'))
-    
     try:
         parts = MwsPart.query.all()
         parts_dict = {}
         for part in parts:
             parts_dict[part.part_id] = part.to_dict()
         
-        # --- PERUBAHAN DI SINI ---
         # Saring MWS yang memiliki permintaan urgensi yang belum disetujui
         urgent_requests = MwsPart.query.filter_by(urgent_request=True, is_urgent=False).all()
         
         users = get_users_from_db()
         return render_template('admin/admin_dashboard.html', 
-                             user=session['user'], 
                              parts=parts_dict, 
                              users=users,
-                             urgent_requests=urgent_requests) # Kirim data notifikasi ke template
+                             urgent_requests=urgent_requests)
     except Exception as e:
         print(f"Error in admin dashboard: {e}")
         return render_template('admin/admin_dashboard.html', 
-                             user=session['user'], 
                              parts={}, 
                              users={},
-                             urgent_requests=[]) # Kirim list kosong jika ada error
+                             urgent_requests=[])
 
 @app.route('/mechanic-dashboard')
+@require_role('mechanic')
+@limiter.limit("30 per minute")
 def mechanic_dashboard():
-    if 'user' not in session or session['user']['role'] != 'mechanic':
-        flash('Akses ditolak!', 'error')
-        return redirect(url_for('login'))
-    
     try:
-        user_nik = session['user']['nik']
-        parts = MwsPart.query.filter_by(assignedTo=user_nik).all()
+        parts = MwsPart.query.filter_by(assignedTo=current_user.nik).all()
         parts_dict = {}
         for part in parts:
             parts_dict[part.part_id] = part.to_dict()
         
         return render_template('mechanic/mechanic_dashboard.html', 
-                             user=session['user'], 
                              parts=parts_dict)
     except Exception as e:
         print(f"Error in mechanic dashboard: {e}")
         return render_template('mechanic/mechanic_dashboard.html', 
-                             user=session['user'], 
                              parts={})
 
 @app.route('/quality1-dashboard')
+@require_role('quality1')
+@limiter.limit("30 per minute")
 def quality1_dashboard():
-    if 'user' not in session or session['user']['role'] != 'quality1':
-        flash('Akses ditolak!', 'error')
-        return redirect(url_for('login'))
-    
     try:
         parts = MwsPart.query.all()
         parts_dict = {}
@@ -287,22 +324,18 @@ def quality1_dashboard():
         
         users = get_users_from_db()
         return render_template('quality/quality1_dashboard.html', 
-                             user=session['user'], 
                              parts=parts_dict, 
                              users=users)
     except Exception as e:
         print(f"Error in quality1 dashboard: {e}")
         return render_template('quality/quality1_dashboard.html', 
-                             user=session['user'], 
                              parts={}, 
                              users={})
 
 @app.route('/quality2-dashboard')
+@require_role('quality2')
+@limiter.limit("30 per minute")
 def quality2_dashboard():
-    if 'user' not in session or session['user']['role'] != 'quality2':
-        flash('Akses ditolak!', 'error')
-        return redirect(url_for('login'))
-    
     try:
         parts = MwsPart.query.all()
         parts_dict = {}
@@ -311,22 +344,18 @@ def quality2_dashboard():
         
         users = get_users_from_db()
         return render_template('quality/quality2_dashboard.html', 
-                             user=session['user'], 
                              parts=parts_dict, 
                              users=users)
     except Exception as e:
         print(f"Error in quality2 dashboard: {e}")
         return render_template('quality/quality2_dashboard.html', 
-                             user=session['user'], 
                              parts={}, 
                              users={})
 
 @app.route('/superadmin-dashboard')
+@require_role('superadmin')
+@limiter.limit("30 per minute")
 def superadmin_dashboard():
-    if 'user' not in session or session['user']['role'] != 'superadmin':
-        flash('Akses ditolak!', 'error')
-        return redirect(url_for('login'))
-    
     try:
         parts = MwsPart.query.all()
         parts_dict = {}
@@ -337,41 +366,35 @@ def superadmin_dashboard():
         
         users = get_users_from_db()
         return render_template('superadmin/superadmin_dashboard.html', 
-                               user=session['user'], 
                                parts=parts_dict, 
                                users=users,
-                               urgent_requests=urgent_requests) 
+                               urgent_requests=urgent_requests)
                                
     except Exception as e:
         print(f"Error in superadmin dashboard: {e}")
         return render_template('superadmin/superadmin_dashboard.html', 
-                               user=session['user'], 
                                parts={}, 
                                users={},
-                               urgent_requests=[]) 
+                               urgent_requests=[])
 
 # =====================================================================
-# ROUTE MANAJEMEN PENGGUNA (ADMIN & SUPERADMIN)
+# ROUTE MANAJEMEN PENGGUNA (ADMIN & SUPERADMIN) - DENGAN RATE LIMITING
 # =====================================================================
 
-@app.route('/users')
+@app.route('/admin/users')
+@require_role('admin', 'superadmin')
+@limiter.limit("25 per minute")
 def manage_users():
-    if 'user' not in session or session['user']['role'] not in ['admin', 'superadmin']:
-        return "Unauthorized", 403
-    
     users = get_users_from_db()
-    return render_template('user-management/manage_user.html', 
-                         users=users, 
-                         session=session)
+    return render_template('user-management/manage_user.html', users=users)
 
-@csrf.exempt
-@app.route('/get_user/<nik>')
+
+@app.route('/users/<nik>')
+@login_required
+@limiter.limit("25 per minute")
 def get_user(nik):
-    if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 403
-    
     try:
-        user = User.query.get(nik)
+        user = User.query.filter_by(nik=nik).first()
         if not user:
             return jsonify({'error': 'User not found'}), 404
         
@@ -386,12 +409,11 @@ def get_user(nik):
         print(f"Error getting user: {e}")
         return jsonify({'error': 'Database error'}), 500
 
-@csrf.exempt
-@app.route('/save_user', methods=['POST'])
+
+@app.route('/users', methods=['POST'])
+@require_role('admin', 'superadmin')
+@limiter.limit("25 per minute")  # Limit user creation/updates
 def save_user():
-    if 'user' not in session or session['user']['role'] not in ['admin', 'superadmin']:
-        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
-    
     try:
         req_data = request.get_json()
         nik = req_data.get('nik')
@@ -401,11 +423,13 @@ def save_user():
             return jsonify({'success': False, 'error': 'NIK tidak boleh kosong.'}), 400
         
         if nik_original:  # Update existing user
-            user_to_update = User.query.get(nik_original)
+            # FIX: Menggunakan filter_by karena nik bukan primary key
+            user_to_update = User.query.filter_by(nik=nik_original).first()
             if not user_to_update:
                 return jsonify({'success': False, 'error': 'Pengguna tidak ditemukan.'}), 404
             
-            if nik != nik_original and User.query.get(nik):
+            # Cek jika NIK baru sudah ada (kecuali jika tidak berubah)
+            if nik != nik_original and User.query.filter_by(nik=nik).first():
                 return jsonify({'success': False, 'error': f'NIK {nik} sudah ada.'}), 400
             
             user_to_update.nik = nik
@@ -417,7 +441,8 @@ def save_user():
             if req_data.get('password'):
                 user_to_update.set_password(req_data.get('password'))
         else:  # Create new user
-            if User.query.get(nik):
+            # FIX: Menggunakan filter_by karena nik bukan primary key
+            if User.query.filter_by(nik=nik).first():
                 return jsonify({'success': False, 'error': f'NIK {nik} sudah ada.'}), 400
             
             if not req_data.get('password'):
@@ -441,14 +466,14 @@ def save_user():
         print(f"Error saving user: {e}")
         return jsonify({'success': False, 'error': 'Database error'}), 500
 
-@csrf.exempt
-@app.route('/delete_user/<nik>', methods=['DELETE'])
+
+@app.route('/users/<nik>', methods=['DELETE'])
+@require_role('admin', 'superadmin')
+@limiter.limit("25 per minute")  # Limit user deletions
 def delete_user(nik):
-    if 'user' not in session or session['user']['role'] not in ['admin', 'superadmin']:
-        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
-    
     try:
-        user_to_delete = User.query.get(nik)
+        # FIX: Menggunakan filter_by karena nik bukan primary key
+        user_to_delete = User.query.filter_by(nik=nik).first()
         if user_to_delete:
             db.session.delete(user_to_delete)
             db.session.commit()
@@ -460,106 +485,129 @@ def delete_user(nik):
         return jsonify({'success': False, 'error': 'Database error'}), 500
 
 # =====================================================================
-# ROUTE MWS (MAINTENANCE WORK SHEET)
+# ROUTE MWS (MAINTENANCE WORK SHEET) - DENGAN RATE LIMITING
 # =====================================================================
 
-@app.route('/create_mws')
+@app.route('/create_mws', methods=['GET', 'POST'])
+@require_role('admin', 'superadmin')
+@limiter.limit("30 per minute")
 def create_mws():
-    if 'user' not in session or session['user']['role'] not in ['admin', 'superadmin']:
-        flash('Hanya Admin atau Superadmin yang dapat membuat MWS baru!', 'error')
-        return redirect(url_for('dashboard'))
-    return render_template('admin/create_mws.html', user=session['user'])
-
-
-@app.route('/create_mws', methods=['POST'])
-def create_mws_post():
-    if 'user' not in session or session['user']['role'] not in ['admin', 'superadmin']:
-        return jsonify({'error': 'Unauthorized'}), 403
+    """
+    Menangani pembuatan MWS (Manufacturing Work Sheet).
+    - Metode GET: Menampilkan formulir untuk membuat MWS baru.
+    - Metode POST: Memproses data dari formulir, memvalidasi, dan menyimpannya ke database.
+    """
     
-    try:
-        csrf_token = request.headers.get('X-CSRFToken')
-        validate_csrf(csrf_token)
-    except ValidationError:
-        return jsonify({'error': 'CSRF token tidak valid'}), 400
-    
-    try:
-        req_data = request.get_json()
+    # --- Penanganan untuk Metode POST ---
+    # Logika ini hanya akan berjalan ketika ada permintaan POST ke endpoint ini.
+    if request.method == 'POST':
+        try:
+            # 1. Validasi CSRF Token dari header permintaan
+            csrf_token = request.headers.get('X-CSRFToken')
+            validate_csrf(csrf_token)
+        except ValidationError:
+            # Jika token tidak valid atau tidak ada, kembalikan error
+            return jsonify({'success': False, 'error': 'CSRF token tidak valid atau hilang.'}), 400
         
-        # Generate part_id
-        part_count = MwsPart.query.count() + 1
-        part_id = f"MWS-{part_count:03d}"
-        
-        # Validate required fields
-        tittle_name = req_data.get('tittle_name')
-        job_type = req_data.get('jobType')
-        
-        if not tittle_name or not job_type:
-            return jsonify({'success': False, 'error': 'Tittle dan Jenis Pekerjaan wajib diisi.'}), 400
-        
-        # Parse dates
-        target_date = None
-        if req_data.get('targetDate'):
-            try:
-                target_date = datetime.strptime(req_data.get('targetDate'), '%Y-%m-%d').date()
-            except ValueError:
-                pass
-        
-        # Create new MWS part
-        new_mws = MwsPart(
-            part_id=part_id,
-            partNumber=req_data.get('partNumber', ''),
-            serialNumber=req_data.get('serialNumber', ''),
-            tittle=tittle_name,
-            jobType=job_type,
-            ref=req_data.get('ref', ''),
-            customer=req_data.get('customer', ''),
-            acType=req_data.get('acType', ''),
-            wbsNo=req_data.get('wbsNo', ''),
-            worksheetNo=req_data.get('worksheetNo', ''),
-            iwoNo=req_data.get('iwoNo', ''),
-            shopArea=req_data.get('shopArea', ''),
-            revision=req_data.get('revision', '1'),
-            targetDate=target_date,
-            status='pending',
-            currentStep=0
-        )
-        
-        db.session.add(new_mws)
-        db.session.flush()  # Get the ID
-        
-        # Create steps based on job type
-        steps_template = JOB_STEPS_TEMPLATES.get(job_type, [])
-        for step_data in steps_template:
-            step = MwsStep(
-                mws_part_id=new_mws.id,
-                no=step_data['no'],
-                description=step_data['description'],
-                status=step_data['status'],
-                man=step_data['man'],
-                hours=step_data['hours'],
-                tech=step_data['tech'],
-                insp=step_data['insp']
+        try:
+            # 2. Ambil data JSON dari body permintaan
+            req_data = request.get_json()
+            if not req_data:
+                return jsonify({'success': False, 'error': 'Request body harus berupa JSON.'}), 400
+
+            # 3. Validasi field yang wajib diisi
+            tittle_name = req_data.get('tittle_name')
+            job_type = req_data.get('jobType')
+            
+            if not tittle_name or not job_type:
+                return jsonify({'success': False, 'error': 'Tittle dan Jenis Pekerjaan wajib diisi.'}), 400
+            
+            # 4. Generate part_id secara atomik dan aman
+            # Menggunakan lock atau transaksi untuk mencegah race condition jika diperlukan,
+            # namun untuk kesederhanaan, kita hitung seperti ini.
+            # Untuk produksi, pertimbangkan sequence di database atau mekanisme locking.
+            part_count = MwsPart.query.count() + 1
+            part_id = f"MWS-{part_count:03d}"
+            
+            # 5. Parsing tanggal dengan penanganan error
+            target_date = None
+            if req_data.get('targetDate'):
+                try:
+                    # Konversi string tanggal ke objek date Python
+                    target_date = datetime.strptime(req_data.get('targetDate'), '%Y-%m-%d').date()
+                except (ValueError, TypeError):
+                    # Abaikan jika format tanggal salah atau tipe tidak sesuai
+                    pass
+            
+            # 6. Buat instance MwsPart baru dengan data yang diterima
+            new_mws = MwsPart(
+                part_id=part_id,
+                partNumber=req_data.get('partNumber', ''),
+                serialNumber=req_data.get('serialNumber', ''),
+                tittle=tittle_name,
+                jobType=job_type,
+                ref=req_data.get('ref', ''),
+                customer=req_data.get('customer', ''),
+                acType=req_data.get('acType', ''),
+                wbsNo=req_data.get('wbsNo', ''),
+                worksheetNo=req_data.get('worksheetNo', ''),
+                iwoNo=req_data.get('iwoNo', ''),
+                shopArea=req_data.get('shopArea', ''),
+                revision=req_data.get('revision', '1'),
+                targetDate=target_date,
+                status='pending', # Status awal
+                currentStep=1 # Langsung set ke step 1
             )
-            step.set_details(step_data['details'])
-            db.session.add(step)
-        
-        # Set initial currentStep to 1 for new MWS
-        new_mws.currentStep = 1
-        
-        db.session.commit()
-        return jsonify({'success': True, 'partId': part_id})
-        
-    except Exception as e:
-        db.session.rollback()
-        print(f"Error creating MWS: {e}")
-        return jsonify({'success': False, 'error': 'Database error'}), 500
+            
+            db.session.add(new_mws)
+            db.session.flush()  # Penting untuk mendapatkan new_mws.id sebelum commit
+            
+            # 7. Buat MwsStep berdasarkan template dari job_type
+            steps_template = JOB_STEPS_TEMPLATES.get(job_type, [])
+            if not steps_template:
+                # Jika tidak ada template, rollback dan beri tahu user
+                db.session.rollback()
+                return jsonify({'success': False, 'error': f'Template langkah untuk jenis pekerjaan "{job_type}" tidak ditemukan.'}), 400
+
+            for step_data in steps_template:
+                step = MwsStep(
+                    mws_part_id=new_mws.id, # Gunakan ID dari MWS yang baru dibuat
+                    no=step_data.get('no'),
+                    description=step_data.get('description'),
+                    status=step_data.get('status', 'pending'),
+                    man=step_data.get('man'),
+                    hours=step_data.get('hours'),
+                    tech=step_data.get('tech'),
+                    insp=step_data.get('insp')
+                )
+                # Jika 'details' adalah JSON/dict, simpan dengan metode khusus
+                step.set_details(step_data.get('details', {}))
+                db.session.add(step)
+            
+            # 8. Commit semua perubahan ke database
+            db.session.commit()
+            
+            # Kirim respons sukses bersama part_id yang baru dibuat
+            return jsonify({'success': True, 'partId': part_id}), 201 # 201 Created lebih cocok
+            
+        except Exception as e:
+            # Jika terjadi error apapun selama proses di atas, rollback sesi database
+            db.session.rollback()
+            # Catat error untuk debugging
+            app.logger.error(f"Error saat membuat MWS: {e}", exc_info=True)
+            # Kirim respons error umum ke klien
+            return jsonify({'success': False, 'error': 'Terjadi kesalahan internal pada server.'}), 500
+
+    # --- Penanganan untuk Metode GET (Default) ---
+    # Jika permintaan bukan POST, maka diasumsikan GET.
+    # Kode ini akan merender template HTML yang berisi formulir.
+    return render_template('mws/create_mws.html')
 
 @csrf.exempt
 @app.route('/delete_mws/<part_id>', methods=['DELETE'])
+@require_role('admin', 'superadmin')
+@limiter.limit("20 per minute")  # Limit MWS deletions
 def delete_mws(part_id):
-    if 'user' not in session or session['user']['role'] not in ['admin', 'superadmin']:
-        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
-    
     try:
         mws_part = MwsPart.query.filter_by(part_id=part_id).first()
         if mws_part:
@@ -573,15 +621,12 @@ def delete_mws(part_id):
         print(f"Error deleting MWS: {e}")
         return jsonify({'success': False, 'error': 'Database error'}), 500
 
-
 @csrf.exempt
 @app.route('/mws/<part_id>')
+@login_required
+@limiter.limit("60 per minute")
 def mws_detail(part_id):
-    if 'user' not in session:
-        return redirect(url_for('login'))
-    
     try:
-        user = session['user']
         mws_part = MwsPart.query.filter_by(part_id=part_id).first()
         
         if not mws_part:
@@ -592,7 +637,6 @@ def mws_detail(part_id):
         part_dict = mws_part.to_dict()
         
         return render_template('mws/mws_detail.html', 
-                             user=user, 
                              part=part_dict, 
                              part_id=part_id, 
                              users=users)
@@ -603,6 +647,8 @@ def mws_detail(part_id):
 
 @csrf.exempt
 @app.route('/update_mws_info', methods=['POST'])
+@login_required
+@limiter.limit("40 per minute")  # Limit MWS updates
 def update_mws_info():
     try:
         data = request.get_json()
@@ -642,15 +688,14 @@ def update_mws_info():
         return jsonify({'success': False, 'error': 'Database error'}), 500
 
 # =====================================================================
-# ROUTE AKSI SPESIFIK PADA MWS (CRUD STEP & UPDATE STATUS)
+# ROUTE AKSI SPESIFIK PADA MWS (CRUD STEP & UPDATE STATUS) - DENGAN RATE LIMITING
 # =====================================================================
 
 @csrf.exempt
 @app.route('/insert_step/<part_id>', methods=['POST'])
+@require_role('admin', 'superadmin')
+@limiter.limit("30 per minute")
 def insert_step(part_id):
-    if 'user' not in session or session['user']['role'] not in ['admin', 'superadmin']:
-        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
-    
     try:
         mws_part = MwsPart.query.filter_by(part_id=part_id).first()
         if not mws_part:
@@ -697,10 +742,9 @@ def insert_step(part_id):
 
 @csrf.exempt
 @app.route('/update_step_description/<part_id>/<int:step_no>', methods=['POST'])
+@require_role('admin', 'superadmin')
+@limiter.limit("30 per minute")
 def update_step_description(part_id, step_no):
-    if 'user' not in session or session['user']['role'] not in ['admin', 'superadmin']:
-        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
-    
     try:
         mws_part = MwsPart.query.filter_by(part_id=part_id).first()
         if not mws_part:
@@ -730,10 +774,9 @@ def update_step_description(part_id, step_no):
 
 @csrf.exempt
 @app.route('/delete_step/<part_id>/<int:step_no>', methods=['DELETE'])
+@require_role('admin', 'superadmin')
+@limiter.limit("20 per minute")
 def delete_step(part_id, step_no):
-    if 'user' not in session or session['user']['role'] not in ['admin', 'superadmin']:
-        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
-    
     try:
         mws_part = MwsPart.query.filter_by(part_id=part_id).first()
         if not mws_part:
@@ -770,13 +813,11 @@ def delete_step(part_id, step_no):
         return jsonify({'success': False, 'error': 'Database error'}), 500
 
 @csrf.exempt
-@app.route('/update_step_field', methods=['POST'])
+@app.route('/update_step_field', methods=['POST']) # untuk mechanic dan inspector 
+@login_required
+@limiter.limit("70 per minute")  # Higher limit for frequent updates
 def update_step_field():
-    if 'user' not in session:
-        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
-    
     try:
-        user = session['user']
         req_data = request.json
         part_id = req_data.get('partId')
         step_no = req_data.get('stepNo')
@@ -797,10 +838,10 @@ def update_step_field():
         
         # Role-based permissions
         if field in ['man', 'hours', 'tech']:
-            if user['role'] != 'mechanic' or mws_part.assignedTo != user['nik']:
+            if current_user.role != 'mechanic' or mws_part.assignedTo != current_user.nik:
                 return jsonify({'success': False, 'error': 'Hanya mekanik yang ditugaskan yang dapat mengubah MAN, Hours, dan TECH'}), 403
         
-        if field == 'insp' and user['role'] != 'quality1':
+        if field == 'insp' and current_user.role != 'quality1':
             return jsonify({'success': False, 'error': 'Hanya Quality Inspector yang dapat mengubah INSP'}), 403
         
         setattr(step, field, value)
@@ -814,13 +855,11 @@ def update_step_field():
         return jsonify({'success': False, 'error': 'Database error'}), 500
 
 @csrf.exempt
-@app.route('/update_step_status', methods=['POST'])
+@app.route('/update_step_status', methods=['POST']) # untuk status setiap step 
+@login_required
+@limiter.limit("40 per minute")
 def update_step_status():
-    if 'user' not in session:
-        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
-    
     try:
-        user = session['user']
         req_data = request.get_json()
         part_id = req_data.get('partId')
         step_no = req_data.get('stepNo')
@@ -839,14 +878,14 @@ def update_step_status():
             return jsonify({'success': False, 'error': 'Langkah kerja tidak ditemukan'}), 404
         
         # Validation for mechanic role
-        if user['role'] == 'mechanic' and new_status == 'in_progress':
+        if current_user.role == 'mechanic' and new_status == 'in_progress':
             if not step.man or not step.hours or not step.tech:
                 return jsonify({'success': False, 'error': 'Server validation: Harap isi MAN, Hours, dan TECH sebelum mengirim ke inspector.'}), 400
         
         step.status = new_status
         
         if new_status == 'completed':
-            step.completedBy = user['nik']
+            step.completedBy = current_user.nik
             step.completedDate = datetime.now().strftime('%Y-%m-%d')
             
         elif new_status == 'in_progress':
@@ -867,11 +906,10 @@ def update_step_status():
         return jsonify({'success': False, 'error': 'Database error'}), 500
 
 @csrf.exempt
-@app.route('/update_step_details', methods=['POST'])
+@app.route('/update_step_details', methods=['POST']) 
+@require_role('admin', 'superadmin')
+@limiter.limit("30 per minute")
 def update_step_details():
-    if 'user' not in session or session['user']['role'] not in ['admin', 'superadmin']:
-        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
-    
     try:
         req_data = request.get_json()
         part_id = req_data.get('partId')
@@ -905,19 +943,14 @@ def update_step_details():
 
 @csrf.exempt
 @app.route('/update_step_after_submission', methods=['POST'])
+@require_role('mechanic')
+@limiter.limit("40 per minute")
 def update_step_after_submission():
     """
     Endpoint untuk mekanik mengedit MAN, HOURS, dan TECH 
     setelah langkah kerja dikirim ke inspector (status 'in_progress').
     """
-    if 'user' not in session:
-        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
-    
     try:
-        user = session['user']
-        if user['role'] != 'mechanic':
-            return jsonify({'success': False, 'error': 'Hanya mekanik yang dapat melakukan aksi ini'}), 403
-        
         req_data = request.json
         part_id = req_data.get('partId')
         step_no = req_data.get('stepNo')
@@ -932,7 +965,7 @@ def update_step_after_submission():
         if not mws_part:
             return jsonify({'success': False, 'error': 'Part tidak ditemukan'}), 404
         
-        if mws_part.assignedTo != user['nik']:
+        if mws_part.assignedTo != current_user.nik:
             return jsonify({'success': False, 'error': 'Anda tidak ditugaskan untuk MWS ini'}), 403
         
         step = MwsStep.query.filter_by(
@@ -972,10 +1005,9 @@ def update_step_after_submission():
 
 @csrf.exempt
 @app.route('/assign_part', methods=['POST'])
+@require_role('admin', 'superadmin')
+@limiter.limit("30 per minute")
 def assign_part():
-    if 'user' not in session or session['user']['role'] not in ['admin', 'superadmin']:
-        return jsonify({'error': 'Unauthorized'}), 403
-    
     try:
         part_id = request.json.get('partId')
         assigned_to = request.json.get('assignedTo')
@@ -999,18 +1031,13 @@ def assign_part():
 
 @csrf.exempt
 @app.route('/update_dates', methods=['POST'])
+@require_role('mechanic')
+@limiter.limit("50 per minute")
 def update_dates():
-    if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 403
-    
     try:
-        user = session['user']
         part_id = request.json.get('partId')
         field = request.json.get('field')
         value = request.json.get('value')
-        
-        if user['role'] != 'mechanic':
-            return jsonify({'error': 'Only mechanic can update dates'}), 403
         
         mws_part = MwsPart.query.filter_by(part_id=part_id).first()
         if not mws_part:
@@ -1036,15 +1063,13 @@ def update_dates():
 
 @csrf.exempt
 @app.route('/sign_document', methods=['POST'])
+@login_required
+@limiter.limit("20 per minute")  
 def sign_document():
-    if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 403
-    
     try:
-        user = session['user']
         part_id = request.json.get('partId')
         sign_type = request.json.get('type')
-        print(f"User attempting to sign: {user}")
+        print(f"User attempting to sign: {current_user.to_dict()}")
         print(f"Signature type requested: '{sign_type}' for Part ID: {part_id}")
 
         mws_part = MwsPart.query.filter_by(part_id=part_id).first()
@@ -1053,21 +1078,21 @@ def sign_document():
         
         current_date = datetime.now().strftime('%Y-%m-%d')
         
-        if sign_type == 'prepared' and user['role'] == 'admin':
-            mws_part.preparedBy = user['nik']
+        if sign_type == 'prepared' and current_user.role == 'admin':
+            mws_part.preparedBy = current_user.nik
             mws_part.preparedDate = current_date
-        elif sign_type == 'approved' and user['role'] == 'superadmin':
-            mws_part.approvedBy = user['nik']
+        elif sign_type == 'approved' and current_user.role == 'superadmin':
+            mws_part.approvedBy = current_user.nik
             mws_part.approvedDate = current_date
-        elif sign_type == 'verified' and user['role'] == 'quality2':
-            mws_part.verifiedBy = user['nik']
+        elif sign_type == 'verified' and current_user.role == 'quality2':
+            mws_part.verifiedBy = current_user.nik
             mws_part.verifiedDate = current_date
         else:
-            print(f"AUTHORIZATION FAILED: User role '{user['role']}' is not authorized for signature type '{sign_type}'.")
+            print(f"AUTHORIZATION FAILED: User role '{current_user.role}' is not authorized for signature type '{sign_type}'.")
             return jsonify({'error': 'Unauthorized for this signature type'}), 403
         
         db.session.commit()
-        print("Signature successful!") # 
+        print("Signature successful!")
         return jsonify({'success': True})
         
     except Exception as e:
@@ -1076,20 +1101,15 @@ def sign_document():
         return jsonify({'error': 'Database error'}), 500
 
 # =====================================================================
-# TIMER FUNCTIONALITY
+# TIMER FUNCTIONALITY - DENGAN RATE LIMITING
 # =====================================================================
 
 @csrf.exempt
 @app.route('/start_timer', methods=['POST'])
+@require_role('mechanic')
+@limiter.limit("60 per minute")  # Allow frequent timer starts
 def start_timer():
-    if 'user' not in session:
-        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
-    
     try:
-        user = session['user']
-        if user['role'] != 'mechanic':
-            return jsonify({'success': False, 'error': 'Hanya mekanik yang dapat memulai timer'}), 403
-        
         req_data = request.json
         part_id = req_data.get('partId')
         step_no = req_data.get('stepNo')
@@ -1098,7 +1118,7 @@ def start_timer():
         if not mws_part:
             return jsonify({'success': False, 'error': 'Part tidak ditemukan'}), 404
         
-        if mws_part.assignedTo != user['nik']:
+        if mws_part.assignedTo != current_user.nik:
             return jsonify({'success': False, 'error': 'Anda tidak ditugaskan untuk MWS ini'}), 403
         
         step = MwsStep.query.filter_by(
@@ -1109,14 +1129,10 @@ def start_timer():
         if not step:
             return jsonify({'success': False, 'error': 'Langkah kerja tidak ditemukan'}), 404
         
-        # --- PERUBAHAN DI SINI ---
-        # Pengecekan 'step.status != pending' dihapus agar lebih fleksibel.
-        # Frontend sudah mengontrol kapan tombol bisa ditekan.
-        
         if step.timer_start_time:
             return jsonify({'success': False, 'error': 'Timer sudah berjalan untuk langkah ini'}), 400
         
-        # Save start time in ISO format
+   
         step.timer_start_time = datetime.now(timezone.utc).isoformat()
         db.session.commit()
         
@@ -1129,19 +1145,14 @@ def start_timer():
 
 @csrf.exempt
 @app.route('/stop_timer', methods=['POST'])
+@require_role('mechanic')
+@limiter.limit("60 per minute")  
 def stop_timer():
     """
     Menghitung durasi sejak timer dimulai, mengakumulasi total menit,
     dan menyimpannya kembali ke data step kerja di field 'hours'.
     """
-    if 'user' not in session:
-        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
-    
     try:
-        user = session['user']
-        if user['role'] != 'mechanic':
-            return jsonify({'success': False, 'error': 'Hanya mekanik yang dapat menghentikan timer'}), 403
-        
         req_data = request.json
         part_id = req_data.get('partId')
         step_no = req_data.get('stepNo')
@@ -1161,18 +1172,17 @@ def stop_timer():
         if not step.timer_start_time:
             return jsonify({'success': False, 'error': 'Timer belum dimulai untuk langkah ini'}), 400
         
-        # Calculate duration
+      
         start_time = datetime.fromisoformat(step.timer_start_time)
         stop_time = datetime.now(timezone.utc)
         duration = stop_time - start_time
         duration_in_minutes = duration.total_seconds() / 60
         
-        # Add to existing hours
         existing_minutes = float(step.hours or 0)
         total_minutes = existing_minutes + duration_in_minutes
         
         step.hours = f"{total_minutes:.2f}"
-        step.timer_start_time = None  # Clear timer
+        step.timer_start_time = None  
         
         db.session.commit()
         
@@ -1185,12 +1195,10 @@ def stop_timer():
 
 @csrf.exempt
 @app.route('/set_urgent_status/<part_id>', methods=['POST'])
+@login_required
+@limiter.limit("10 per minute")
 def set_urgent_status(part_id):
-    if 'user' not in session:
-        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
-    
     try:
-        user = session['user']
         req_data = request.get_json()
         action = req_data.get('action')
         
@@ -1199,26 +1207,24 @@ def set_urgent_status(part_id):
             return jsonify({'success': False, 'error': 'Part tidak ditemukan'}), 404
         
         # Kondisi untuk mekanik meminta urgensi
-        if action == 'request' and user['role'] == 'mechanic':
+        if action == 'request' and current_user.role == 'mechanic':
             mws_part.urgent_request = True
         
-        # --- PERBAIKAN DI SINI ---
         # Kondisi baru untuk mekanik membatalkan permintaan urgensi
-        elif action == 'cancel_request' and user['role'] == 'mechanic':
+        elif action == 'cancel_request' and current_user.role == 'mechanic':
             mws_part.urgent_request = False
         
         # Kondisi untuk admin/superadmin menyetujui permintaan
-        elif action == 'approve' and user['role'] in ['admin', 'superadmin']:
+        elif action == 'approve' and current_user.role in ['admin', 'superadmin']:
             mws_part.is_urgent = True
             mws_part.urgent_request = False
             
-        # Kondisi untuk admin/superadmin mengubah status urgen (menjadikan/membatalkan)
-        elif action == 'toggle' and user['role'] in ['admin', 'superadmin']:
+        elif action == 'toggle' and current_user.role in ['admin', 'superadmin']:
             mws_part.is_urgent = not mws_part.is_urgent
-            # Pastikan permintaan juga di-reset jika ada
+
             mws_part.urgent_request = False
             
-        # Jika tidak ada kondisi yang cocok, tolak aksi
+    
         else:
             return jsonify({'success': False, 'error': 'Aksi tidak diizinkan untuk peran Anda.'}), 403
         
@@ -1229,32 +1235,8 @@ def set_urgent_status(part_id):
         db.session.rollback()
         print(f"Error setting urgent status: {e}")
         return jsonify({'success': False, 'error': 'Database error'}), 500
-# =====================================================================
-# ROUTE UNTUK CETAK MWS
-# =====================================================================
 
-@app.route('/cetak/<part_id>')
-def cetak_mws(part_id):
-    """
-    Rute ini khusus untuk testing dan menampilkan halaman cetak
-    untuk MWS (Maintenance Work Sheet) tertentu.
-    """
-    if 'user' not in session:
-        return redirect(url_for('login'))
-    
-    try:
-        mws_part = MwsPart.query.filter_by(part_id=part_id).first()
-        if not mws_part:
-            flash('MWS dengan ID tersebut tidak ditemukan!', 'error')
-            return redirect(url_for('dashboard'))
-        
-        part_dict = mws_part.to_dict()
-        return render_template('mws/cetak.html', part=part_dict, part_id=part_id)
-        
-    except Exception as e:
-        print(f"Error in cetak_mws: {e}")
-        flash('Terjadi kesalahan saat memuat halaman cetak!', 'error')
-        return redirect(url_for('dashboard'))
+
 
 # =====================================================================
 # MENJALANKAN APLIKASI

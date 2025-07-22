@@ -1,37 +1,57 @@
 {% extends "shared/base.html" %} {% block title %}Login - Sistem MWS Aircraft Maintenance{% endblock %} {% block content %}
 
-<div class="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-  <div id="login-card" class="max-w-md w-full transition-transform duration-500">
-    <div class="text-center mb-6">
-      <img src="{{ url_for('static', filename='img/logo PT DI.jpeg') }}" alt="Logo PT DI" class="w-32 h-32 mx-auto mb-4 object-contain" />
-      <h1 class="text-3xl font-bold text-gray-800">Maintenance WorkSheet</h1>
+<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+  <div id="login-card" class="max-w-md w-full">
+    <!-- Header Section -->
+    <div class="text-center mb-8">
+      <div class="relative inline-block">
+        <img src="{{ url_for('static', filename='img/logo PT DI.jpeg') }}" alt="Logo PT DI" class="w-24 h-24 sm:w-32 sm:h-32 mx-auto mb-4 object-contain rounded-full shadow-lg bg-white p-2" />
+      </div>
+      <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">Maintenance WorkSheet</h1>
+      <p class="text-sm text-gray-600">PT Dirgantara Indonesia</p>
     </div>
 
-    <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 sm:p-8 relative">
-      <!-- Overlay untuk login berhasil -->
-      <div id="success-overlay" class="absolute inset-0 bg-white flex flex-col items-center justify-center text-center z-10 hidden">
-        <div class="bg-green-500 p-4 rounded-full inline-flex"><i class="fas fa-check text-white text-4xl"></i></div>
-        <p class="mt-4 text-lg font-semibold text-gray-700">Login Berhasil!</p>
-        <p class="text-sm text-gray-500">Mengarahkan ke dashboard...</p>
+    <!-- Main Card -->
+    <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden relative">
+      <div id="success-overlay" class="absolute inset-0 bg-white flex flex-col items-center justify-center text-center z-20 opacity-0 invisible p-6">
+        <div class="transform scale-0" id="success-icon">
+          <div class="bg-green-500 p-4 sm:p-6 rounded-full inline-flex shadow-lg">
+            <i class="fas fa-check text-white text-2xl sm:text-4xl"></i>
+          </div>
+        </div>
+        <div class="mt-4 sm:mt-6 transform translate-y-4 opacity-0" id="success-text">
+          <p class="text-lg sm:text-xl font-semibold text-gray-800 mb-2">Login Berhasil!</p>
+          <p class="text-sm text-gray-500">Mengarahkan ke dashboard...</p>
+          <div class="mt-4">
+            <div class="inline-flex items-center space-x-2">
+              <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+              <span class="text-xs text-gray-400">Memuat...</span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div id="login-content">
+      <!-- Login Content -->
+      <div id="login-content" class="p-6 sm:p-8">
         <div class="text-center mb-6">
-          <h2 class="text-xl font-semibold text-gray-700">Selamat Datang Kembali</h2>
+          <h2 class="text-xl sm:text-2xl font-semibold text-gray-800 mb-2">Selamat Datang</h2>
           <p class="text-gray-500 text-sm">Masuk dengan NIK dan password Anda</p>
         </div>
 
-        <div id="flash-container"></div>
+        <!-- Flash Messages Container -->
+        <div id="flash-container" class="mb-4"></div>
 
-        <form id="login-form" method="POST" class="space-y-4">
+        <!-- Login Form -->
+        <form id="login-form" method="POST" class="space-y-5">
           <!-- CSRF token -->
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 
-          <div>
-            <label for="nik" class="block text-sm font-medium text-gray-700 mb-1">NIK</label>
+          <!-- NIK Input -->
+          <div class="space-y-2">
+            <label for="nik" class="block text-sm font-medium text-gray-700">NIK</label>
             <div class="relative">
               <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <i class="fas fa-user text-gray-400"></i>
+                <i class="fas fa-user text-gray-400 text-sm"></i>
               </div>
               <input
                 type="text"
@@ -42,28 +62,37 @@
                 pattern="\d{6}"
                 title="Harus berupa 6 digit angka"
                 placeholder="Contoh: 000001"
-                class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 text-sm sm:text-base"
               />
             </div>
           </div>
 
-          <div>
-            <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+          <!-- Password Input -->
+          <div class="space-y-2">
+            <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
             <div class="relative">
               <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <i class="fas fa-lock text-gray-400"></i>
+                <i class="fas fa-lock text-gray-400 text-sm"></i>
               </div>
-              <input type="password" id="password" name="password" required placeholder="Masukkan password" class="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+              <input
+                type="password"
+                id="password"
+                name="password"
+                required
+                placeholder="Masukkan password"
+                class="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 text-sm sm:text-base"
+              />
               <button type="button" id="togglePassword" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-blue-600">
-                <i class="fas fa-eye"></i>
+                <i class="fas fa-eye text-sm"></i>
               </button>
             </div>
           </div>
 
+          <!-- Submit Button -->
           <button
             id="submit-button"
             type="submit"
-            class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-semibold transition-transform transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-300"
+            class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white py-3 px-4 rounded-lg font-semibold focus:outline-none focus:ring-4 focus:ring-blue-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <i class="fas fa-sign-in-alt mr-2"></i>
             <span id="submit-button-text">Masuk</span>
@@ -72,14 +101,62 @@
       </div>
     </div>
 
-    <div class="mt-6 p-4 bg-gray-100 rounded-lg border">
-      <h6 class="font-semibold text-gray-700 mb-2">Gunakan Akun Demo (Klik untuk mengisi):</h6>
-      <div id="demo-accounts" class="text-sm text-gray-600 grid grid-cols-1 sm:grid-cols-2 gap-2">
-        <button type="button" class="demo-account-btn" data-nik="000001" data-password="123"><strong>Admin:</strong> 000001 / 123</button>
-        <button type="button" class="demo-account-btn" data-nik="000002" data-password="123"><strong>Mechanic:</strong> 000002 / 123</button>
-        <button type="button" class="demo-account-btn" data-nik="000003" data-password="123"><strong>Quality 1:</strong> 000003 / 123</button>
-        <button type="button" class="demo-account-btn" data-nik="000004" data-password="123"><strong>Quality 2:</strong> 000004 / 123</button>
-        <button type="button" class="demo-account-btn" data-nik="000005" data-password="123"><strong>Super Admin:</strong> 000005 / 123</button>
+    <!-- Demo Accounts Section -->
+    <div class="mt-6 p-4 sm:p-6 bg-white/80 backdrop-blur-sm rounded-xl border border-gray-200 shadow-lg">
+      <h6 class="font-semibold text-gray-700 mb-3 text-center text-sm sm:text-base">
+        <i class="fas fa-users mr-2 text-blue-600"></i>
+        Gunakan Akun Demo (Klik untuk mengisi)
+      </h6>
+      <div id="demo-accounts" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs sm:text-sm">
+        <button type="button" class="demo-account-btn" data-nik="000001" data-password="123">
+          <div class="flex items-center space-x-2">
+            <div class="w-2 h-2 bg-red-500 rounded-full"></div>
+            <div>
+              <div class="font-semibold text-gray-800">Admin</div>
+              <div class="text-gray-500">000001 / 123</div>
+            </div>
+          </div>
+        </button>
+
+        <button type="button" class="demo-account-btn" data-nik="000002" data-password="123">
+          <div class="flex items-center space-x-2">
+            <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
+            <div>
+              <div class="font-semibold text-gray-800">Mechanic</div>
+              <div class="text-gray-500">000002 / 123</div>
+            </div>
+          </div>
+        </button>
+
+        <button type="button" class="demo-account-btn" data-nik="000003" data-password="123">
+          <div class="flex items-center space-x-2">
+            <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+            <div>
+              <div class="font-semibold text-gray-800">Quality 1</div>
+              <div class="text-gray-500">000003 / 123</div>
+            </div>
+          </div>
+        </button>
+
+        <button type="button" class="demo-account-btn" data-nik="000004" data-password="123">
+          <div class="flex items-center space-x-2">
+            <div class="w-2 h-2 bg-yellow-500 rounded-full"></div>
+            <div>
+              <div class="font-semibold text-gray-800">Quality 2</div>
+              <div class="text-gray-500">000004 / 123</div>
+            </div>
+          </div>
+        </button>
+
+        <button type="button" class="demo-account-btn col-span-1 sm:col-span-2" data-nik="000005" data-password="123">
+          <div class="flex items-center justify-center space-x-2">
+            <div class="w-2 h-2 bg-purple-500 rounded-full"></div>
+            <div>
+              <div class="font-semibold text-gray-800">Super Admin</div>
+              <div class="text-gray-500">000005 / 123</div>
+            </div>
+          </div>
+        </button>
       </div>
     </div>
   </div>
@@ -87,51 +164,31 @@
 
 <style>
   .demo-account-btn {
-    padding: 6px 10px;
-    border-radius: 6px;
+    padding: 12px 16px;
+    border-radius: 8px;
     background-color: white;
     border: 1px solid #e5e7eb;
     text-align: left;
-    transition: all 0.2s;
     cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   }
 
   .demo-account-btn:hover {
-    background-color: #f0f9ff;
+    background-color: #f8fafc;
     border-color: #3b82f6;
-    color: #1e40af;
   }
 
-  .animate-shake {
-    animation: shake 0.5s ease-in-out;
-  }
-
-  @keyframes shake {
-    0%,
-    100% {
-      transform: translateX(0);
-    }
-    20%,
-    60% {
-      transform: translateX(-5px);
-    }
-    40%,
-    80% {
-      transform: translateX(5px);
+  /* Loading animation */
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
     }
   }
 
-  .animate-pulse-success {
-    animation: pulse-success 1s ease-in-out;
-  }
-
-  @keyframes pulse-success {
-    0%,
-    100% {
-      transform: scale(1);
-    }
-    50% {
-      transform: scale(1.02);
+  /* Responsive adjustments */
+  @media (max-width: 640px) {
+    .demo-account-btn {
+      padding: 10px 12px;
     }
   }
 </style>
@@ -144,14 +201,19 @@
     const submitButton = document.getElementById("submit-button");
     const submitButtonText = document.getElementById("submit-button-text");
     const successOverlay = document.getElementById("success-overlay");
+    const successIcon = document.getElementById("success-icon");
+    const successText = document.getElementById("success-text");
     const loginContent = document.getElementById("login-content");
     const nikInput = document.getElementById("nik");
     const passwordInput = document.getElementById("password");
 
+    // Login form submission
     loginForm.addEventListener("submit", function (e) {
       e.preventDefault();
+
+      // Disable button and show loading state
       submitButton.disabled = true;
-      submitButtonText.textContent = "Memproses...";
+      submitButtonText.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Memproses...';
       flashContainer.innerHTML = "";
 
       const formData = new FormData(loginForm);
@@ -167,51 +229,83 @@
         .then((response) => response.json().then((data) => ({ ok: response.ok, data })))
         .then(({ ok, data }) => {
           if (ok && data.redirect_url) {
-            loginContent.classList.add("hidden");
-            successOverlay.classList.remove("hidden");
-            successOverlay.classList.add("flex");
-            loginCard.classList.add("animate-pulse-success");
+            // Show success overlay with smooth animation
+            successOverlay.style.opacity = "1";
+            successOverlay.style.visibility = "visible";
 
+            // Animate success icon
+            setTimeout(() => {
+              successIcon.style.transform = "scale(1)";
+            }, 50);
+
+            // Animate success text
+            setTimeout(() => {
+              successText.style.transform = "translateY(0)";
+              successText.style.opacity = "1";
+            }, 150);
+
+            // Redirect after animation
             setTimeout(() => {
               window.location.href = data.redirect_url;
-            }, 1500);
+            }, 1200);
           } else {
-            const errorMessage = `<div class="mb-4 p-4 rounded-lg text-sm bg-red-100 border border-red-200 text-red-700">${data.message}</div>`;
+            // Show error message
+            const errorMessage = `
+              <div class="mb-4 p-4 rounded-lg text-sm bg-red-50 border border-red-200 text-red-700 flex items-center">
+                <i class="fas fa-exclamation-triangle mr-2"></i>
+                ${data.message}
+              </div>
+            `;
             flashContainer.innerHTML = errorMessage;
-            loginCard.classList.add("animate-shake");
+
+            // Reset button
             submitButton.disabled = false;
-            submitButtonText.textContent = "Masuk";
-            setTimeout(() => {
-              loginCard.classList.remove("animate-shake");
-            }, 500);
+            submitButtonText.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i>Masuk';
           }
         })
         .catch((error) => {
           console.error("Error:", error);
-          const errorMessage = `<div class="mb-4 p-4 rounded-lg text-sm bg-red-100 border border-red-200 text-red-700">Terjadi kesalahan jaringan.</div>`;
+          const errorMessage = `
+            <div class="mb-4 p-4 rounded-lg text-sm bg-red-50 border border-red-200 text-red-700 flex items-center">
+              <i class="fas fa-wifi mr-2"></i>
+              Terjadi kesalahan jaringan. Silakan coba lagi.
+            </div>
+          `;
           flashContainer.innerHTML = errorMessage;
           submitButton.disabled = false;
-          submitButtonText.textContent = "Masuk";
+          submitButtonText.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i>Masuk';
         });
     });
 
+    // Toggle password visibility
     const togglePassword = document.getElementById("togglePassword");
     if (togglePassword) {
       togglePassword.addEventListener("click", function () {
         const type = passwordInput.getAttribute("type") === "password" ? "text" : "password";
         passwordInput.setAttribute("type", type);
-        this.querySelector("i").classList.toggle("fa-eye");
-        this.querySelector("i").classList.toggle("fa-eye-slash");
+
+        const icon = this.querySelector("i");
+        icon.classList.toggle("fa-eye");
+        icon.classList.toggle("fa-eye-slash");
       });
     }
 
+    // Demo account buttons
     const demoButtons = document.querySelectorAll(".demo-account-btn");
     demoButtons.forEach((button) => {
       button.addEventListener("click", function () {
         nikInput.value = this.dataset.nik;
         passwordInput.value = this.dataset.password;
+
+        // Focus on submit button
+        setTimeout(() => {
+          submitButton.focus();
+        }, 100);
       });
     });
+
+    // Auto-focus on NIK input
+    nikInput.focus();
   });
 </script>
 

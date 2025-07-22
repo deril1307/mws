@@ -1,0 +1,14 @@
+{
+  "name": "aircraft-maintenance-system",
+  "version": "1.0.0",
+  "description": "Aircraft Maintenance Work Sheet System",
+  "scripts": {
+    "build-css": "tailwindcss -i ./static/css/input.css -o ./static/css/output.css --watch",
+    "build-css-prod": "tailwindcss -i ./static/css/input.css -o ./static/css/output.css --minify"
+  },
+  "devDependencies": {
+    "@tailwindcss/forms": "^0.5.10",
+    "autoprefixer": "^10.4.21",
+    "tailwindcss": "^3.4.17"
+  }
+}

@@ -1,148 +1,230 @@
-{% extends "shared/base.html" %} {% block title %} {% if session['user']['role'] == 'superadmin' %} Manajemen Admin & Pengguna {% else %} Manajemen Pengguna {% endif %} - Sistem Aircraft Maintenance {% endblock %} {% block content %}
-<div class="min-h-screen bg-gray-50">
-  <div class="bg-white shadow-sm border-b border-gray-200">
+{% extends "shared/base.html" %} {% block title %} {% if user.role == 'superadmin' %} Manajemen Admin & Pengguna {% else %} Manajemen Pengguna {% endif %} - Sistem Aircraft Maintenance {% endblock %} {% block content %}
+<div class="min-h-screen bg-gray-100">
+  <header class="bg-white shadow-sm sticky top-0 z-40">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-4 space-y-3 sm:space-y-0">
-        <div class="flex items-center">
-          <div class="bg-blue-600 p-3 rounded-lg mr-4"><i class="fas fa-users-cog text-white text-xl sm:text-2xl"></i></div>
+      <div class="flex justify-between items-center py-4">
+        <div class="flex items-center space-x-4">
+          <div class="bg-indigo-600 p-3 rounded-full text-white">
+            <i class="fas fa-users-cog text-xl"></i>
+          </div>
           <div>
-            <h1 class="text-xl sm:text-2xl font-bold text-gray-800">{% if session['user']['role'] == 'superadmin' %} Manajemen Admin & Pengguna {% else %} Manajemen Pengguna {% endif %}</h1>
-            <p class="text-sm sm:text-base text-gray-600">Kelola data pengguna sistem</p>
+            <h1 class="text-xl md:text-2xl font-bold text-gray-900">{% if user.role == 'superadmin' %} Manajemen Admin & Pengguna {% else %} Manajemen Pengguna {% endif %}</h1>
+            <p class="text-sm text-gray-500 mt-1">Kelola data pengguna sistem secara efisien.</p>
           </div>
         </div>
         <div class="flex items-center space-x-2">
-          <a href="{{ url_for('dashboard') }}" class="px-4 py-2 bg-gray-200 text-gray-800 hover:bg-gray-300 rounded-lg text-sm font-medium transition-colors"> <i class="fas fa-arrow-left mr-2"></i>Kembali ke Dashboard </a>
-          <button onclick="openUserModal()" class="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg text-sm font-medium transition-colors inline-flex items-center"><i class="fas fa-plus mr-2"></i>Tambah Pengguna</button>
+          <a
+            href="{{ url_for('dashboard') }}"
+            class="hidden sm:inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+          >
+            <i class="fas fa-arrow-left mr-2"></i>
+            Dashboard
+          </a>
+          <button
+            onclick="openUserModal()"
+            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+          >
+            <i class="fas fa-plus mr-2"></i>
+            Tambah
+          </button>
         </div>
       </div>
     </div>
-  </div>
+  </header>
 
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
-      <table class="w-full text-sm text-left text-gray-500">
-        <thead class="text-xs text-gray-700 uppercase bg-gray-50">
-          <tr>
-            <th scope="col" class="px-6 py-3">NIK</th>
-            <th scope="col" class="px-6 py-3">Nama</th>
-            <th scope="col" class="px-6 py-3">Role</th>
-            <th scope="col" class="px-6 py-3">Posisi</th>
-            <th scope="col" class="px-6 py-3"><span class="sr-only">Aksi</span></th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for nik, user_data in users.items() %} {% set is_superadmin = session['user']['role'] == 'superadmin' %} {% set is_admin = session['user']['role'] == 'admin' %} {% set viewable_by_superadmin = user_data.role in ['admin',
-          'mechanic', 'quality1', 'quality2'] %} {% set viewable_by_admin = user_data.role in ['mechanic', 'quality1', 'quality2'] %} {% if (is_superadmin and viewable_by_superadmin) or (is_admin and viewable_by_admin) %}
-          <tr class="bg-white border-b hover:bg-gray-50">
-            <th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{{ nik }}</th>
-            <td class="px-6 py-4">{{ user_data.name }}</td>
-            <td class="px-6 py-4">
-              {% if user_data.role == 'admin' %}
-              <span class="px-2 py-1 font-semibold leading-tight text-red-700 bg-red-100 rounded-full">{{ user_data.role }}</span>
-              {% elif user_data.role == 'mechanic' %}
-              <span class="px-2 py-1 font-semibold leading-tight text-green-700 bg-green-100 rounded-full">{{ user_data.role }}</span>
-              {% elif user_data.role == 'quality1' %}
-              <span class="px-2 py-1 font-semibold leading-tight text-orange-700 bg-orange-100 rounded-full">{{ user_data.role }}</span>
-              {% elif user_data.role == 'quality2' %}
-              <span class="px-2 py-1 font-semibold leading-tight text-purple-700 bg-purple-100 rounded-full">{{ user_data.role }}</span>
-              {% endif %}
-            </td>
-            <td class="px-6 py-4">{{ user_data.position }}</td>
-            <td class="px-6 py-4 text-right space-x-2">
-              <button onclick="openUserModal('{{ nik }}')" class="font-medium text-blue-600 hover:underline">Edit</button>
-              <button onclick="openDeleteModal('{{ nik }}', '{{ user_data.name }}')" class="font-medium text-red-600 hover:underline">Hapus</button>
-            </td>
-          </tr>
-          {% endif %} {% endfor %}
-        </tbody>
-      </table>
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left text-gray-600">
+          <thead class="text-xs text-gray-700 uppercase bg-gray-50 border-b border-gray-200">
+            <tr>
+              <th scope="col" class="px-6 py-3 font-medium">NIK</th>
+              <th scope="col" class="px-6 py-3 font-medium">Nama</th>
+              <th scope="col" class="px-6 py-3 font-medium">Role</th>
+              <th scope="col" class="px-6 py-3 font-medium">Posisi</th>
+              <th scope="col" class="px-6 py-3 font-medium text-right">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for nik, user_data in users.items() %} {% set is_superadmin = user.role == 'superadmin' %} {% set is_admin = user.role == 'admin' %} {% set viewable_by_superadmin = user_data.role in ['admin', 'mechanic', 'quality1',
+            'quality2'] %} {% set viewable_by_admin = user_data.role in ['mechanic', 'quality1', 'quality2'] %} {% if (is_superadmin and viewable_by_superadmin) or (is_admin and viewable_by_admin) %}
+            <tr class="bg-white border-b border-gray-200 hover:bg-gray-50 transition-colors">
+              <td class="px-6 py-4 font-mono text-gray-900 whitespace-nowrap">{{ nik }}</td>
+              <td class="px-6 py-4 text-gray-800 whitespace-nowrap">{{ user_data.name }}</td>
+              <td class="px-6 py-4">
+                {% set role_colors = { 'admin': 'bg-red-100 text-red-800', 'mechanic': 'bg-green-100 text-green-800', 'quality1': 'bg-yellow-100 text-yellow-800', 'quality2': 'bg-purple-100 text-purple-800' } %}
+                <span class="px-3 py-1 text-xs font-semibold leading-tight rounded-full {{ role_colors.get(user_data.role, 'bg-gray-100 text-gray-800') }}"> {{ user_data.role | capitalize }} </span>
+              </td>
+              <td class="px-6 py-4 text-gray-800 whitespace-nowrap">{{ user_data.position }}</td>
+              <td class="px-6 py-4 text-right whitespace-nowrap space-x-4">
+                <button onclick="openUserModal('{{ nik }}')" class="font-medium text-indigo-600 hover:text-indigo-900 transition-colors">Edit</button>
+                <button onclick="openDeleteModal('{{ nik }}', '{{ user_data.name }}')" class="font-medium text-red-600 hover:text-red-900 transition-colors">Hapus</button>
+              </td>
+            </tr>
+            {% endif %} {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div id="user-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 overflow-y-auto h-full w-full z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+  <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+    <div class="fixed inset-0" aria-hidden="true"></div>
+    <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+    <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+      <form id="user-form" novalidate>
+        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+          <div class="sm:flex sm:items-start">
+            <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-indigo-100 sm:mx-0 sm:h-10 sm:w-10">
+              <i class="fas fa-user-plus text-indigo-600"></i>
+            </div>
+            <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+              <h3 id="modal-title" class="text-lg leading-6 font-medium text-gray-900">Tambah Pengguna Baru</h3>
+              <div class="mt-4 space-y-4">
+                <input type="hidden" name="nik_original" id="nik_original" />
+                <div>
+                  <label for="nik" class="block text-sm font-medium text-gray-700">NIK</label>
+                  <input
+                    type="text"
+                    name="nik"
+                    id="nik"
+                    class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    required
+                  />
+                </div>
+                <div>
+                  <label for="name" class="block text-sm font-medium text-gray-700">Nama Lengkap</label>
+                  <input
+                    type="text"
+                    name="name"
+                    id="name"
+                    class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    required
+                  />
+                </div>
+                <div>
+                  <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+                  <input
+                    type="password"
+                    name="password"
+                    id="password"
+                    class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  />
+                  <p id="password-help" class="mt-2 text-xs text-gray-500">Wajib diisi untuk pengguna baru. Kosongkan jika tidak ingin mengubah.</p>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label for="role" class="block text-sm font-medium text-gray-700">Role</label>
+                    <select id="role" name="role" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                      {% if user.role == 'superadmin' %}
+                      <option value="admin">Admin</option>
+                      <option value="mechanic">Mechanic</option>
+                      <option value="quality1">Quality 1</option>
+                      <option value="quality2">Quality 2</option>
+                      {% elif user.role == 'admin' %}
+                      <option value="mechanic">Mechanic</option>
+                      <option value="quality1">Quality 1</option>
+                      <option value="quality2">Quality 2</option>
+                      {% endif %}
+                    </select>
+                  </div>
+                  <div>
+                    <label for="position" class="block text-sm font-medium text-gray-700">Posisi / Jabatan</label>
+                    <input
+                      type="text"
+                      name="position"
+                      id="position"
+                      class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label for="description" class="block text-sm font-medium text-gray-700">Deskripsi</label>
+                  <input
+                    type="text"
+                    name="description"
+                    id="description"
+                    class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+          <button
+            type="submit"
+            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm"
+          >
+            Simpan
+          </button>
+          <button
+            type="button"
+            onclick="closeUserModal()"
+            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm"
+          >
+            Batal
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 </div>
 
-<!-- User Modal (Add/Edit) -->
-<div id="user-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 hidden">
-  <div class="relative top-10 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
-    <form id="user-form">
-      <div class="flex justify-between items-center pb-3 border-b">
-        <h3 id="modal-title" class="text-lg font-medium text-gray-900">Tambah Pengguna Baru</h3>
-        <button type="button" onclick="closeUserModal()" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center"><i class="fas fa-times"></i></button>
-      </div>
-      <div class="mt-4 space-y-4">
-        <input type="hidden" name="nik_original" id="nik_original" />
-        <div>
-          <label for="nik" class="block mb-2 text-sm font-medium text-gray-900">NIK</label
-          ><input type="text" name="nik" id="nik" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required />
-        </div>
-        <div>
-          <label for="name" class="block mb-2 text-sm font-medium text-gray-900">Nama Lengkap</label
-          ><input type="text" name="name" id="name" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required />
-        </div>
-        <div>
-          <label for="password" class="block mb-2 text-sm font-medium text-gray-900">Password</label>
-          <input type="password" name="password" id="password" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" />
-          <p id="password-help" class="text-xs text-gray-500 mt-1">Wajib diisi untuk pengguna baru. Kosongkan jika tidak ingin mengubah password.</p>
-        </div>
-        <div>
-          <label for="role" class="block mb-2 text-sm font-medium text-gray-900">Role</label>
-          <select id="role" name="role" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
-            {% if session['user']['role'] == 'superadmin' %}
-            <option value="admin">admin</option>
-            <option value="mechanic">mechanic</option>
-            <option value="quality1">quality1</option>
-            <option value="quality2">quality2</option>
-            {% elif session['user']['role'] == 'admin' %}
-            <option value="mechanic">mechanic</option>
-            <option value="quality1">quality1</option>
-            <option value="quality2">quality2</option>
-            {% endif %}
-          </select>
-        </div>
-        <div>
-          <label for="position" class="block mb-2 text-sm font-medium text-gray-900">Posisi / Jabatan</label
-          ><input type="text" name="position" id="position" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" />
-        </div>
-        <div>
-          <label for="description" class="block mb-2 text-sm font-medium text-gray-900">Deskripsi</label
-          ><input type="text" name="description" id="description" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" />
+<div id="delete-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 overflow-y-auto h-full w-full z-50 hidden" aria-labelledby="delete-modal-title" role="dialog" aria-modal="true">
+  <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+    <div class="fixed inset-0" aria-hidden="true"></div>
+    <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+    <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+      <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+        <div class="sm:flex sm:items-start">
+          <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+            <i class="fas fa-exclamation-triangle text-red-600"></i>
+          </div>
+          <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+            <h3 class="text-lg leading-6 font-medium text-gray-900" id="delete-modal-title">Hapus Pengguna</h3>
+            <div class="mt-2">
+              <p class="text-sm text-gray-500">Apakah Anda yakin ingin menghapus pengguna <strong id="user-to-delete-name" class="font-bold text-gray-900"></strong>? Tindakan ini tidak dapat dibatalkan.</p>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="mt-6 pt-4 border-t flex justify-end">
-        <button type="button" onclick="closeUserModal()" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 mr-2">Batal</button>
-        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Simpan</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- Delete Confirmation Modal -->
-<div id="delete-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 hidden">
-  <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
-    <div class="mt-3 text-center">
-      <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
-        <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
-      </div>
-      <h3 class="text-lg leading-6 font-medium text-gray-900 mt-2">Hapus Pengguna?</h3>
-      <div class="mt-2 px-7 py-3">
-        <p class="text-sm text-gray-500">Apakah Anda yakin ingin menghapus pengguna <strong id="user-to-delete-name" class="font-bold"></strong>? Tindakan ini tidak dapat dibatalkan.</p>
-      </div>
-      <div class="items-center px-4 py-3 space-x-2">
-        <button id="cancel-delete-button" class="px-4 py-2 bg-gray-200 text-gray-800 text-base font-medium rounded-md w-auto shadow-sm hover:bg-gray-300">Batal</button>
-        <button id="confirm-delete-button" class="px-4 py-2 bg-red-600 text-white text-base font-medium rounded-md w-auto shadow-sm hover:bg-red-700">Ya, Hapus</button>
+      <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+        <button
+          id="confirm-delete-button"
+          type="button"
+          class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
+        >
+          Ya, Hapus
+        </button>
+        <button
+          id="cancel-delete-button"
+          type="button"
+          class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm"
+        >
+          Batal
+        </button>
       </div>
     </div>
   </div>
 </div>
 
 <script>
-  // The JavaScript remains the same as it correctly handles the form logic.
-  // It is not dependent on the user's role, only on the data present in the form and table.
   document.addEventListener("DOMContentLoaded", function () {
+    // Get CSRF token from meta tag or cookie
+    function getCSRFToken() {
+      const token = document.querySelector('meta[name="csrf-token"]');
+      return token ? token.getAttribute("content") : "";
+    }
+
     const userModal = document.getElementById("user-modal");
     const userForm = document.getElementById("user-form");
     const modalTitle = document.getElementById("modal-title");
     const nikInput = document.getElementById("nik");
     const nikOriginalInput = document.getElementById("nik_original");
+    const passwordInput = document.getElementById("password");
     const passwordHelp = document.getElementById("password-help");
 
     const deleteModal = document.getElementById("delete-modal");
@@ -154,20 +236,32 @@
     // Function to open the Add/Edit modal
     window.openUserModal = async (nik = null) => {
       userForm.reset();
+      nikInput.classList.remove("bg-gray-100");
+
       if (nik) {
         // Edit Mode
         modalTitle.textContent = "Edit Pengguna";
         nikInput.readOnly = true;
+        nikInput.classList.add("bg-gray-100"); // Visual cue for readonly
         nikOriginalInput.value = nik;
+        passwordInput.placeholder = "Kosongkan jika tidak diubah";
         passwordHelp.textContent = "Kosongkan jika tidak ingin mengubah password.";
+        passwordInput.required = false;
 
         try {
-          const response = await fetch(`/get_user/${nik}`);
+          const response = await fetch(`/users/${nik}`, {
+            headers: {
+              "X-CSRFToken": getCSRFToken(),
+            },
+          });
+          if (!response.ok) throw new Error("Network response was not ok.");
           const data = await response.json();
+
           if (data.error) {
             alert("Error: " + data.error);
             return;
           }
+
           nikInput.value = data.nik;
           document.getElementById("name").value = data.name;
           document.getElementById("role").value = data.role;
@@ -183,7 +277,9 @@
         modalTitle.textContent = "Tambah Pengguna Baru";
         nikInput.readOnly = false;
         nikOriginalInput.value = "";
+        passwordInput.placeholder = "";
         passwordHelp.textContent = "Password wajib diisi untuk pengguna baru.";
+        passwordInput.required = true;
       }
       userModal.classList.remove("hidden");
     };
@@ -210,21 +306,38 @@
     // Event handler for form submission (Add/Edit)
     userForm.addEventListener("submit", async (e) => {
       e.preventDefault();
+
+      const isEditMode = nikOriginalInput.value !== "";
+      if (!isEditMode && !passwordInput.value) {
+        alert("Password wajib diisi untuk pengguna baru.");
+        return;
+      }
+
       const formData = new FormData(userForm);
       const data = Object.fromEntries(formData.entries());
 
+      // Don't send empty password on edit unless intended
+      if (isEditMode && data.password === "") {
+        delete data.password;
+      }
+
       try {
-        const response = await fetch("/save_user", {
+        const response = await fetch("/users", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCSRFToken(),
+          },
           body: JSON.stringify(data),
         });
+        if (!response.ok) throw new Error("Server responded with an error.");
         const result = await response.json();
+
         if (result.success) {
           closeUserModal();
           location.reload();
         } else {
-          alert("Error: " + result.error);
+          alert("Error: " + (result.error || "Gagal menyimpan data."));
         }
       } catch (error) {
         alert("Terjadi kesalahan jaringan.");
@@ -235,16 +348,22 @@
     // Event handler for the delete confirmation button
     confirmDeleteButton.addEventListener("click", async () => {
       if (!nikToDelete) return;
+
       try {
-        const response = await fetch(`/delete_user/${nikToDelete}`, {
+        const response = await fetch(`/users/${nikToDelete}`, {
           method: "DELETE",
+          headers: {
+            "X-CSRFToken": getCSRFToken(),
+          },
         });
+        if (!response.ok) throw new Error("Server responded with an error.");
         const result = await response.json();
+
         if (result.success) {
           closeDeleteModal();
           location.reload();
         } else {
-          alert("Error: " + result.error);
+          alert("Error: " + (result.error || "Gagal menghapus pengguna."));
         }
       } catch (error) {
         alert("Terjadi kesalahan jaringan.");
