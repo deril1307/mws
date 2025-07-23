@@ -102,7 +102,18 @@ render_tracking_list(parts, users, current_user) %}
                     <span class="customer-name cursor-pointer hover:text-blue-600 hover:underline" data-customer="{{ part.customer }}">{{ part.customer }}</span>
                   </div>
                   <div><span class="font-medium text-gray-500">IWO No:</span> {{ part.iwoNo }}</div>
-                  <div><span class="font-medium text-gray-500">Mekanik:</span> {% if part.assignedTo and part.assignedTo in users %}{{ users[part.assignedTo].name }}{% else %}-{% endif %}</div>
+                  <div>
+                    <span class="font-medium text-gray-500">Mekanik:</span>
+                    {% if part.assignedTo %} {% if part.assignedTo in users %}
+                    <span class="text-green-700 font-semibold">{{ users[part.assignedTo].name }}</span>
+                    {% else %}
+                    <span class="text-red-600 font-semibold" title="User ID: {{ part.assignedTo }} tidak ditemukan dalam dictionary users"> - </span>
+                    {% if current_user.role in ['admin', 'superadmin'] %}
+                    <small class="text-xs text-red-500 block">(Debug: ID {{ part.assignedTo }} tidak di users)</small>
+                    {% endif %} {% endif %} {% else %}
+                    <span class="text-gray-500">-</span>
+                    {% endif %}
+                  </div>
                 </div>
               </div>
               <div class="flex items-center space-x-2 flex-shrink-0">

@@ -1,0 +1,241 @@
+/* Table layout and column sizing */
+.worksheet-table {
+  table-layout: fixed;
+  min-width: 800px; /* Minimum width to prevent cramping */
+}
+
+.worksheet-table th,
+.worksheet-table td {
+  vertical-align: top;
+  border-right: 1px solid #e5e7eb; /* Add vertical borders between columns */
+}
+
+/* Column width definitions */
+.no-column {
+  width: 50px;
+  min-width: 50px;
+}
+
+.description-column {
+  width: 35%;
+  min-width: 200px;
+}
+
+.man-column {
+  width: 80px;
+  min-width: 80px;
+}
+
+.hours-column {
+  width: 90px;
+  min-width: 90px;
+}
+
+.tech-column {
+  width: 150px;
+  min-width: 120px;
+  max-width: 150px;
+}
+
+.insp-column {
+  width: 80px;
+  min-width: 80px;
+}
+
+.status-column {
+  width: 80px;
+  min-width: 80px;
+}
+
+.action-column {
+  width: 120px;
+  min-width: 120px;
+}
+
+/* TECH column specific styling */
+.tech-cell {
+  max-width: 150px !important;
+  min-width: 120px !important;
+  width: 150px !important;
+}
+
+.tech-cell textarea {
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+  hyphens: auto;
+  line-height: 1.3;
+}
+
+.tech-cell span {
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+  hyphens: auto;
+  line-height: 1.3;
+  display: inline-block;
+}
+
+/* Mobile responsive design */
+@media (max-width: 768px) {
+  .worksheet-table {
+    min-width: 700px; /* Ensure minimum width on mobile */
+  }
+
+  .no-column {
+    width: 40px;
+    min-width: 40px;
+  }
+
+  .description-column {
+    width: 30%;
+    min-width: 150px;
+  }
+
+  .man-column {
+    width: 60px;
+    min-width: 60px;
+  }
+
+  .hours-column {
+    width: 70px;
+    min-width: 70px;
+  }
+
+  .tech-column {
+    width: 120px;
+    min-width: 100px;
+    max-width: 120px;
+  }
+
+  .tech-cell {
+    max-width: 120px !important;
+    min-width: 100px !important;
+    width: 120px !important;
+  }
+
+  .insp-column {
+    width: 60px;
+    min-width: 60px;
+  }
+
+  .status-column {
+    width: 60px;
+    min-width: 60px;
+  }
+
+  .action-column {
+    width: 100px;
+    min-width: 100px;
+  }
+
+  /* Smaller font sizes for mobile */
+  .worksheet-table th,
+  .worksheet-table td {
+    font-size: 0.75rem;
+    padding: 0.5rem;
+  }
+
+  .worksheet-table th {
+    padding: 0.75rem 0.5rem;
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 480px) {
+  .worksheet-table {
+    min-width: 600px;
+  }
+
+  .description-column {
+    width: 25%;
+    min-width: 120px;
+  }
+
+  .tech-column {
+    width: 100px;
+    min-width: 80px;
+    max-width: 100px;
+  }
+
+  .tech-cell {
+    max-width: 100px !important;
+    min-width: 80px !important;
+    width: 100px !important;
+  }
+
+  .action-column {
+    width: 80px;
+    min-width: 80px;
+  }
+}
+
+/* Ensure proper spacing and borders */
+.worksheet-table tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+.worksheet-table th:last-child,
+.worksheet-table td:last-child {
+  border-right: none;
+}
+
+/* Button styling for mobile */
+@media (max-width: 768px) {
+  .worksheet-table button {
+    font-size: 0.625rem;
+    padding: 0.25rem 0.5rem;
+  }
+
+  .worksheet-table input,
+  .worksheet-table textarea {
+    font-size: 0.75rem;
+    padding: 0.25rem;
+  }
+}
+
+/* Custom confirmation dialog styling */
+.confirmation-dialog {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.confirmation-dialog-content {
+  background: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  max-width: 28rem;
+  width: 100%;
+  margin: 1rem;
+  padding: 1.5rem;
+}
+
+/* Notification styling */
+.notification {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  color: white;
+  z-index: 50;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.notification.success {
+  background-color: #10b981;
+}
+
+.notification.error {
+  background-color: #ef4444;
+}

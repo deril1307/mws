@@ -318,7 +318,6 @@ def admin_dashboard():
 
 @app.route('/mechanic-dashboard')
 @require_role('mechanic')
-@limiter.limit("80 per minute")
 def mechanic_dashboard():
     try:
         parts = MwsPart.query.filter_by(assignedTo=current_user.nik).all()
@@ -326,12 +325,16 @@ def mechanic_dashboard():
         for part in parts:
             parts_dict[part.part_id] = part.to_dict()
         
+        users = get_users_from_db()
         return render_template('mechanic/mechanic_dashboard.html', 
-                             parts=parts_dict)
+                             parts=parts_dict,
+                             users=users) 
+                             
     except Exception as e:
         print(f"Error in mechanic dashboard: {e}")
         return render_template('mechanic/mechanic_dashboard.html', 
-                             parts={})
+                             parts={},
+                             users={}) 
 
 @app.route('/quality1-dashboard')
 @require_role('quality1')
