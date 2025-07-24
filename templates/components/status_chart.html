@@ -9,22 +9,25 @@
       <p id="total-ws-stat" class="text-2xl font-bold text-gray-900">{{ total_parts }}</p>
     </div>
   </div>
+
   <div class="bg-white p-5 rounded-xl shadow-sm border flex items-center card-hover">
-    <div class="p-3 bg-green-100 rounded-lg mr-4"><i class="fas fa-check-circle text-green-600 text-xl"></i></div>
+    <div class="p-3 bg-blue-100 rounded-lg mr-4"><i class="fas fa-check-circle text-blue-600 text-xl"></i></div>
     <div>
       <p class="text-sm font-medium text-gray-600">WS Finish</p>
       <p id="completed-ws-stat" class="text-2xl font-bold text-gray-900">{{ completed_parts }}</p>
     </div>
   </div>
+
   <div class="bg-white p-5 rounded-xl shadow-sm border flex items-center card-hover">
-    <div class="p-3 bg-yellow-100 rounded-lg mr-4"><i class="fas fa-clock text-yellow-600 text-xl"></i></div>
+    <div class="p-3 bg-green-100 rounded-lg mr-4"><i class="fas fa-clock text-green-600 text-xl"></i></div>
     <div>
       <p class="text-sm font-medium text-gray-600">WS In Progress</p>
       <p id="inprogress-ws-stat" class="text-2xl font-bold text-gray-900">{{ in_progress_parts }}</p>
     </div>
   </div>
+
   <div class="bg-white p-5 rounded-xl shadow-sm border flex items-center card-hover">
-    <div class="p-3 bg-gray-200 rounded-lg mr-4"><i class="fas fa-pause-circle text-gray-600 text-xl"></i></div>
+    <div class="p-3 bg-red-100 rounded-lg mr-4"><i class="fas fa-pause-circle text-red-600 text-xl"></i></div>
     <div>
       <p class="text-sm font-medium text-gray-600">WS Pending</p>
       <p id="pending-ws-stat" class="text-2xl font-bold text-gray-900">{{ pending_parts }}</p>
@@ -73,17 +76,20 @@
 
       // -- Variabel untuk Chart 1 & 2 --
       const statusChartLabels = ['Menunggu', 'Dikerjakan', 'Selesai'];
-      const statusChartColors = ['rgb(209, 213, 219)', 'rgb(251, 191, 36)', 'rgb(16, 185, 129)'];
+
+      // DIUBAH: Urutan warna disesuaikan: Merah, Hijau, Biru
+      const statusChartColors = ['rgb(239, 68, 68)', 'rgb(16, 185, 129)', 'rgb(59, 130, 246)'];
+
       const initialStats = calculateCustomerStats('');
       let statusChartData = [initialStats.pending, initialStats.inProgress, initialStats.completed];
 
-      // -- Variabel untuk Chart 3 (BARU) --
+      // -- Variabel untuk Chart 3 (Urgensi) --
       const urgencyChartLabels = ['Urgent', 'Reguler'];
       const urgencyChartColors = ['rgb(220, 38, 38)', 'rgb(59, 130, 246)'];
       const initialUrgencyStats = calculateUrgencyStats('');
       let urgencyChartData = [initialUrgencyStats.urgent, initialUrgencyStats.regular];
 
-      let mwsStatusChart, mwsStatusBarChart, mwsUrgencyChart; // Tambahkan variabel chart baru
+      let mwsStatusChart, mwsStatusBarChart, mwsUrgencyChart;
 
       // -- Perhitungan Data Chart 1 & 2 --
       function calculateCustomerStats(customerName = '') {
@@ -99,7 +105,7 @@
           return { total: customerTotal, pending: customerPending, inProgress: customerInProgress, completed: customerCompleted };
       }
 
-      // -- Perhitungan Data Chart 3: Urgensi (BARU) --
+      // -- Perhitungan Data Chart 3: Urgensi --
       function calculateUrgencyStats(customerName = '') {
           let urgentCount = 0, regularCount = 0;
           Object.values(originalData).forEach(part => {
@@ -130,7 +136,6 @@
           }
       }
 
-      // -- Fungsi untuk update Chart 3 (BARU) --
       function updateUrgencyChart(stats) {
           const newData = [stats.urgent, stats.regular];
           if (mwsUrgencyChart) {
@@ -163,7 +168,7 @@
                   responsive: true, maintainAspectRatio: false,
                   plugins: {
                       legend: { position: 'top' },
-                      title: { display: true, text: 'Berdasarkan Statistik Customer' }, // Menambahkan judul
+                      title: { display: true, text: 'Berdasarkan Statistik Customer' },
                       datalabels: {
                           display: true, color: '#fff', font: { weight: 'bold', size: 14 },
                           formatter: (value) => (value > 0 ? value : null)
@@ -199,7 +204,7 @@
           });
       }
 
-
+      // -- Inisialisasi Chart 3: Urgensi (Doughnut) --
       const ctxUrgency = document.getElementById('mwsUrgencyChart');
       if (ctxUrgency) {
           mwsUrgencyChart = new Chart(ctxUrgency, {
@@ -212,7 +217,7 @@
                   responsive: true, maintainAspectRatio: false,
                   plugins: {
                       legend: { position: 'top' },
-                      title: { display: true, text: 'Berdasarkan Urgensi' }, // Menambahkan judul
+                      title: { display: true, text: 'Berdasarkan Urgensi' },
                       datalabels: {
                           display: true, color: '#fff', font: { weight: 'bold', size: 14 },
                           formatter: (value) => (value > 0 ? value : null)

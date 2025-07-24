@@ -301,7 +301,7 @@ def admin_dashboard():
 @require_role('mechanic')
 def mechanic_dashboard():
     try:
-        parts = MwsPart.query.filter_by(assignedTo=current_user.nik).all()
+        parts = MwsPart.query.all()
         parts_dict = {}
         for part in parts:
             parts_dict[part.part_id] = part.to_dict()
@@ -817,16 +817,19 @@ def update_step_field():
         if not step:
             return jsonify({'success': False, 'error': 'Step not found'}), 404
         
-        # Role-based permissions
         if field in ['man', 'hours', 'tech']:
-            if current_user.role != 'mechanic' or mws_part.assignedTo != current_user.nik:
-                return jsonify({'success': False, 'error': 'Hanya mekanik yang ditugaskan yang dapat mengubah MAN, Hours, dan TECH'}), 403
+            if current_user.role != 'mechanic':
+                return jsonify({'success': False, 'error': 'Hanya mekanik yang dapat mengubah MAN, Hours, dan TECH'}), 403
         
-        if field == 'insp' and current_user.role != 'quality1':
-            return jsonify({'success': False, 'error': 'Hanya Quality Inspector yang dapat mengubah INSP'}), 403
+        if field == 'insp':
+            if current_user.role != 'quality1':
+                return jsonify({'success': False, 'error': 'Hanya Quality Inspector yang dapat mengubah INSP'}), 403
+            print(f"Quality1 user {current_user.nik} updating INSP field to: {value}")
         
         setattr(step, field, value)
+        print(f"Updated step {step_no} field '{field}' to '{value}' for part {part_id}")
         db.session.commit()
+        print(f"Database committed successfully")
         
         return jsonify({'success': True})
         
@@ -858,10 +861,10 @@ def update_step_status():
         if not step:
             return jsonify({'success': False, 'error': 'Langkah kerja tidak ditemukan'}), 404
         
-        # Validation for mechanic role
+        # Validation for mechanic role - REMOVED tech validation
         if current_user.role == 'mechanic' and new_status == 'in_progress':
-            if not step.man or not step.hours or not step.tech:
-                return jsonify({'success': False, 'error': 'Server validation: Harap isi MAN, Hours, dan TECH sebelum mengirim ke inspector.'}), 400
+            if not step.man or not step.hours:
+                return jsonify({'success': False, 'error': 'Server validation: Harap isi MAN dan Hours sebelum melakukan approval.'}), 400
         
         step.status = new_status
         
@@ -885,7 +888,6 @@ def update_step_status():
         db.session.rollback()
         print(f"Error updating step status: {e}")
         return jsonify({'success': False, 'error': 'Database error'}), 500
-
 @csrf.exempt
 @app.route('/update_step_details', methods=['POST']) 
 @require_role('admin', 'superadmin')
@@ -946,8 +948,7 @@ def update_step_after_submission():
         if not mws_part:
             return jsonify({'success': False, 'error': 'Part tidak ditemukan'}), 404
         
-        if mws_part.assignedTo != current_user.nik:
-            return jsonify({'success': False, 'error': 'Anda tidak ditugaskan untuk MWS ini'}), 403
+        # DIUBAH: Pemeriksaan 'assignedTo' dihapus dari fungsi ini
         
         step = MwsStep.query.filter_by(
             mws_part_id=mws_part.id,
@@ -984,31 +985,6 @@ def update_step_after_submission():
         print(f"Error updating step after submission: {e}")
         return jsonify({'success': False, 'error': 'Database error'}), 500
 
-@csrf.exempt
-@app.route('/assign_part', methods=['POST'])
-@require_role('admin', 'superadmin')
-@limiter.limit("30 per minute")
-def assign_part():
-    try:
-        part_id = request.json.get('partId')
-        assigned_to = request.json.get('assignedTo')
-        
-        mws_part = MwsPart.query.filter_by(part_id=part_id).first()
-        if not mws_part:
-            return jsonify({'error': 'Part not found'}), 404
-        
-        mws_part.assignedTo = assigned_to
-        
-        if not mws_part.startDate:
-            mws_part.startDate = datetime.now().date()
-        
-        db.session.commit()
-        return jsonify({'success': True})
-        
-    except Exception as e:
-        db.session.rollback()
-        print(f"Error assigning part: {e}")
-        return jsonify({'error': 'Database error'}), 500
 
 @csrf.exempt
 @app.route('/update_dates', methods=['POST'])
@@ -1097,11 +1073,7 @@ def start_timer():
         
         mws_part = MwsPart.query.filter_by(part_id=part_id).first()
         if not mws_part:
-            return jsonify({'success': False, 'error': 'Part tidak ditemukan'}), 404
-        
-        if mws_part.assignedTo != current_user.nik:
-            return jsonify({'success': False, 'error': 'Anda tidak ditugaskan untuk MWS ini'}), 403
-        
+            return jsonify({'success': False, 'error': 'Part tidak ditemukan'}), 404        
         step = MwsStep.query.filter_by(
             mws_part_id=mws_part.id,
             no=step_no
@@ -1218,6 +1190,80 @@ def set_urgent_status(part_id):
         return jsonify({'success': False, 'error': 'Database error'}), 500
 
 
+
+
+# app.py
+
+# ... (kode lainnya tetap sama) ...
+
+# app.py
+
+# ... (kode lain sebelum fungsi)
+
+@csrf.exempt
+@app.route('/print_mws/<part_id>')
+@require_role('admin', 'superadmin')
+def print_mws(part_id):
+    """
+    Generate printable Maintenance Work Sheet
+    """
+    try:
+        # ... (logika untuk mengambil data tetap sama) ...
+        mws_part = MwsPart.query.filter_by(part_id=part_id).first()
+        if not mws_part:
+            return "MWS tidak ditemukan", 404
+        
+        steps = MwsStep.query.filter_by(mws_part_id=mws_part.id).order_by(MwsStep.no).all()
+        users = get_users_from_db()
+        
+        part_data = {
+            # ... (semua persiapan 'part_data' tetap sama) ...
+             'title': mws_part.tittle,
+            'part_number': mws_part.partNumber,
+            'customer': mws_part.customer,
+            'serial_number': mws_part.serialNumber,
+            'iwo_no': mws_part.iwoNo,
+            'wbs_no': mws_part.wbsNo,
+            'ac_type': mws_part.acType,
+            'shop_area': mws_part.shopArea,
+            'revision': mws_part.revision,
+            'worksheet_no': mws_part.worksheetNo,
+            'reference': mws_part.ref,
+            'manual_reference': getattr(mws_part, 'manual_reference', 'Chp. 34-12-24, 15 MAY 1987'),
+            'steps': [],
+            'prepared_by_name': users.get(mws_part.preparedBy, {}).get('name'),
+            'prepared_date': mws_part.preparedDate,
+            'approved_by_name': users.get(mws_part.approvedBy, {}).get('name'),
+            'approved_date': mws_part.approvedDate,
+            'verified_by_name': users.get(mws_part.verifiedBy, {}).get('name'),
+            'verified_date': mws_part.verifiedDate,
+            'start_date': mws_part.startDate,
+            'finish_date': mws_part.finishDate,
+        }
+        
+        for step in steps:
+            step_data = {
+                'no': step.no,
+                'description': step.description,
+                'man_power': step.man or '',
+                'hours': step.hours or '',
+                'technician': step.tech or '',
+                'inspector': step.insp or ''
+            }
+            part_data['steps'].append(step_data)
+        
+
+        return render_template('mws/print_mws.html', part=part_data)
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"Error generating print MWS for part_id {part_id}: {e}")
+        return "Terjadi kesalahan internal saat membuat halaman cetak.", 500
+
+# ... (sisa kode lainnya tetap sama) ...
+
+# ... (sisa kode lainnya tetap sama) ...
 
 # =====================================================================
 # MENJALANKAN APLIKASI

@@ -70,6 +70,7 @@ class MwsPart(db.Model):
             'verifiedDate': self.verifiedDate or '',
             'is_urgent': self.is_urgent,
             'urgent_request': self.urgent_request,
+            'created_at': self.created_at,
             'steps': [step.to_dict() for step in self.steps]
         }
 

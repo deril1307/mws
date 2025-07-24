@@ -237,7 +237,7 @@
             <p class="text-gray-600">Serial Number: <span id="header-serial-number">{{ part.serialNumber }}</span></p>
           </div>
         </div>
-        <span class="px-4 py-2 rounded-full text-sm font-medium {% if part.status == 'completed' %}bg-green-100 text-green-800 {% elif part.status == 'in_progress' %}bg-yellow-100 text-yellow-800 {% else %}bg-gray-100 text-gray-800{% endif %}">
+        <span class="px-4 py-2 rounded-full text-sm font-medium {% if part.status == 'completed' %}bg-blue-500 text-white {% elif part.status == 'in_progress' %}bg-green-500 text-white {% else %}bg-red-500 text-white {% endif %}">
           {% if part.status == 'completed' %}Selesai {% elif part.status == 'in_progress' %}Sedang Dikerjakan {% else %}Menunggu{% endif %}
         </span>
       </div>
@@ -255,21 +255,37 @@
       </div>
       <div class="overflow-x-auto">
         <table class="worksheet-table w-full">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="no-column text-center text-sm font-semibold text-gray-700 p-3">NO</th>
-              <th class="description-column text-left text-sm font-semibold text-gray-700 p-3">DESCRIPTION</th>
-              <th class="man-column text-center text-sm font-semibold text-gray-700 p-3">MAN</th>
-              <th class="hours-column text-center text-sm font-semibold text-gray-700 p-3">HOURS</th>
-              <th class="tech-column text-center text-sm font-semibold text-gray-700 p-3">TECH</th>
-              <th class="insp-column text-center text-sm font-semibold text-gray-700 p-3">INSP</th>
-              <th class="status-column text-center text-sm font-semibold text-gray-700 p-3">STATUS</th>
-              <th class="action-column text-center text-sm font-semibold text-gray-700 p-3">AKSI</th>
-            </tr>
+         <thead class="bg-gray-50">
+              <tr>
+                <th class="no-column text-center p-3 text-sm font-semibold text-gray-700">
+                  NO
+                </th>
+                <th class="description-column text-left p-3 text-sm font-semibold text-gray-700">
+                  DESCRIPTION
+                </th>
+                <th class="man-column text-center p-3 text-sm font-semibold text-gray-700">
+                  MAN
+                </th>
+                <th class="hours-column text-center p-3 text-sm font-semibold text-gray-700">
+                  HOURS
+                </th>
+                <th class="tech-column text-center p-3 text-sm font-semibold text-gray-700">
+                  TECH
+                </th>
+                <th class="insp-column text-center p-3 text-sm font-semibold text-gray-700">
+                  INSP
+                </th>
+                <th class="status-column text-center p-3 text-sm font-semibold text-gray-700">
+                  STATUS
+                </th>
+                <th class="action-column text-center p-3 text-sm font-semibold text-gray-700">
+                  AKSI
+                </th>
+              </tr>
           </thead>
           <tbody>
             {% for step in part.steps %}
-            <tr id="step-row-{{ step.no }}" class="{% if step.status == 'completed' %}bg-green-50{% elif step.status == 'in_progress' %}bg-yellow-50{% else %}bg-white{% endif %} hover:bg-gray-50">
+            <tr id="step-row-{{ step.no }}" class="{% if step.status == 'completed' %}bg-blue-50{% elif step.status == 'in_progress' %}bg-green-50{% else %}bg-red-50{% endif %} hover:bg-gray-50">
               <td class="text-center font-medium p-3 align-top border-b">{{ step.no }}</td>
               <td class="text-sm p-3 align-top border-b">
                 <div id="step-desc-{{ step.no }}" class="font-semibold text-gray-800">{{ step.description }}</div>
@@ -294,7 +310,7 @@
                 {% endif %}
               </td>
               <td class="p-1 align-top border-b">
-                {% if user.role == 'mechanic' and part.assignedTo == user.nik and step.status == 'pending' %}
+                {% if user.role == 'mechanic' and step.status == 'pending' %}
                 <input type="text" id="man-{{ step.no }}" class="w-full rounded border-gray-300 text-center" value="{{ step.man }}" onchange="updateStepField('{{ part_id }}', {{ step.no }}, 'man', this.value)">
                 {% else %}
                 <div class="text-center p-3">
@@ -303,7 +319,7 @@
                 {% endif %}
               </td>
               <td class="p-1 align-top border-b">
-                {% if user.role == 'mechanic' and part.assignedTo == user.nik and step.status == 'pending' %}
+                {% if user.role == 'mechanic' and step.status == 'pending' %}
                 <div class="flex flex-col items-center justify-center space-y-1 p-1" id="timer-controls-{{ step.no }}">
                   <input type="hidden" id="hours-{{ step.no }}" value="{{ step.hours or '0' }}" />
                   <span id="hours-display-{{ step.no }}" class="font-mono text-sm font-semibold text-gray-700 h-6 flex items-center" {% if step.get('timer_start_time') %} data-start-time="{{ step.get('timer_start_time') }}" data-initial-hours="{{ step.hours or '0' }}" {% endif %}>
@@ -322,45 +338,72 @@
                 {% endif %}
               </td>
               <td class="p-1 align-top border-b tech-cell">
-                {% if user.role == 'mechanic' and part.assignedTo == user.nik and step.status == 'pending' %}
-                <textarea id="tech-{{ step.no }}" class="w-full min-h-[40px] max-h-[120px] resize-y rounded border-gray-300 text-center text-sm p-2 leading-tight" onchange="updateStepField('{{ part_id }}', {{ step.no }}, 'tech', this.value)" placeholder="Masukkan tech...">{{ step.tech or '' }}</textarea>
+                {% if user.role == 'mechanic' and step.status == 'pending' %}
+                <div class="p-3 min-h-[40px] flex items-center justify-center">
+                  <button onclick="approveStep('{{ part_id }}', {{ step.no }})" class="px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded text-sm font-medium">Approved</button>
+                </div>
                 {% else %}
                 <div class="p-3 min-h-[40px] flex items-center justify-center">
-                  <span class="text-sm font-semibold text-gray-900 break-words text-center leading-tight max-w-full block">{{ step.tech if step.tech else 'N/A' }}</span>
+                  <span class="text-sm font-semibold text-gray-900 break-words text-center leading-tight max-w-full block">
+                    {% if step.status == 'in_progress' or step.status == 'completed' %}
+                      Approved
+                      {% if user.role in ['admin', 'superadmin'] %}
+                      <br>
+                      <button onclick="cancelApproval('{{ part_id }}', {{ step.no }})" class="mt-1 px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs">Batal</button>
+                      {% endif %}
+                    {% else %}
+                      N/A
+                    {% endif %}
+                  </span>
                 </div>
                 {% endif %}
               </td>
               <td class="p-1 align-top border-b">
-                <input type="text" id="insp-{{ step.no }}" value="{{ step.insp }}" class="w-full rounded border-gray-300 text-center" {% if user.role == 'quality1' and step.status == 'in_progress' %} onchange="updateStepField('{{ part_id }}', {{ step.no }}, 'insp', this.value)" {% else %} disabled readonly class="bg-gray-100 border-transparent" {% endif %}>
+                {% if user.role == 'quality1' and step.status == 'in_progress' %}
+                <div class="p-3 min-h-[40px] flex items-center justify-center">
+                  <button onclick="finishStep('{{ part_id }}', {{ step.no }})" class="px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded text-sm font-medium">Finish</button>
+                </div>
+                {% else %}
+                <div class="text-center p-3">
+                  <span class="text-sm font-semibold text-gray-900">
+                    {% if step.status == 'completed' %}
+                      Approved
+                      {% if user.role in ['admin', 'superadmin'] %}
+                      <br>
+                      <button onclick="cancelFinishStep('{{ part_id }}', {{ step.no }})" class="mt-1 px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs">Batal</button>
+                      {% endif %}
+                    {% else %}
+                      N/A
+                    {% endif %}
+                  </span>
+                </div>
+                {% endif %}
               </td>
               <td class="text-center align-top p-3 border-b">
-                {% if step.status == 'completed' %}<i class="fas fa-check-circle text-green-500 text-lg" title="Completed on {{ step.completedDate }}"></i>
-                {% elif step.status == 'in_progress' %}<i class="fas fa-clock text-yellow-500 text-lg" title="In Progress"></i>
-                {% else %}<i class="fas fa-circle text-gray-300 text-lg" title="Pending"></i>
+                {% if step.status == 'completed' %}<i class="fas fa-check-circle text-blue-500 text-lg" title="Completed on {{ step.completedDate }}"></i>
+                {% elif step.status == 'in_progress' %}<i class="fas fa-clock text-green-500 text-lg" title="In Progress"></i>
+                {% else %}<i class="fas fa-circle text-red-300 text-lg" title="Pending"></i>
                 {% endif %}
               </td>
               <td class="text-center align-top p-3 border-b">
                 <div class="flex flex-col items-center justify-center space-y-2">
                   
-                  <!-- Debug information for each step - Remove in production -->
                   {% if user.role in ['admin', 'superadmin'] %}
                   <div class="text-xs text-gray-500 mb-1" title="Debug Info">
                     <div>Status: {{ step.status }}</div>
                   </div>
                   {% endif %}
                   
-                  <!-- Action buttons with improved logic -->
-                  {% if user.role == 'mechanic' and part.assignedTo == user.nik %}
+                  {% if user.role == 'mechanic' %}
                     {% if step.status == 'pending' %}
-                      <button onclick="validateAndSubmitToInspector('{{ part_id }}', {{ step.no }})" class="px-2 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded text-xs w-full">Kirim ke Inspector</button>
-                    {% elif step.status == 'in_progress' %}
-                      <button onclick="cancelSubmissionToInspector('{{ part_id }}', {{ step.no }})" class="px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs w-full">Batal Kirim ke Inspector</button>
+                      <span class="text-xs text-gray-500">Klik Approved untuk melanjutkan</span>
                     {% endif %}
-                  {% elif user.role == 'quality1' and step.status == 'in_progress' %}
-                    <button onclick="updateStepStatus('{{ part_id }}', {{ step.no }}, 'completed')" class="px-2 py-1 bg-green-500 hover:bg-green-600 text-white rounded text-xs w-full">Finish</button>
+                  {% elif user.role == 'quality1' %}
+                    {% if step.status == 'in_progress' %}
+                      <span class="text-xs text-gray-500">Klik Finish untuk menyelesaikan</span>
+                    {% endif %}
                   {% endif %}
                   
-                  <!-- Admin controls -->
                   {% if user.role in ['admin', 'superadmin'] %}
                   <div class="flex space-x-1">
                     <button onclick="editStepDescription('{{ part_id }}', {{ step.no }})" title="Edit Deskripsi" class="p-1 text-blue-600 hover:text-blue-800"><i class="fas fa-edit text-xs"></i></button>
@@ -383,17 +426,18 @@
 <script>
   const currentUserRole = "{{ user.role }}";
   const currentUserNik = "{{ user.nik }}";
+  // DIUBAH: Menghapus variabel partAssignedTo dan log yang terkait
+  /*
   const partAssignedTo = "{{ part.assignedTo }}";
   
-  // Debug logging - remove in production
   console.log('Debug Info:', {
     userRole: currentUserRole,
     userNik: currentUserNik,
     partAssignedTo: partAssignedTo,
     assignmentMatch: partAssignedTo === currentUserNik
   });
+  */
   
-  // Objek untuk menyimpan interval ID dari timer yang berjalan
   window.activeTimers = {};
 
   function showNotification(message, type) {
@@ -406,9 +450,6 @@
     }, 3000);
   }
 
-  /**
-   * Menginisialisasi semua timer yang sedang berjalan di halaman.
-   */
   function initializeLiveTimers() {
     const runningTimers = document.querySelectorAll('[data-start-time]');
 
@@ -512,39 +553,53 @@
       .catch((e) => showNotification("Error", "error"));
   }
 
-  function validateAndSubmitToInspector(partId, stepNo) {
+  function approveStep(partId, stepNo) {
     const manValue = document.getElementById(`man-${stepNo}`).value.trim();
     const hoursValue = document.getElementById(`hours-${stepNo}`).value.trim();
-    const techValue = document.getElementById(`tech-${stepNo}`).value.trim();
 
-    console.log('Validation check:', { manValue, hoursValue, techValue });
+    console.log('Validation check:', { manValue, hoursValue });
 
-    if (!manValue || !techValue || !hoursValue || parseFloat(hoursValue) <= 0) {
-      alert("Harap isi field MAN, TECH, dan jalankan timer sebelum mengirim ke inspector.");
+    if (!manValue || !hoursValue || parseFloat(hoursValue) <= 0) {
+      alert("Harap isi field MAN dan jalankan timer sebelum melakukan approval.");
       return;
     }
+
+    if (!confirm("Apakah Anda yakin ingin meng-approve langkah kerja ini?\n\nSetelah di-approve, Anda tidak dapat lagi mengedit field MAN dan HOURS.")) {
+      return;
+    }
+
+    // Update field TECH ke "Approved" sebelum mengubah status
+    updateStepField(partId, stepNo, "tech", "Approved");
+    
     updateStepStatus(partId, stepNo, "in_progress");
   }
 
-  function cancelSubmissionToInspector(partId, stepNo) {
-    if (confirm("Apakah Anda yakin ingin membatalkan pengiriman ke inspector?\n\nKonsekuensi: Langkah kerja akan kembali ke status pending dan Anda dapat mengedit kembali field MAN, TECH, dan menggunakan timer.")) {
+  function cancelApproval(partId, stepNo) {
+    if (confirm("Apakah Anda yakin ingin membatalkan approval?\n\nKonsekuensi: Langkah kerja akan kembali ke status pending dan Anda dapat mengedit kembali field MAN, HOURS, dan menggunakan timer.")) {
       updateStepStatus(partId, stepNo, "pending");
+    }
+  }
+
+  // DENGAN FUNGSI BARU INI:
+  function finishStep(partId, stepNo) {
+    if (!confirm("Apakah Anda yakin ingin menyelesaikan langkah kerja ini?")) {
+      return;
+    }
+
+    // Langkah 1: Isi kolom 'insp' dengan teks "Approved".
+    updateStepField(partId, stepNo, "insp", "Approved"); // DIUBAH: Mengirim teks "Approved"
+
+    // Langkah 2: Ubah status langkah kerja menjadi 'completed'.
+    updateStepStatus(partId, stepNo, "completed");
+}
+  function cancelFinishStep(partId, stepNo) {
+    if (confirm("Apakah Anda yakin ingin membatalkan penyelesaian langkah kerja ini?\n\nKonsekuensi: Langkah kerja akan kembali ke status in_progress dan dapat diinspeksi ulang.")) {
+      updateStepStatus(partId, stepNo, "in_progress");
     }
   }
 
   function updateStepStatus(partId, stepNo, status) {
     console.log('Update step status:', { partId, stepNo, status });
-    
-    if (currentUserRole === "quality1" && status === "completed") {
-      const inspValue = document.getElementById(`insp-${stepNo}`).value.trim();
-      if (!inspValue) {
-        alert("Harap isi field INSP sebelum menyelesaikan langkah ini.");
-        return;
-      }
-      if (!confirm("Apakah Anda yakin ingin menyelesaikan langkah kerja ini?")) {
-        return;
-      }
-    }
 
     fetch("/update_step_status", {
         method: "POST",
@@ -555,9 +610,15 @@
       .then((d) => {
         if (d.success) {
           if (status === "pending") {
-            showNotification("Pengiriman ke inspector berhasil dibatalkan.", "success");
+            showNotification("Approval berhasil dibatalkan.", "success");
           } else if (status === "in_progress") {
-            showNotification("Berhasil dikirim ke inspector.", "success");
+            if (currentUserRole === "quality1") {
+              showNotification("Penyelesaian langkah kerja berhasil dibatalkan.", "success");
+            } else {
+              showNotification("Langkah kerja berhasil di-approve.", "success");
+            }
+          } else if (status === "completed") {
+            showNotification("Langkah kerja berhasil diselesaikan.", "success");
           }
           location.reload();
         } else {
@@ -569,8 +630,7 @@
         alert("Terjadi kesalahan jaringan.");
       });
   }
-
-  // Rest of the functions remain the same...
+  
   function updateDates(partId, field, value) {
     fetch("/update_dates", {
         method: "POST",
@@ -659,8 +719,6 @@
     editBtn.classList.toggle("hidden", isEditing);
     finishBtn.classList.toggle("hidden", !isEditing);
   }
-
- 
 
   function insertStepAfter(partId, afterStepNo) {
     const description = prompt("Masukkan deskripsi untuk langkah kerja baru:");
