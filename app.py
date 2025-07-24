@@ -45,23 +45,16 @@ login_manager.login_message_category = 'info'
 
 @login_manager.user_loader
 def load_user(nik):
-    """Load user by NIK for Flask-Login"""
     return User.query.filter_by(nik=nik).first()
 
-# Make current_user available in templates as 'user' for backward compatibility
 @app.context_processor
 def inject_user():
-    """Inject current_user as 'user' in all templates for backward compatibility"""
     if current_user.is_authenticated:
         return {'user': current_user.to_dict()}
     return {'user': None}
 
 @app.before_request
 def before_request_callback():
-    """
-    Fungsi yang berjalan sebelum setiap request.
-    Digunakan untuk memperbarui waktu terakhir pengguna terlihat.
-    """
     if current_user.is_authenticated:
         current_user.last_seen = datetime.now(timezone.utc)
         db.session.commit()
@@ -140,14 +133,13 @@ def update_mws_status(mws_part):
         mws_part.currentStep = len(all_steps)
     elif in_progress_steps or completed_steps:
         mws_part.status = 'in_progress'
-        # Set currentStep to the first in_progress step, or the next step after last completed
         if in_progress_steps:
             mws_part.currentStep = min(s.no for s in in_progress_steps)
         else:
             mws_part.currentStep = max(s.no for s in completed_steps) + 1 if completed_steps else 1
     else:
         mws_part.status = 'pending'
-        mws_part.currentStep = 1  # First step for pending status
+        mws_part.currentStep = 1 
 
 def render_error_page(error):
     """Fungsi generik untuk menampilkan halaman error."""
@@ -202,7 +194,6 @@ def internal_server_error(e):
 # ROUTE UMUM (LANDING PAGE & AUTENTIKASI) - DENGAN RATE LIMITING
 # =====================================================================
 def get_users_from_db():
-    """Mengambil semua user dari DB dan mengubahnya ke format dictionary."""
     try:
         all_users = User.query.all()
         users_dict = {user.nik: {
@@ -221,10 +212,8 @@ def get_users_from_db():
 @app.route('/login', methods=['GET', 'POST'])
 @limiter.limit("20 per minute", methods=["POST"])  
 def login():
-    # Cek jika user sudah login, arahkan ke dashboard
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
-        
     if request.method == 'POST':
         nik = request.form.get('nik')
         password = request.form.get('password')
@@ -241,8 +230,6 @@ def login():
         except Exception as e:
             print(f"Error during login: {e}")
             return jsonify({'success': False, 'message': 'Terjadi kesalahan sistem!'}), 500
-    
-    # Jika GET request, tampilkan halaman login
     return render_template('auth/login.html')
 
 @app.route('/logout')
@@ -259,11 +246,6 @@ def logout():
 @login_required
 @limiter.limit("60 per minute")
 def view_profile():
-    """
-    Menampilkan halaman profil pengguna yang sedang login.
-    Data pengguna diambil dari `current_user` yang disediakan oleh Flask-Login
-    dan secara otomatis diteruskan ke template oleh context processor `inject_user`.
-    """
     return render_template('profile/profile.html')
 
 @app.route('/dashboard')
@@ -301,7 +283,6 @@ def admin_dashboard():
         for part in parts:
             parts_dict[part.part_id] = part.to_dict()
         
-        # Saring MWS yang memiliki permintaan urgensi yang belum disetujui
         urgent_requests = MwsPart.query.filter_by(urgent_request=True, is_urgent=False).all()
         
         users = get_users_from_db()
@@ -399,7 +380,6 @@ def superadmin_dashboard():
             print(f"GAGAL MENGHITUNG PENGGUNA AKTIF: {e_active}")
             active_users_count = 0 
         
-        # Render template dengan semua data yang berhasil diambil
         return render_template('superadmin/superadmin_dashboard.html', 
                                parts=parts_dict, 
                                users=users,
@@ -407,37 +387,30 @@ def superadmin_dashboard():
                                active_users_count=active_users_count)
                                
     except Exception as e_main:
-        # Blok ini hanya akan terpicu jika ada error saat mengambil data parts atau users
         print(f"Error pada data utama dashboard: {e_main}")
         return render_template('superadmin/superadmin_dashboard.html', 
                                parts={}, 
                                users={},
                                urgent_requests=[],
-                               active_users_count=0) # Default value jika error
+                               active_users_count=0) 
 
 
 # =====================================================================
 # ROUTE MANAJEMEN PENGGUNA (ADMIN & SUPERADMIN) - DENGAN RATE LIMITING
 # =====================================================================
 
-# PERUBAHAN DIMULAI DI SINI
 @app.route('/admin/users')
 @require_role('admin', 'superadmin')
 @limiter.limit("25 per minute")
 def manage_users():
     users = get_users_from_db()
-    
-    # Logika untuk mendapatkan pengguna aktif
     active_users_niks = []
     try:
-        # Menggunakan interval 30 detik
         seconds_ago = datetime.now(timezone.utc) - timedelta(seconds=20)
         active_users = User.query.filter(User.last_seen.isnot(None), User.last_seen > seconds_ago).all()
         active_users_niks = [user.nik for user in active_users]
     except Exception as e:
         print(f"Gagal mengambil data pengguna aktif: {e}")
-
-    # Kirim daftar pengguna dan daftar NIK yang aktif ke template
     return render_template('user-management/manage_user.html', users=users, active_users_niks=active_users_niks)
 
 
@@ -464,7 +437,7 @@ def get_user(nik):
 
 @app.route('/users', methods=['POST'])
 @require_role('admin', 'superadmin')
-@limiter.limit("25 per minute")  # Limit user creation/updates
+@limiter.limit("35 per minute")  # Limit user creation/updates
 def save_user():
     try:
         req_data = request.get_json()
@@ -621,10 +594,10 @@ def create_mws():
             return jsonify({'success': False, 'error': 'Terjadi kesalahan internal pada server.'}), 500
     return render_template('mws/create_mws.html')
 
-@csrf.exempt
+
 @app.route('/delete_mws/<part_id>', methods=['DELETE'])
 @require_role('admin', 'superadmin')
-@limiter.limit("20 per minute")  # Limit MWS deletions
+@limiter.limit("35 per minute")  
 def delete_mws(part_id):
     try:
         mws_part = MwsPart.query.filter_by(part_id=part_id).first()
@@ -639,7 +612,6 @@ def delete_mws(part_id):
         print(f"Error deleting MWS: {e}")
         return jsonify({'success': False, 'error': 'Database error'}), 500
 
-@csrf.exempt
 @app.route('/mws/<part_id>')
 @login_required
 @limiter.limit("60 per minute")
@@ -663,10 +635,10 @@ def mws_detail(part_id):
         flash('Terjadi kesalahan saat memuat data!', 'error')
         return redirect(url_for('dashboard'))
 
-@csrf.exempt
+
 @app.route('/update_mws_info', methods=['POST'])
 @login_required
-@limiter.limit("40 per minute")  # Limit MWS updates
+@limiter.limit("40 per minute") 
 def update_mws_info():
     try:
         data = request.get_json()
@@ -680,11 +652,9 @@ def update_mws_info():
         mws_part = MwsPart.query.filter_by(part_id=part_id).first()
         if not mws_part:
             return jsonify({'success': False, 'error': f'Part dengan ID {part_id} tidak ditemukan.'}), 404
-        
-        # Update fields
+
         for key, value in data.items():
             if hasattr(mws_part, key):
-                # Handle date fields
                 if key in ['startDate', 'finishDate', 'targetDate'] and value:
                     try:
                         if isinstance(value, str):
@@ -726,7 +696,6 @@ def insert_step(part_id):
         if not new_description or after_step_no is None:
             return jsonify({'success': False, 'error': 'Data tidak lengkap'}), 400
         
-        # Update step numbers for existing steps
         steps_to_update = MwsStep.query.filter(
             MwsStep.mws_part_id == mws_part.id,
             MwsStep.no > after_step_no
@@ -735,7 +704,6 @@ def insert_step(part_id):
         for step in steps_to_update:
             step.no += 1
         
-        # Create new step
         new_step = MwsStep(
             mws_part_id=mws_part.id,
             no=after_step_no + 1,
@@ -743,14 +711,9 @@ def insert_step(part_id):
             status='pending'
         )
         new_step.set_details([])
-        
         db.session.add(new_step)
-        
-        # Update MWS status when adding new step
         update_mws_status(mws_part)
-        
         db.session.commit()
-        
         return jsonify({'success': True})
         
     except Exception as e:
@@ -873,7 +836,7 @@ def update_step_field():
         return jsonify({'success': False, 'error': 'Database error'}), 500
 
 @csrf.exempt
-@app.route('/update_step_status', methods=['POST']) # untuk status setiap step 
+@app.route('/update_step_status', methods=['POST']) 
 @login_required
 @limiter.limit("40 per minute")
 def update_step_status():

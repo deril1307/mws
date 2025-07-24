@@ -1,5 +1,4 @@
-{# CATATAN: Fungsionalitas CSRF token telah dihapus dari skrip di bawah ini sesuai permintaan. Pastikan route Flask yang terkait (@app.route('/set_urgent_status/...')) memiliki dekorator @csrf.exempt agar dapat berfungsi. #} {% macro
-render_tracking_list(parts, users, current_user) %}
+{% macro render_tracking_list(parts, users, current_user) %}
 <div class="bg-white rounded-xl shadow-sm border border-gray-200">
   <div class="px-6 py-4 border-b border-gray-200 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
     <h2 class="text-xl font-semibold text-gray-800 flex items-center">
@@ -88,7 +87,7 @@ render_tracking_list(parts, users, current_user) %}
                   <span
                     class="px-3 py-1 rounded-full text-xs font-medium {% if part.is_urgent %}bg-red-100 text-red-800 animate-pulse {% elif part.approvedBy %}bg-red-100 text-red-800 {% elif part.verifiedBy %}bg-purple-100 text-purple-800 {% elif part.status == 'completed' %}bg-green-100 text-green-800 {% elif part.status == 'in_progress' %}bg-yellow-100 text-yellow-800 {% elif part.status == 'pending' %}bg-gray-100 text-gray-800 {% else %}bg-gray-100 text-gray-800{% endif %}"
                   >
-                    {% if part.is_urgent %} URGENT {% elif part.approvedBy %} Approved {% elif part.verifiedBy %} Verified {% elif part.status == 'completed' %} Selesai {% elif part.status == 'in_progress' %} Perlu Inspeksi {% elif
+                    {% if part.is_urgent %} URGENT {% elif part.approvedBy %} Approved {% elif part.verifiedBy %} Verified {% elif part.status == 'completed' %} Selesai {% elif part.status == 'in_progress' %} Sedang di Kerjakan {% elif
                     part.status == 'pending' %} Menunggu {% else %} Menunggu {% endif %}
                   </span>
                   {% if part.urgent_request and not part.is_urgent and current_user.role in ['admin', 'superadmin'] %}
@@ -407,9 +406,6 @@ render_tracking_list(parts, users, current_user) %}
         showConfirmationModal(confirmationTitle, confirmationMessage, () => {
           button.disabled = true;
           button.innerHTML += ' <i class="fas fa-spinner fa-spin"></i>';
-
-          // CATATAN PENTING: Pastikan backend Flask Anda di route /set_urgent_status/
-          // juga sudah bisa menangani { action: 'cancel_request' }
           fetch(`/set_urgent_status/${partId}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -436,7 +432,7 @@ render_tracking_list(parts, users, current_user) %}
     });
   });
 
-  // -- Delete Modal Logic --
+  // --- Logika Modal Hapus dengan CSRF ---
   const deleteModal = document.getElementById("delete-modal");
   const confirmDeleteButton = document.getElementById("confirm-delete-button");
   const cancelDeleteButton = document.getElementById("cancel-delete-button");
@@ -448,10 +444,7 @@ render_tracking_list(parts, users, current_user) %}
     partToDeleteName.textContent = partName;
     if (deleteModal) {
       deleteModal.classList.remove("hidden");
-      // [UX] Efek fade-in
-      requestAnimationFrame(() => {
-        deleteModal.classList.remove("opacity-0");
-      });
+      requestAnimationFrame(() => deleteModal.classList.remove("opacity-0"));
     }
   };
 
@@ -466,7 +459,14 @@ render_tracking_list(parts, users, current_user) %}
 
   confirmDeleteButton?.addEventListener("click", () => {
     if (partIdToDelete) {
-      fetch(`/delete_mws/${partIdToDelete}`, { method: "DELETE" })
+      const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute("content");
+      fetch(`/delete_mws/${partIdToDelete}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": csrfToken,
+        },
+      })
         .then((res) => res.json())
         .then((data) => {
           if (data.success) {
@@ -475,7 +475,10 @@ render_tracking_list(parts, users, current_user) %}
             alert("Gagal menghapus: " + data.error);
           }
         })
-        .catch((err) => console.error(err));
+        .catch((err) => {
+          console.error("Error saat menghapus MWS:", err);
+          alert("Terjadi kesalahan jaringan saat mencoba menghapus.");
+        });
     }
     hideDeleteModal();
   });

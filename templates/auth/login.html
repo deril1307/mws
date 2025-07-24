@@ -277,7 +277,6 @@
         });
     });
 
-    // Toggle password visibility
     const togglePassword = document.getElementById("togglePassword");
     if (togglePassword) {
       togglePassword.addEventListener("click", function () {
@@ -290,21 +289,18 @@
       });
     }
 
-    // Demo account buttons
     const demoButtons = document.querySelectorAll(".demo-account-btn");
     demoButtons.forEach((button) => {
       button.addEventListener("click", function () {
         nikInput.value = this.dataset.nik;
         passwordInput.value = this.dataset.password;
 
-        // Focus on submit button
         setTimeout(() => {
           submitButton.focus();
         }, 100);
       });
     });
 
-    // Auto-focus on NIK input
     nikInput.focus();
   });
 </script>
