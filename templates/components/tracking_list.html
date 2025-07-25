@@ -108,13 +108,13 @@
                 <div class="flex items-center mb-2 flex-wrap">
                   <h3 class="mws-title text-lg font-semibold text-gray-800 mr-3">{{ part.customer }} - {{ part.tittle.name if part.tittle is mapping else part.tittle }}</h3>
                   <span
-                    class="px-3 py-1 rounded-full text-xs font-medium {% if part.is_urgent %} bg-red-100 text-red-800 {% elif part.approvedBy %} bg-red-100 text-red-800 {% elif part.verifiedBy %} bg-purple-100 text-purple-800 {% elif part.status == 'completed' %} bg-blue-100 text-blue-800 {% elif part.status == 'in_progress' %} bg-green-100 text-green-800 {% elif part.status == 'pending' %} bg-red-100 text-red-800 {% else %} bg-gray-100 text-gray-800 {% endif %}"
+                    class="px-3 py-1 rounded-full text-xs font-medium {% if part.is_urgent %} bg-red-500 text-white {% elif part.approvedBy %} bg-red-100 text-red-800 {% elif part.verifiedBy %} bg-purple-100 text-purple-800 {% elif part.status == 'completed' %} bg-blue-100 text-blue-800 {% elif part.status == 'in_progress' %} bg-green-100 text-green-800 {% elif part.status == 'pending' %} bg-red-100 text-red-800 {% else %} bg-gray-100 text-gray-800 {% endif %}"
                   >
-                    {% if part.is_urgent %} URGENT !! {% elif part.approvedBy %} Approved {% elif part.verifiedBy %} Verified {% elif part.status == 'completed' %} Selesai {% elif part.status == 'in_progress' %} Sedang di Kerjakan {% elif
+                    {% if part.is_urgent %} URGENT !! {% elif part.approvedBy %} Approved {% elif part.verifiedBy %} Verified {% elif part.status == 'completed' %} Completed {% elif part.status == 'in_progress' %} In_Progress {% elif
                     part.status == 'pending' %} Pending {% else %} Pending {% endif %}
                   </span>
                   {% if part.urgent_request and not part.is_urgent and current_user.role in ['admin', 'superadmin'] %}
-                  <span class="ml-2 px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"> <i class="fas fa-bell mr-1"></i> Permintaan Urgensi </span>
+                  <span class="ml-2 px-3 py-1 rounded-full text-xs font-medium bg-red-500 text-white"> <i class="fas fa-bell mr-1"></i> Permintaan Urgensi </span>
                   {% endif %}
                 </div>
 
@@ -166,7 +166,7 @@
                   <i class="fas fa-exclamation-triangle mr-1"></i> Jadikan Urgent
                 </button>
                 {% endif %} {% elif current_user.role == 'mechanic' %} {% if part.is_urgent %}
-                <span class="px-3 py-2 text-red-600 text-sm font-bold"> <i class="fas fa-fire mr-1"></i>URGENT </span>
+                <span class="px-3 py-2 text-red-600 text-sm font-bold"> <i class="fas fa-fire mr-1"></i>URGENT</span>
                 {% elif part.urgent_request %}
                 <button class="px-3 py-2 bg-gray-300 text-gray-500 text-xs font-bold rounded-lg cursor-not-allowed" disabled><i class="fas fa-clock mr-1"></i> Menunggu Persetujuan</button>
                 <button class="urgent-action-btn px-3 py-2 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-lg" data-part-id="{{ part_id }}" data-action="cancel_request"><i class="fas fa-ban mr-1"></i> Batal Urgensi</button>
@@ -199,14 +199,14 @@
             <div class="flex justify-between items-center text-sm text-gray-600 mb-2">
               <span class="step-info truncate pr-4">
                 {% if part.status == 'completed' %}
-                <i class="fas fa-check-circle text-green-500 mr-2"></i>Selesai<span class="hidden">Selesai</span>
+                <i class="fas fa-check-circle text-green-500 mr-2"></i>Completed<span class="hidden">Completed</span>
                 {% elif part.status == 'in_progress' %}
                 <i class="fas fa-clock text-green-500 mr-2"></i>Step {{ part.currentStep }} {% for step in part.steps %} {% if step.no == part.currentStep %} : <span class="font-medium">{{ step.description }}</span>
                 <span class="hidden">{{ step.description }}</span>
                 {% endif %} {% endfor %} {% elif part.status == 'pending' %}
-                <i class="fas fa-pause-circle text-gray-500 mr-2"></i>Menunggu<span class="hidden">Menunggu</span>
+                <i class="fas fa-pause-circle text-gray-500 mr-2"></i>Pending<span class="hidden">Pending</span>
                 {% else %}
-                <i class="fas fa-pause-circle text-gray-500 mr-2"></i>Menunggu<span class="hidden">Menunggu</span>
+                <i class="fas fa-pause-circle text-gray-500 mr-2"></i>Pending<span class="hidden">Pending</span>
                 {% endif %}
               </span>
               <span class="font-semibold text-gray-800">{{ progress_percentage }}%</span>
@@ -219,12 +219,12 @@
             <div class="flex justify-between items-center text-sm text-gray-600 mb-2">
               <span class="step-info truncate pr-4">
                 {% if part.status == 'completed' %}
-                <i class="fas fa-check-circle text-blue-500 mr-2"></i>Selesai<span class="hidden">Selesai</span>
+                <i class="fas fa-check-circle text-blue-500 mr-2"></i>Completed<span class="hidden">Completed</span>
                 {% elif part.status == 'in_progress' %}
                 <i class="fas fa-clock text-green-500 mr-2"></i>Step {{ part.currentStep }} {% for step in part.steps %} {% if step.no == part.currentStep %} : <span class="font-medium">{{ step.description }}</span>
                 <span class="hidden">{{ step.description }}</span>
                 {% endif %} {% endfor %} {% else %}
-                <i class="fas fa-pause-circle text-red-500 mr-2"></i>Menunggu<span class="hidden">Menunggu</span>
+                <i class="fas fa-pause-circle text-red-500 mr-2"></i>Pending<span class="hidden">Pending</span>
                 {% endif %}
               </span>
               <span class="font-semibold text-gray-800">{{ progress_percentage }}%</span>

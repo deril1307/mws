@@ -60,182 +60,268 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 
 <script>
-  document.addEventListener("DOMContentLoaded", function () {
-      Chart.register(ChartDataLabels);
+        document.addEventListener("DOMContentLoaded", function () {
+            Chart.register(ChartDataLabels);
 
-      const originalData = {
-          {% for part_id, part in parts.items() %}
-          "{{ part_id }}": {
-              customer: "{{ part.customer }}",
-              status: "{{ part.status }}",
-              is_urgent: {{ part.is_urgent|lower }},
-              steps: {{ part.steps|length if part.steps else 0 }}
-          }{% if not loop.last %},{% endif %}
-          {% endfor %}
-      };
+            const originalData = {
+                {% for part_id, part in parts.items() %}
+                "{{ part_id }}": {
+                    customer: "{{ part.customer }}",
+                    status: "{{ part.status }}",
+                    is_urgent: {{ part.is_urgent|lower }},
+                    steps: {{ part.steps|length if part.steps else 0 }}
+                }{% if not loop.last %},{% endif %}
+                {% endfor %}
+            };
 
-      // -- Variabel untuk Chart 1 & 2 --
-      const statusChartLabels = ['Menunggu', 'Dikerjakan', 'Selesai'];
+            // -- Variabel untuk Chart 1 & 2 --
+            const statusChartLabels = ['Menunggu', 'Dikerjakan', 'Selesai'];
 
-      // DIUBAH: Urutan warna disesuaikan: Merah, Hijau, Biru
-      const statusChartColors = ['rgb(239, 68, 68)', 'rgb(16, 185, 129)', 'rgb(59, 130, 246)'];
+            // DIUBAH: Urutan warna disesuaikan: Merah, Hijau, Biru
+            const statusChartColors = ['rgb(239, 68, 68)', 'rgb(16, 185, 129)', 'rgb(59, 130, 246)'];
 
-      const initialStats = calculateCustomerStats('');
-      let statusChartData = [initialStats.pending, initialStats.inProgress, initialStats.completed];
+            const initialStats = calculateCustomerStats('');
+            let statusChartData = [initialStats.pending, initialStats.inProgress, initialStats.completed];
 
-      // -- Variabel untuk Chart 3 (Urgensi) --
-      const urgencyChartLabels = ['Urgent', 'Reguler'];
-      const urgencyChartColors = ['rgb(220, 38, 38)', 'rgb(59, 130, 246)'];
-      const initialUrgencyStats = calculateUrgencyStats('');
-      let urgencyChartData = [initialUrgencyStats.urgent, initialUrgencyStats.regular];
+            // -- Variabel untuk Chart 3 (Urgensi) --
+            const urgencyChartLabels = ['Urgent', 'Reguler'];
+            const urgencyChartColors = ['rgb(220, 38, 38)', 'rgb(59, 130, 246)'];
+            const initialUrgencyStats = calculateUrgencyStats('');
+            let urgencyChartData = [initialUrgencyStats.urgent, initialUrgencyStats.regular];
 
-      let mwsStatusChart, mwsStatusBarChart, mwsUrgencyChart;
+            let mwsStatusChart, mwsStatusBarChart, mwsUrgencyChart;
 
-      // -- Perhitungan Data Chart 1 & 2 --
-      function calculateCustomerStats(customerName = '') {
-          let customerPending = 0, customerInProgress = 0, customerCompleted = 0, customerTotal = 0;
-          Object.values(originalData).forEach(part => {
-              if (customerName === '' || part.customer === customerName) {
-                  customerTotal++;
-                  if (part.status === 'pending') customerPending++;
-                  else if (part.status === 'in_progress') customerInProgress++;
-                  else if (part.status === 'completed') customerCompleted++;
-              }
-          });
-          return { total: customerTotal, pending: customerPending, inProgress: customerInProgress, completed: customerCompleted };
-      }
+            // -- Perhitungan Data Chart 1 & 2 --
+            function calculateCustomerStats(customerName = '') {
+                let customerPending = 0, customerInProgress = 0, customerCompleted = 0, customerTotal = 0;
+                Object.values(originalData).forEach(part => {
+                    if (customerName === '' || part.customer === customerName) {
+                        customerTotal++;
+                        if (part.status === 'pending') customerPending++;
+                        else if (part.status === 'in_progress') customerInProgress++;
+                        else if (part.status === 'completed') customerCompleted++;
+                    }
+                });
+                return { total: customerTotal, pending: customerPending, inProgress: customerInProgress, completed: customerCompleted };
+            }
 
-      // -- Perhitungan Data Chart 3: Urgensi --
-      function calculateUrgencyStats(customerName = '') {
-          let urgentCount = 0, regularCount = 0;
-          Object.values(originalData).forEach(part => {
-              if (customerName === '' || part.customer === customerName) {
-                  if (part.is_urgent) urgentCount++;
-                  else regularCount++;
-              }
-          });
-          return { urgent: urgentCount, regular: regularCount };
-      }
+            // -- Perhitungan Data Chart 3: Urgensi --
+            function calculateUrgencyStats(customerName = '') {
+                let urgentCount = 0, regularCount = 0;
+                Object.values(originalData).forEach(part => {
+                    if (customerName === '' || part.customer === customerName) {
+                        if (part.is_urgent) urgentCount++;
+                        else regularCount++;
+                    }
+                });
+                return { urgent: urgentCount, regular: regularCount };
+            }
 
-      function updateStatistics(stats) {
-          document.getElementById('total-ws-stat').textContent = stats.total;
-          document.getElementById('pending-ws-stat').textContent = stats.pending;
-          document.getElementById('inprogress-ws-stat').textContent = stats.inProgress;
-          document.getElementById('completed-ws-stat').textContent = stats.completed;
-      }
+            function updateStatistics(stats) {
+                document.getElementById('total-ws-stat').textContent = stats.total;
+                document.getElementById('pending-ws-stat').textContent = stats.pending;
+                document.getElementById('inprogress-ws-stat').textContent = stats.inProgress;
+                document.getElementById('completed-ws-stat').textContent = stats.completed;
+            }
 
-      function updateCharts(stats) {
-          const newData = [stats.pending, stats.inProgress, stats.completed];
-          if (mwsStatusChart) {
-              mwsStatusChart.data.datasets[0].data = newData;
-              mwsStatusChart.update('none');
-          }
-          if (mwsStatusBarChart) {
-              mwsStatusBarChart.data.datasets[0].data = newData;
-              mwsStatusBarChart.update('none');
-          }
-      }
+            function updateCharts(stats) {
+                const newData = [stats.pending, stats.inProgress, stats.completed];
+                if (mwsStatusChart) {
+                    mwsStatusChart.data.datasets[0].data = newData;
+                    mwsStatusChart.update('none');
+                }
+                if (mwsStatusBarChart) {
+                    mwsStatusBarChart.data.datasets[0].data = newData;
+                    mwsStatusBarChart.update('none');
+                }
+            }
 
-      function updateUrgencyChart(stats) {
-          const newData = [stats.urgent, stats.regular];
-          if (mwsUrgencyChart) {
-              mwsUrgencyChart.data.datasets[0].data = newData;
-              mwsUrgencyChart.update('none');
-          }
-      }
+            function updateUrgencyChart(stats) {
+                const newData = [stats.urgent, stats.regular];
+                if (mwsUrgencyChart) {
+                    mwsUrgencyChart.data.datasets[0].data = newData;
+                    mwsUrgencyChart.update('none');
+                }
+            }
 
-      function updateCustomerLabel(customerName) {
-          const label = document.getElementById('customer-chart-label');
-          if (customerName) {
-              label.textContent = `- ${customerName}`;
-              label.classList.add('text-blue-600', 'font-medium');
-          } else {
-              label.textContent = '';
-              label.classList.remove('text-blue-600', 'font-medium');
-          }
-      }
+            function updateCustomerLabel(customerName) {
+                const label = document.getElementById('customer-chart-label');
+                if (customerName) {
+                    label.textContent = `- ${customerName}`;
+                    label.classList.add('text-blue-600', 'font-medium');
+                } else {
+                    label.textContent = '';
+                    label.classList.remove('text-blue-600', 'font-medium');
+                }
+            }
 
-      // -- Inisialisasi Chart 1: Status (Doughnut) --
-      const ctxDoughnut = document.getElementById('mwsStatusChart');
-      if (ctxDoughnut) {
-          mwsStatusChart = new Chart(ctxDoughnut, {
-              type: 'doughnut',
-              data: {
-                  labels: statusChartLabels,
-                  datasets: [{ label: 'Status Pengerjaan', data: statusChartData, backgroundColor: statusChartColors, hoverOffset: 4 }]
-              },
-              options: {
-                  responsive: true, maintainAspectRatio: false,
-                  plugins: {
-                      legend: { position: 'top' },
-                      title: { display: true, text: 'Berdasarkan Statistik Customer' },
-                      datalabels: {
-                          display: true, color: '#fff', font: { weight: 'bold', size: 14 },
-                          formatter: (value) => (value > 0 ? value : null)
-                      }
-                  },
-                  animation: { duration: 400 }
-              }
-          });
-      }
+            // -- Inisialisasi Chart 1: Status (Doughnut) --
+    const ctxDoughnut = document.getElementById('mwsStatusChart');
+    if (ctxDoughnut) {
+        mwsStatusChart = new Chart(ctxDoughnut, {
+            type: 'doughnut',
+            data: {
+                labels: statusChartLabels,
+                datasets: [{
+                    label: 'Status Pengerjaan',
+                    data: statusChartData,
+                    backgroundColor: statusChartColors,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top'
+                    },
+                    title: {
+                        display: true,
+                        text: 'Berdasarkan Statistik Customer',
+                        padding: {
+                            top: 0,
+                            bottom: 30 // tambah jarak agar title lebih naik
+                        },
+                        font: {
+                            size: 16
+                        }
+                    },
+                    datalabels: {
+                        display: true,
+                        color: '#fff',
+                        font: {
+                            weight: 'bold',
+                            size: 14
+                        },
+                        formatter: (value) => (value > 0 ? value : null)
+                    }
+                },
+                animation: {
+                    duration: 400
+                }
+            }
+        });
+    }
 
-      // -- Inisialisasi Chart 2: Status (Bar) --
+
+           // -- Inisialisasi Chart 2: Status (Bar) --
       const ctxBar = document.getElementById('mwsStatusBarChart');
       if (ctxBar) {
           mwsStatusBarChart = new Chart(ctxBar, {
               type: 'bar',
               data: {
                   labels: statusChartLabels,
-                  datasets: [{ label: 'Jumlah Work Sheet', data: statusChartData, backgroundColor: statusChartColors, borderWidth: 1 }]
+                  datasets: [{
+                      label: 'Jumlah Work Sheet',
+                      data: statusChartData,
+                      backgroundColor: statusChartColors,
+                      borderWidth: 1
+                  }]
               },
               options: {
-                  responsive: true, maintainAspectRatio: false,
-                  scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  scales: {
+                      y: {
+                          beginAtZero: true,
+                          ticks: {
+                              stepSize: 1
+                          }
+                      }
+                  },
                   plugins: {
-                      legend: { display: false },
-                      title: { display: true, text: 'Berdasarkan Statistik Customer' },
+                      legend: {
+                          display: false
+                      },
+                      title: {
+                          display: true,
+                          text: 'Berdasarkan Statistik Customer',
+                          padding: {
+                              top: 0,
+                              bottom: 30
+                          },
+                          font: {
+                              size: 16
+                          }
+                      },
                       datalabels: {
-                          display: true, anchor: 'end', align: 'top', color: '#4A5568', font: { weight: 'bold' },
+                          display: true,
+                          anchor: 'end',
+                          align: 'top',
+                          color: '#4A5568',
+                          font: {
+                              weight: 'bold'
+                          },
                           formatter: (value) => (value > 0 ? value : null)
                       }
                   },
-                  animation: { duration: 400 }
+                  animation: {
+                      duration: 400
+                  }
               }
           });
       }
 
-      // -- Inisialisasi Chart 3: Urgensi (Doughnut) --
-      const ctxUrgency = document.getElementById('mwsUrgencyChart');
-      if (ctxUrgency) {
-          mwsUrgencyChart = new Chart(ctxUrgency, {
-              type: 'doughnut',
-              data: {
-                  labels: urgencyChartLabels,
-                  datasets: [{ label: 'Status Urgensi', data: urgencyChartData, backgroundColor: urgencyChartColors, hoverOffset: 4 }]
-              },
-              options: {
-                  responsive: true, maintainAspectRatio: false,
-                  plugins: {
-                      legend: { position: 'top' },
-                      title: { display: true, text: 'Berdasarkan Urgensi' },
-                      datalabels: {
-                          display: true, color: '#fff', font: { weight: 'bold', size: 14 },
-                          formatter: (value) => (value > 0 ? value : null)
+
+           // -- Inisialisasi Chart 3: Urgensi (Doughnut) --
+  const ctxUrgency = document.getElementById('mwsUrgencyChart');
+  if (ctxUrgency) {
+      mwsUrgencyChart = new Chart(ctxUrgency, {
+          type: 'doughnut',
+          data: {
+              labels: urgencyChartLabels,
+              datasets: [{
+                  label: 'Status Urgensi',
+                  data: urgencyChartData,
+                  backgroundColor: urgencyChartColors,
+                  hoverOffset: 4
+              }]
+          },
+          options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                  legend: {
+                      position: 'top'
+                  },
+                  title: {
+                      display: true,
+                      text: 'Berdasarkan Urgensi',
+                      padding: {
+                          top: 0,
+                          bottom: 30 // Semakin besar nilainya, judul makin naik ke atas
+                      },
+                      font: {
+                          size: 16
                       }
                   },
-                  animation: { duration: 400 }
+                  datalabels: {
+                      display: true,
+                      color: '#fff',
+                      font: {
+                          weight: 'bold',
+                          size: 14
+                      },
+                      formatter: (value) => (value > 0 ? value : null)
+                  }
+              },
+              animation: {
+                  duration: 400
               }
-          });
-      }
+          }
+      });
+  }
 
-      // -- Fungsi Filter Global
-      window.filterChartsByCustomer = function(customerName) {
-          const statusStats = calculateCustomerStats(customerName);
-          const urgencyStats = calculateUrgencyStats(customerName);
-          updateStatistics(statusStats);
-          updateCharts(statusStats);
-          updateUrgencyChart(urgencyStats);
-          updateCustomerLabel(customerName);
-      };
-  });
+
+            // -- Fungsi Filter Global
+            window.filterChartsByCustomer = function(customerName) {
+                const statusStats = calculateCustomerStats(customerName);
+                const urgencyStats = calculateUrgencyStats(customerName);
+                updateStatistics(statusStats);
+                updateCharts(statusStats);
+                updateUrgencyChart(urgencyStats);
+                updateCustomerLabel(customerName);
+            };
+        });
 </script>

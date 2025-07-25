@@ -220,11 +220,99 @@
 .notification.error {
   background-color: #ef4444;
 }
+
+/* Stripping notification styles */
+.stripping-notification {
+  position: fixed;
+  top: 5rem;
+  right: 1rem;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  color: white;
+  z-index: 50;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  min-width: 300px;
+  max-width: 400px;
+}
+
+.stripping-notification.warning {
+  background-color: #f59e0b;
+}
+
+.stripping-notification.critical {
+  background-color: #ef4444;
+  animation: pulse 2s infinite;
+}
+
+.stripping-notification.safe {
+  background-color: #10b981;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.stripping-progress-bar {
+  width: 100%;
+  height: 8px;
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  margin: 0.5rem 0;
+  overflow: hidden;
+}
+
+.stripping-progress-fill {
+  height: 100%;
+  background-color: white;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+/* Check step highlighting for stripping notification */
+.check-step-row.stripping-warning {
+  background-color: #fef3cd !important;
+  border-left: 4px solid #f59e0b;
+}
+
+.check-step-row.stripping-critical {
+  background-color: #fee2e2 !important;
+  border-left: 4px solid #ef4444;
+  animation: subtle-pulse 3s infinite;
+}
+
+@keyframes subtle-pulse {
+  0%, 100% { background-color: #fee2e2; }
+  50% { background-color: #fecaca; }
+}
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="min-h-screen bg-gray-50">
+  <!-- Stripping Notification Area -->
+  <div id="stripping-notification" class="stripping-notification" style="display: none;">
+    <div class="flex items-start space-x-2">
+      <div class="flex-shrink-0">
+        <i id="stripping-icon" class="fas fa-exclamation-triangle text-xl"></i>
+      </div>
+      <div class="flex-1">
+        <h4 class="font-bold text-sm mb-1">Peringatan Stripping</h4>
+        <p id="stripping-message" class="text-sm mb-2"></p>
+        <div class="stripping-progress-bar">
+          <div id="stripping-progress-fill" class="stripping-progress-fill" style="width: 100%;"></div>
+        </div>
+        <div class="flex justify-between text-xs mt-1">
+          <span id="stripping-percentage">100%</span>
+          <span id="stripping-deadline"></span>
+        </div>
+      </div>
+      <button onclick="dismissStrippingNotification()" class="flex-shrink-0 text-white hover:text-gray-200">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+  </div>
+
   <div class="bg-white shadow-sm border-b">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex justify-between items-center py-4">
@@ -238,7 +326,7 @@
           </div>
         </div>
         <span class="px-4 py-2 rounded-full text-sm font-medium {% if part.status == 'completed' %}bg-blue-500 text-white {% elif part.status == 'in_progress' %}bg-green-500 text-white {% else %}bg-red-500 text-white {% endif %}">
-          {% if part.status == 'completed' %}Selesai {% elif part.status == 'in_progress' %}Sedang Dikerjakan {% else %}Menunggu{% endif %}
+          {% if part.status == 'completed' %}Completed {% elif part.status == 'in_progress' %}In Progress {% else %}Menunggu{% endif %}
         </span>
       </div>
     </div>
@@ -285,7 +373,7 @@
           </thead>
           <tbody>
             {% for step in part.steps %}
-            <tr id="step-row-{{ step.no }}" class="{% if step.status == 'completed' %}bg-blue-50{% elif step.status == 'in_progress' %}bg-green-50{% else %}bg-red-50{% endif %} hover:bg-gray-50">
+            <tr id="step-row-{{ step.no }}" class="{% if step.description.lower() == 'check' %}check-step-row{% endif %} {% if step.status == 'completed' %}bg-blue-50{% elif step.status == 'in_progress' %}bg-green-50{% else %}bg-red-50{% endif %} hover:bg-gray-50">
               <td class="text-center font-medium p-3 align-top border-b">{{ step.no }}</td>
               <td class="text-sm p-3 align-top border-b">
                 <div id="step-desc-{{ step.no }}" class="font-semibold text-gray-800">{{ step.description }}</div>
@@ -322,8 +410,11 @@
                 {% if user.role == 'mechanic' and step.status == 'pending' %}
                 <div class="flex flex-col items-center justify-center space-y-1 p-1" id="timer-controls-{{ step.no }}">
                   <input type="hidden" id="hours-{{ step.no }}" value="{{ step.hours or '0' }}" />
-                  <span id="hours-display-{{ step.no }}" class="font-mono text-sm font-semibold text-gray-700 h-6 flex items-center" {% if step.get('timer_start_time') %} data-start-time="{{ step.get('timer_start_time') }}" data-initial-hours="{{ step.hours or '0' }}" {% endif %}>
-                    {{ '%.2f'|format(step.hours|float) if step.hours else '0.00' }}
+                  <span id="hours-display-{{ step.no }}" class="font-mono text-xs font-semibold text-gray-700 h-6 flex items-center" {% if step.get('timer_start_time') %} data-start-time="{{ step.get('timer_start_time') }}" data-initial-hours="{{ step.hours or '0' }}" {% endif %}>
+                    {% set total_minutes = step.hours|float if step.hours else 0 %}
+                    {% set hours = (total_minutes // 60)|int %}
+                    {% set minutes = (total_minutes % 60)|int %}
+                    {{ '%02d:%02d'|format(hours, minutes) }}
                   </span>
                   {% if step.get('timer_start_time') %}
                   <button onclick="stopTimer('{{ part_id }}', {{ step.no }})" class="w-full px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs">Stop</button>
@@ -333,7 +424,16 @@
                 </div>
                 {% else %}
                 <div class="text-center p-3">
-                  <span class="text-sm font-mono font-semibold text-gray-900"> {{ '%.2f'|format(step.hours|float) if step.hours else 'N/A' }} </span>
+                  <span id="hours-display-{{ step.no }}" class="text-xs font-mono font-semibold text-gray-900">
+                    {% if step.hours %}
+                      {% set total_minutes = step.hours|float %}
+                      {% set hours = (total_minutes // 60)|int %}
+                      {% set minutes = (total_minutes % 60)|int %}
+                      {{ '%02d:%02d'|format(hours, minutes) }}
+                    {% else %}
+                      N/A
+                    {% endif %}
+                  </span>
                 </div>
                 {% endif %}
               </td>
@@ -380,9 +480,10 @@
                 {% endif %}
               </td>
               <td class="text-center align-top p-3 border-b">
-                {% if step.status == 'completed' %}<i class="fas fa-check-circle text-blue-500 text-lg" title="Completed on {{ step.completedDate }}"></i>
-                {% elif step.status == 'in_progress' %}<i class="fas fa-clock text-green-500 text-lg" title="In Progress"></i>
-                {% else %}<i class="fas fa-circle text-red-300 text-lg" title="Pending"></i>
+                {% if step.status == 'completed' %}<i class="fas fa-check-circle text-blue-400 text-lg" title="Completed on {{ step.completedDate }}"></i>
+                {% elif step.status == 'in_progress' %}<i class="fas fa-clock text-green-400 text-lg" title="In Progress"></i>
+                {% else %}<i class="fas fa-exclamation-circle text-red-400 text-lg" title="Pending"></i>
+
                 {% endif %}
               </td>
               <td class="text-center align-top p-3 border-b">
@@ -426,17 +527,11 @@
 <script>
   const currentUserRole = "{{ user.role }}";
   const currentUserNik = "{{ user.nik }}";
-  // DIUBAH: Menghapus variabel partAssignedTo dan log yang terkait
-  /*
-  const partAssignedTo = "{{ part.assignedTo }}";
+  const partId = "{{ part_id }}";
   
-  console.log('Debug Info:', {
-    userRole: currentUserRole,
-    userNik: currentUserNik,
-    partAssignedTo: partAssignedTo,
-    assignmentMatch: partAssignedTo === currentUserNik
-  });
-  */
+  // Stripping notification variables
+  let strippingNotificationTimer;
+  let strippingStatus = null;
   
   window.activeTimers = {};
 
@@ -448,6 +543,116 @@
     setTimeout(() => {
       notification.remove();
     }, 3000);
+  }
+
+  // Stripping notification functions
+  function checkStrippingStatus() {
+    fetch(`/get_stripping_status/${partId}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          strippingStatus = data.status;
+          updateStrippingNotification();
+          highlightCheckStep();
+        }
+      })
+      .catch(e => console.error('Error checking stripping status:', e));
+  }
+
+  function updateStrippingNotification() {
+    if (!strippingStatus || strippingStatus.status === 'no_start_date') {
+      hideStrippingNotification();
+      return;
+    }
+
+    const notification = document.getElementById('stripping-notification');
+    const icon = document.getElementById('stripping-icon');
+    const message = document.getElementById('stripping-message');
+    const progressFill = document.getElementById('stripping-progress-fill');
+    const percentage = document.getElementById('stripping-percentage');
+    const deadline = document.getElementById('stripping-deadline');
+
+    // Remove existing classes
+    notification.className = 'stripping-notification';
+
+    let notificationClass, iconClass, messageText;
+    
+    switch (strippingStatus.status) {
+      case 'safe':
+        notificationClass = 'safe';
+        iconClass = 'fas fa-check-circle';
+        messageText = `Masih tersisa ${strippingStatus.working_days_remaining} hari kerja untuk stripping step.`;
+        break;
+      case 'warning':
+        notificationClass = 'warning';
+        iconClass = 'fas fa-exclamation-triangle';
+        messageText = `Peringatan! Tersisa ${strippingStatus.working_days_remaining} hari kerja untuk stripping step Check.`;
+        break;
+      case 'critical':
+        notificationClass = 'critical';
+        iconClass = 'fas fa-exclamation-circle';
+        if (strippingStatus.working_days_remaining <= 0) {
+          const overdue = Math.abs(strippingStatus.working_days_remaining);
+          messageText = `KRITIS! Batas waktu stripping telah terlewat ${overdue} hari kerja.`;
+        } else {
+          messageText = `KRITIS! Hanya tersisa ${strippingStatus.working_days_remaining} hari kerja untuk stripping step Check.`;
+        }
+        break;
+    }
+
+    notification.classList.add(notificationClass);
+    icon.className = iconClass + ' text-xl';
+    message.textContent = messageText;
+    progressFill.style.width = `${strippingStatus.percentage}%`;
+    percentage.textContent = `${strippingStatus.percentage}%`;
+    
+    if (strippingStatus.deadline_date) {
+      const deadlineDate = new Date(strippingStatus.deadline_date);
+      deadline.textContent = `Deadline: ${deadlineDate.toLocaleDateString('id-ID')}`;
+    }
+
+    notification.style.display = 'block';
+
+    // Auto-hide safe notifications after 10 seconds
+    if (strippingStatus.status === 'safe') {
+      clearTimeout(strippingNotificationTimer);
+      strippingNotificationTimer = setTimeout(() => {
+        hideStrippingNotification();
+      }, 10000);
+    }
+  }
+
+  function highlightCheckStep() {
+    // Remove existing highlighting
+    document.querySelectorAll('.check-step-row').forEach(row => {
+      row.classList.remove('stripping-warning', 'stripping-critical');
+    });
+
+    if (!strippingStatus || strippingStatus.status === 'no_start_date' || strippingStatus.status === 'safe') {
+      return;
+    }
+
+    // Find and highlight check step
+    document.querySelectorAll('.check-step-row').forEach(row => {
+      if (strippingStatus.status === 'warning') {
+        row.classList.add('stripping-warning');
+      } else if (strippingStatus.status === 'critical') {
+        row.classList.add('stripping-critical');
+      }
+    });
+  }
+
+  function hideStrippingNotification() {
+    document.getElementById('stripping-notification').style.display = 'none';
+    clearTimeout(strippingNotificationTimer);
+  }
+
+  function dismissStrippingNotification() {
+    hideStrippingNotification();
+    // Check again in 5 minutes for critical notifications
+    if (strippingStatus && strippingStatus.status === 'critical') {
+      setTimeout(checkStrippingStatus, 5 * 60 * 1000); // 5 minutes
+    }
   }
 
   function initializeLiveTimers() {
@@ -471,7 +676,10 @@
 
         const totalMinutes = initialHours + elapsedMinutes;
 
-        displayElement.textContent = totalMinutes.toFixed(2);
+        // Convert minutes to hours:minutes format
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = Math.floor(totalMinutes % 60);
+        displayElement.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
       }, 1000);
     });
   }
@@ -521,11 +729,18 @@
       .then((r) => r.json())
       .then((d) => {
         if (d.success) {
-          showNotification(`Timer dihentikan. Total jam: ${d.hours}`, "success");
+          // Convert minutes to hours:minutes format for notification
+          const totalMinutes = parseFloat(d.hours);
+          const hours = Math.floor(totalMinutes / 60);
+          const minutes = Math.floor(totalMinutes % 60);
+          const timeFormat = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+          showNotification(`Timer dihentikan. Total waktu: ${timeFormat}`, "success");
           const hoursInput = document.getElementById(`hours-${stepNo}`);
           if (hoursInput) {
             hoursInput.value = d.hours;
           }
+          // Recalculate total duration after stopping timer
+          setTimeout(calculateTotalDuration, 100);
           location.reload();
         } else {
           showNotification("Error: " + d.error, "error");
@@ -540,7 +755,58 @@
       });
   }
 
-  document.addEventListener('DOMContentLoaded', initializeLiveTimers);
+  document.addEventListener('DOMContentLoaded', function() {
+    initializeLiveTimers();
+    calculateTotalDuration();
+    
+    // Initialize stripping status check
+    checkStrippingStatus();
+    
+    // Check stripping status every 5 minutes
+    setInterval(checkStrippingStatus, 5 * 60 * 1000);
+  });
+
+  function calculateTotalDuration() {
+    let totalMinutes = 0;
+    
+    // Get all hours display elements and extract their values
+    const hoursDisplays = document.querySelectorAll('[id^="hours-display-"]');
+    
+    hoursDisplays.forEach(display => {
+      const timeText = display.textContent.trim();
+      if (timeText && timeText !== 'N/A') {
+        // Parse HH:MM format back to minutes
+        const [hours, minutes] = timeText.split(':').map(num => parseInt(num) || 0);
+        totalMinutes += (hours * 60) + minutes;
+      }
+    });
+    
+    // Also check for any hidden input values (for steps with timers)
+    const hoursInputs = document.querySelectorAll('[id^="hours-"]');
+    hoursInputs.forEach(input => {
+      if (input.type === 'hidden' && input.value) {
+        const stepMinutes = parseFloat(input.value) || 0;
+        // Don't double count - only add if we haven't already counted this step
+        const stepNo = input.id.split('-')[1];
+        const displayElement = document.getElementById(`hours-display-${stepNo}`);
+        if (displayElement && displayElement.textContent.trim() === 'N/A') {
+          totalMinutes += stepMinutes;
+        }
+      }
+    });
+    
+    // Convert total minutes to hours:minutes format
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = Math.floor(totalMinutes % 60);
+    const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    
+    // Update the display
+    const totalDurationDisplay = document.getElementById('total-duration-display');
+    if (totalDurationDisplay) {
+      totalDurationDisplay.textContent = formattedTime;
+      console.log('Total duration updated:', formattedTime, 'from', totalMinutes, 'minutes');
+    }
+  }
 
   function updateStepField(partId, stepNo, field, value) {
     fetch("/update_step_field", {
@@ -638,7 +904,17 @@
         body: JSON.stringify({ partId, field, value })
       })
       .then((r) => r.json())
-      .then((d) => (d.success ? showNotification("Date updated", "success") : showNotification("Error: " + d.error, "error")))
+      .then((d) => {
+        if (d.success) {
+          showNotification("Date updated", "success");
+          // Refresh stripping status when start date changes
+          if (field === 'startDate') {
+            setTimeout(checkStrippingStatus, 1000);
+          }
+        } else {
+          showNotification("Error: " + d.error, "error");
+        }
+      })
       .catch((e) => showNotification("Error", "error"));
   }
 

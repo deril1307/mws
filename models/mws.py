@@ -1,6 +1,6 @@
 from . import db
 from sqlalchemy.orm import relationship # type: ignore
-from datetime import datetime
+from datetime import datetime, timedelta, date
 import json
 
 class MwsPart(db.Model):
@@ -34,14 +34,89 @@ class MwsPart(db.Model):
     verifiedDate = db.Column(db.String(100))
     is_urgent = db.Column(db.Boolean, default=False)
     urgent_request = db.Column(db.Boolean, default=False)
+    stripping_deadline = db.Column(db.Date)  
+    stripping_notified = db.Column(db.Boolean, default=False) 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationship to MwsStep
     steps = relationship('MwsStep', back_populates='mws_part', cascade="all, delete-orphan", order_by="MwsStep.no")
 
+    def calculate_stripping_deadline(self):
+        """Calculate stripping deadline (20 working days from start date)"""
+        if not self.startDate:
+            return None
+            
+        deadline = self.startDate
+        work_days_added = 0
+        while work_days_added < 20:
+            deadline += timedelta(days=1)
+            if deadline.weekday() < 5: 
+                work_days_added += 1
+        return deadline
+    
+    def update_stripping_deadline(self):
+        """Update stripping deadline when start date changes"""
+        if self.startDate:
+            self.stripping_deadline = self.calculate_stripping_deadline()
+        else:
+            self.stripping_deadline = None
+    
+    def get_stripping_status(self):
+        """Get stripping status for notifications"""
+        if not self.startDate or not self.stripping_deadline:
+            return {'status': 'no_start_date', 'days_remaining': None, 'percentage': 100}
+        today = date.today()
+        days_remaining = (self.stripping_deadline - today).days
+        working_days_passed = self.calculate_working_days_between(self.startDate, today)
+        working_days_remaining = 20 - working_days_passed
+        
+
+        if working_days_passed < 20:
+   
+            percentage = 100
+        else:
+       
+            overdue_days = working_days_passed - 20
+
+            percentage = 100 - (overdue_days * 10)
+        
+
+        if working_days_passed < 15:
+            status = 'safe'  
+        elif working_days_passed < 20:
+            status = 'warning'  
+        else:
+            status = 'critical' 
+            
+        return {
+            'status': status,
+            'days_remaining': days_remaining,
+            'percentage': round(percentage, 1),
+            'deadline_date': self.stripping_deadline,
+            'working_days_passed': working_days_passed,
+            'working_days_remaining': working_days_remaining
+        }
+    
+    def calculate_working_days_between(self, start_date, end_date):
+        """Calculate working days between two dates"""
+        if not start_date or not end_date or end_date <= start_date:
+            return 0
+            
+        current_date = start_date
+        working_days = 0
+        
+        while current_date < end_date:
+            current_date += timedelta(days=1)
+            if current_date.weekday() < 5:  
+                working_days += 1
+                
+        return working_days
+
     def to_dict(self):
         """Convert MwsPart to dictionary format compatible with existing templates"""
+        stripping_status = self.get_stripping_status()
+        
         return {
             'part_id': self.part_id,
             'partNumber': self.partNumber,
@@ -71,6 +146,8 @@ class MwsPart(db.Model):
             'is_urgent': self.is_urgent,
             'urgent_request': self.urgent_request,
             'created_at': self.created_at,
+            'stripping_deadline': self.stripping_deadline.isoformat() if self.stripping_deadline else '',
+            'stripping_status': stripping_status,
             'steps': [step.to_dict() for step in self.steps]
         }
 

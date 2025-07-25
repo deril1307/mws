@@ -59,6 +59,9 @@ def before_request_callback():
         current_user.last_seen = datetime.now(timezone.utc)
         db.session.commit()
 
+
+
+
 # Template langkah kerja untuk berbagai jenis pekerjaan
 JOB_STEPS_TEMPLATES = {
     "F.Test": [
@@ -115,6 +118,21 @@ def create_database_tables():
     """Create database tables if they don't exist"""
     with app.app_context():
         db.create_all()
+
+
+def calculate_working_days_deadline(start_date, days):
+
+    if not isinstance(start_date, datetime.date):
+        return None
+        
+    deadline = start_date
+    work_days_added = 0
+    while work_days_added < days:
+        deadline += timedelta(days=1)
+        # weekday() mengembalikan 0 untuk Senin dan 6 untuk Minggu
+        if deadline.weekday() < 5: # Senin (0) sampai Jumat (4)
+            work_days_added += 1
+    return deadline
 
 def update_mws_status(mws_part):
     """Update MWS status based on steps completion"""
@@ -653,6 +671,9 @@ def update_mws_info():
         if not mws_part:
             return jsonify({'success': False, 'error': f'Part dengan ID {part_id} tidak ditemukan.'}), 404
 
+        # Store old start date to check if it changed
+        old_start_date = mws_part.startDate
+
         for key, value in data.items():
             if hasattr(mws_part, key):
                 if key in ['startDate', 'finishDate', 'targetDate'] and value:
@@ -666,6 +687,10 @@ def update_mws_info():
                         continue
                 else:
                     setattr(mws_part, key, value)
+        
+        # Update stripping deadline if start date changed
+        if mws_part.startDate != old_start_date:
+            mws_part.update_stripping_deadline()
         
         db.session.commit()
         return jsonify({'success': True})
@@ -1000,6 +1025,9 @@ def update_dates():
         if not mws_part:
             return jsonify({'error': 'Part not found'}), 404
         
+        # Store old start date to check if it changed
+        old_start_date = mws_part.startDate
+        
         # Parse date value
         if value:
             try:
@@ -1009,6 +1037,10 @@ def update_dates():
                 return jsonify({'error': 'Invalid date format'}), 400
         else:
             setattr(mws_part, field, None)
+        
+        # Update stripping deadline if start date changed
+        if field == 'startDate' and mws_part.startDate != old_start_date:
+            mws_part.update_stripping_deadline()
         
         db.session.commit()
         return jsonify({'success': True})
@@ -1099,10 +1131,10 @@ def start_timer():
 @csrf.exempt
 @app.route('/stop_timer', methods=['POST'])
 @require_role('mechanic')
-@limiter.limit("60 per minute")  
+@limiter.limit("60 per minute")
 def stop_timer():
     """
-    Menghitung durasi sejak timer dimulai, mengakumulasi total menit,
+    Menghitung durasi sejak timer dimulai, mengakumulasi total MENIT,
     dan menyimpannya kembali ke data step kerja di field 'hours'.
     """
     try:
@@ -1125,20 +1157,18 @@ def stop_timer():
         if not step.timer_start_time:
             return jsonify({'success': False, 'error': 'Timer belum dimulai untuk langkah ini'}), 400
         
-      
         start_time = datetime.fromisoformat(step.timer_start_time)
         stop_time = datetime.now(timezone.utc)
         duration = stop_time - start_time
-        duration_in_minutes = duration.total_seconds() / 60
         
+        
+        # 1. Konversi durasi sesi ini ke MENIT
+        duration_in_minutes = duration.total_seconds() / 60
         existing_minutes = float(step.hours or 0)
         total_minutes = existing_minutes + duration_in_minutes
-        
         step.hours = f"{total_minutes:.2f}"
-        step.timer_start_time = None  
-        
+        step.timer_start_time = None
         db.session.commit()
-        
         return jsonify({'success': True, 'hours': step.hours})
         
     except Exception as e:
@@ -1189,16 +1219,30 @@ def set_urgent_status(part_id):
         print(f"Error setting urgent status: {e}")
         return jsonify({'success': False, 'error': 'Database error'}), 500
 
+# =====================================================================
+# NEW ROUTE FOR STRIPPING NOTIFICATION STATUS
+# =====================================================================
 
+@app.route('/get_stripping_status/<part_id>')
+@login_required
+@limiter.limit("30 per minute")
+def get_stripping_status(part_id):
+    """Get current stripping status for a specific part"""
+    try:
+        mws_part = MwsPart.query.filter_by(part_id=part_id).first()
+        if not mws_part:
+            return jsonify({'success': False, 'error': 'Part tidak ditemukan'}), 404
+        
+        stripping_status = mws_part.get_stripping_status()
+        return jsonify({'success': True, 'status': stripping_status})
+        
+    except Exception as e:
+        print(f"Error getting stripping status: {e}")
+        return jsonify({'success': False, 'error': 'Database error'}), 500
 
-
-# app.py
-
-# ... (kode lainnya tetap sama) ...
-
-# app.py
-
-# ... (kode lain sebelum fungsi)
+# =====================================================================
+# Print Mws
+# =====================================================================
 
 @csrf.exempt
 @app.route('/print_mws/<part_id>')
@@ -1261,9 +1305,6 @@ def print_mws(part_id):
         print(f"Error generating print MWS for part_id {part_id}: {e}")
         return "Terjadi kesalahan internal saat membuat halaman cetak.", 500
 
-# ... (sisa kode lainnya tetap sama) ...
-
-# ... (sisa kode lainnya tetap sama) ...
 
 # =====================================================================
 # MENJALANKAN APLIKASI
