@@ -1,49 +1,81 @@
 {% extends "shared/base.html" %} {% block title %}Buat MWS Baru - Sistem Aircraft Maintenance{% endblock %} {% block content %}
 <div class="min-h-screen bg-gray-50">
-  <div class="bg-white shadow-sm border-b border-gray-200">
+  <div class="bg-white shadow-md border-b border-gray-200">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex items-center py-4">
-        <a href="{{ url_for('dashboard') }}" class="mr-4 p-2 hover:bg-gray-100 rounded-lg transition-colors">
-          <i class="fas fa-arrow-left text-gray-600"></i>
-        </a>
-        <div>
-          <h1 class="text-2xl font-bold text-gray-800">Buat MWS Baru</h1>
-          <p class="text-gray-600">Maintenance Work Sheet</p>
+      <div class="flex items-center justify-between py-5">
+        <div class="flex items-center space-x-4">
+          <a href="{{ url_for('dashboard') }}" class="text-gray-500 hover:bg-gray-100 rounded-full p-2 transition-colors duration-200">
+            <i class="fas fa-arrow-left fa-lg"></i>
+          </a>
+          <div>
+            <h1 class="text-2xl font-bold text-gray-900 flex items-center">
+              <i class="fas fa-plus-circle text-blue-500 mr-3"></i>
+              Buat Maintenance Work Sheet (MWS) Baru
+            </h1>
+            <p class="text-sm text-gray-500 ml-9">Isi detail di bawah untuk membuat MWS baru.</p>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-      <form id="createMwsForm" class="space-y-8">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+      <form id="createMwsForm" class="space-y-10 p-8">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 
-        <fieldset>
-          <legend class="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-6 w-full">Informasi Part Utama</legend>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <fieldset class="space-y-6">
+          <legend class="text-lg font-bold text-gray-800 border-l-4 border-blue-500 pl-3">Informasi Part Utama</legend>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
             <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">Part Number *</label><input type="text" name="partNumber" class="w-full px-4 py-3 border border-gray-300 rounded-lg" required placeholder="Contoh: AOA-001" />
+              <label class="block text-sm font-medium text-gray-700 mb-2">Part Number *</label>
+              <input
+                type="text"
+                name="partNumber"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 transition duration-150 ease-in-out focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+                placeholder="Contoh: AOA-001"
+              />
             </div>
             <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">Serial Number *</label><input type="text" name="serialNumber" class="w-full px-4 py-3 border border-gray-300 rounded-lg" required placeholder="Contoh: SN123456" />
+              <label class="block text-sm font-medium text-gray-700 mb-2">Serial Number *</label>
+              <input
+                type="text"
+                name="serialNumber"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 transition duration-150 ease-in-out focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+                placeholder="Contoh: SN123456"
+              />
             </div>
             <div class="md:col-span-2">
-              <label class="block text-sm font-semibold text-gray-700 mb-2">Tittle *</label
-              ><input type="text" name="tittle_name" class="w-full px-4 py-3 border border-gray-300 rounded-lg" required placeholder="Contoh: Angle of Attack Indicator" />
+              <label class="block text-sm font-medium text-gray-700 mb-2">Tittle *</label>
+              <input
+                type="text"
+                name="tittle_name"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 transition duration-150 ease-in-out focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+                placeholder="Contoh: Angle of Attack Indicator"
+              />
             </div>
           </div>
         </fieldset>
 
-        <fieldset>
-          <legend class="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-6 w-full">Detail & Referensi Pekerjaan</legend>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <fieldset class="space-y-6">
+          <legend class="text-lg font-bold text-gray-800 border-l-4 border-blue-500 pl-3">Detail & Referensi Pekerjaan</legend>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
             <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">Ref (Referensi) *</label><input type="text" name="ref" class="w-full px-4 py-3 border border-gray-300 rounded-lg" required placeholder="Contoh: CMM 34-12-24" />
+              <label class="block text-sm font-medium text-gray-700 mb-2">Ref (Referensi) *</label>
+              <input
+                type="text"
+                name="ref"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 transition duration-150 ease-in-out focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+                placeholder="Contoh: CMM 34-12-24"
+              />
             </div>
             <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">Jenis Pekerjaan *</label>
-              <select name="jobType" class="w-full px-4 py-3 border border-gray-300 rounded-lg" required>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Jenis Pekerjaan *</label>
+              <select name="jobType" class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm transition duration-150 ease-in-out focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                 <option value="" disabled selected>Pilih jenis pekerjaan</option>
                 <option value="F.Test">F.Test</option>
                 <option value="Repair">Repair</option>
@@ -53,37 +85,97 @@
               </select>
             </div>
             <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">Customer *</label><input type="text" name="customer" class="w-full px-4 py-3 border border-gray-300 rounded-lg" required placeholder="Contoh: Garuda Indonesia" />
-            </div>
-            <div><label class="block text-sm font-semibold text-gray-700 mb-2">A/C Type *</label><input type="text" name="acType" class="w-full px-4 py-3 border border-gray-300 rounded-lg" required placeholder="Contoh: CN235" /></div>
-          </div>
-        </fieldset>
-        <fieldset>
-          <legend class="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-6 w-full">Informasi Administrasi</legend>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">WBS No. *</label
-              ><input type="text" name="wbsNo" class="w-full px-4 py-3 border border-gray-300 rounded-lg" required placeholder="Contoh: A/S90-025CN235-90-99-99" />
+              <label class="block text-sm font-medium text-gray-700 mb-2">Customer *</label>
+              <input
+                type="text"
+                name="customer"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 transition duration-150 ease-in-out focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+                placeholder="Contoh: Garuda Indonesia"
+              />
             </div>
             <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">Worksheet No. *</label><input type="text" name="worksheetNo" class="w-full px-4 py-3 border border-gray-300 rounded-lg" required placeholder="Contoh: IN-108" />
+              <label class="block text-sm font-medium text-gray-700 mb-2">A/C Type *</label>
+              <input
+                type="text"
+                name="acType"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 transition duration-150 ease-in-out focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+                placeholder="Contoh: CN235"
+              />
             </div>
-            <div><label class="block text-sm font-semibold text-gray-700 mb-2">IWO No. *</label><input type="text" name="iwoNo" class="w-full px-4 py-3 border border-gray-300 rounded-lg" required placeholder="Contoh: Z501-00001" /></div>
-            <div><label class="block text-sm font-semibold text-gray-700 mb-2">Shop Area *</label><input type="text" name="shopArea" class="w-full px-4 py-3 border border-gray-300 rounded-lg" required placeholder="Contoh: IN" /></div>
           </div>
         </fieldset>
 
-        <fieldset>
-          <legend class="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-6 w-full">Tanggal & Revisi</legend>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div><label class="block text-sm font-semibold text-gray-700 mb-2">Target Date *</label><input type="date" name="targetDate" class="w-full px-4 py-3 border border-gray-300 rounded-lg" required /></div>
-            <div><label class="block text-sm font-semibold text-gray-700 mb-2">Revision</label><input type="text" name="revision" class="w-full px-4 py-3 border border-gray-300 rounded-lg" value="1" /></div>
+        <fieldset class="space-y-6">
+          <legend class="text-lg font-bold text-gray-800 border-l-4 border-blue-500 pl-3">Informasi Administrasi</legend>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">WBS No. *</label>
+              <input
+                type="text"
+                name="wbsNo"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 transition duration-150 ease-in-out focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+                placeholder="Contoh: A/S90-025CN235-90-99-99"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Worksheet No. *</label>
+              <input
+                type="text"
+                name="worksheetNo"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 transition duration-150 ease-in-out focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+                placeholder="Contoh: IN-108"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">IWO No. *</label>
+              <input
+                type="text"
+                name="iwoNo"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 transition duration-150 ease-in-out focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+                placeholder="Contoh: Z501-00001"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Shop Area *</label>
+              <input
+                type="text"
+                name="shopArea"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 transition duration-150 ease-in-out focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+                placeholder="Contoh: IN"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Revision</label>
+              <input
+                type="text"
+                name="revision"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 transition duration-150 ease-in-out focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value="1"
+              />
+            </div>
           </div>
         </fieldset>
 
-        <div class="flex justify-end space-x-4 pt-6 border-t border-gray-200 mt-8">
-          <a href="{{ url_for('dashboard') }}" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium">Batal</a>
-          <button type="submit" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium"><i class="fas fa-plus mr-2"></i>Buat MWS</button>
+        <div class="flex justify-end items-center space-x-4 pt-6 border-t border-gray-200 mt-6">
+          <a
+            href="{{ url_for('dashboard') }}"
+            class="px-6 py-3 border border-gray-300 bg-white text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+          >
+            Batal
+          </a>
+          <button
+            type="submit"
+            class="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold shadow-md transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            <i class="fas fa-save mr-2"></i>
+            Buat MWS
+          </button>
         </div>
       </form>
     </div>
@@ -91,16 +183,65 @@
 </div>
 
 <script>
-  function showNotification(message, type) {
+  // =================================================================
+  // SCRIPT NOTIFIKASI BARU YANG LEBIH BAIK
+  // =================================================================
+  function showNotification(message, type = "success") {
+    // Menghapus notifikasi lama jika ada
+    const existingNotification = document.getElementById("toast-notification");
+    if (existingNotification) {
+      existingNotification.remove();
+    }
+
+    // Template Ikon
+    const icons = {
+      success: `<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`,
+      error: `<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`,
+    };
+
+    // Style berdasarkan tipe notifikasi
+    const styles = {
+      success: {
+        bg: "bg-green-500",
+        title: "Berhasil!",
+      },
+      error: {
+        bg: "bg-red-600",
+        title: "Terjadi Kesalahan!",
+      },
+    };
+
     const notification = document.createElement("div");
-    notification.className = `fixed top-4 right-4 px-4 py-2 rounded-lg text-white z-50 ${type === "success" ? "bg-green-500" : "bg-red-500"}`;
-    notification.textContent = message;
+    notification.id = "toast-notification";
+    notification.className = `fixed top-5 right-5 flex items-center w-full max-w-xs p-4 space-x-4 text-white ${styles[type].bg} rounded-xl shadow-2xl z-50 transition-all duration-300 ease-in-out transform translate-x-full opacity-0`;
+
+    notification.innerHTML = `
+      <div class="flex-shrink-0">${icons[type]}</div>
+      <div class="pl-2">
+        <div class="text-sm font-bold">${styles[type].title}</div>
+        <div class="text-sm font-normal">${message}</div>
+      </div>
+    `;
+
     document.body.appendChild(notification);
+
+    // Animasi masuk
+    requestAnimationFrame(() => {
+      notification.classList.remove("translate-x-full", "opacity-0");
+      notification.classList.add("translate-x-0", "opacity-100");
+    });
+
+    // Hapus notifikasi setelah 4 detik dengan animasi keluar
     setTimeout(() => {
-      notification.remove();
-    }, 3000);
+      notification.classList.remove("translate-x-0", "opacity-100");
+      notification.classList.add("translate-x-full", "opacity-0");
+      setTimeout(() => notification.remove(), 300); // Tunggu animasi selesai sebelum menghapus elemen
+    }, 4000);
   }
 
+  // =================================================================
+  // SCRIPT SUBMIT FORM
+  // =================================================================
   document.getElementById("createMwsForm").addEventListener("submit", function (e) {
     e.preventDefault();
     const formData = new FormData(this);
@@ -110,10 +251,7 @@
         data[key] = value;
       }
     }
-    data.tittle = formData.get("tittle_name");
-    data.jobType = formData.get("jobType");
 
-    // [DIPERBARUI] Mengambil token dari input yang benar
     const csrfToken = document.querySelector('input[name="csrf_token"]').value;
 
     fetch("/create_mws", {
@@ -130,14 +268,14 @@
           showNotification("MWS berhasil dibuat!", "success");
           setTimeout(() => {
             window.location.href = "/mws/" + data.partId;
-          }, 1000);
+          }, 500);
         } else {
-          showNotification("Error membuat MWS: " + data.error, "error");
+          showNotification(data.error || "Gagal menyimpan data.", "error");
         }
       })
       .catch((error) => {
         console.error("Error:", error);
-        showNotification("Error membuat MWS", "error");
+        showNotification("Tidak dapat terhubung ke server.", "error");
       });
   });
 </script>

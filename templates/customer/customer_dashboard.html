@@ -1,0 +1,64 @@
+{% extends "shared/base.html" %} {% block title %}Dashboard Customer{% endblock %} {% block content %}
+<div class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between items-center py-4">
+      <div class="flex items-center">
+        <h1 class="text-xl font-bold text-gray-800">
+          <span class="font-normal">Dashboard:</span>
+          {{ current_user.company_name }}
+        </h1>
+      </div>
+      <div>
+        <button id="logout-button" class="text-sm font-medium text-red-600 hover:text-red-800">Logout</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <h2 class="text-2xl font-semibold text-gray-900 mb-6">Tracking Maintenance Work Sheet</h2>
+
+  <div class="bg-white p-6 rounded-xl shadow-sm border mb-8">{% from 'components/tracking_list.html' import render_tracking_list %} {{ render_tracking_list(parts, users, current_user) }}</div>
+</main>
+
+<div id="logout-modal" class="fixed inset-0 z-50 items-center justify-center bg-gray-900 bg-opacity-50 hidden">
+  <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm mx-auto">
+    <div class="flex flex-col items-center text-center">
+      <div class="bg-red-100 p-3 rounded-full mb-4">
+        <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+        </svg>
+      </div>
+      <h3 class="text-lg font-bold text-gray-800">Konfirmasi Logout</h3>
+      <p class="text-gray-600 mt-2">Apakah Anda yakin ingin keluar dari akun Anda?</p>
+      <div class="mt-6 flex gap-4 w-full">
+        <button id="cancel-button" class="w-full py-2 px-4 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 font-medium">Batal</button>
+        <a href="{{ url_for('logout') }}" class="w-full py-2 px-4 bg-red-600 text-white rounded-md hover:bg-red-700 font-medium"> Ya, Logout </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", (event) => {
+    const logoutButton = document.getElementById("logout-button");
+    const logoutModal = document.getElementById("logout-modal");
+    const cancelButton = document.getElementById("cancel-button");
+    logoutButton.addEventListener("click", function (e) {
+      e.preventDefault(); // Mencegah aksi default
+      logoutModal.classList.remove("hidden");
+      logoutModal.classList.add("flex");
+    });
+    cancelButton.addEventListener("click", function () {
+      logoutModal.classList.add("hidden");
+      logoutModal.classList.remove("flex");
+    });
+    window.addEventListener("click", function (e) {
+      if (e.target === logoutModal) {
+        logoutModal.classList.add("hidden");
+        logoutModal.classList.remove("flex");
+      }
+    });
+  });
+</script>
+{% endblock %}

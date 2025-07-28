@@ -40,6 +40,7 @@
       .header-section {
         display: flex;
         border-bottom: 1px solid #000;
+        align-items: center; /* Vertically align items in the center */
       }
 
       .logo-section {
@@ -49,17 +50,7 @@
         text-align: center;
       }
 
-      .logo-placeholder {
-        width: 60px;
-        height: 60px;
-        border: 1px solid #000;
-        border-radius: 50%;
-        margin: 0 auto 5px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 8px;
-      }
+      /* You can remove the .logo-placeholder style as it's no longer used */
 
       .title-section {
         flex: 1;
@@ -208,7 +199,7 @@
     <div class="worksheet-container">
       <div class="header-section">
         <div class="logo-section">
-          <div class="logo-placeholder">LOGO</div>
+          <img src="{{ url_for('static', filename='img/Logo PT DI.jpeg') }}" alt="Logo PT DI" style="width: 100%; height: auto; max-width: 70px" />
         </div>
 
         <div class="title-section">

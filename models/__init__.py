@@ -9,3 +9,4 @@ db = SQLAlchemy()
 from .user import User
 from .mws import MwsPart
 from .step import MwsStep
+from .customer import Customer 

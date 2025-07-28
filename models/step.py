@@ -10,7 +10,7 @@ class MwsStep(db.Model):
     mws_part_id = db.Column(db.Integer, db.ForeignKey('mws_parts.id'), nullable=False)
     no = db.Column(db.Integer, nullable=False)
     description = db.Column(db.String(255), nullable=False)
-    details = db.Column(db.Text)  # Changed to TEXT for storing JSON
+    details = db.Column(db.Text) 
     status = db.Column(db.String(50), default='pending')
     completedBy = db.Column(db.String(100))
     completedDate = db.Column(db.String(100))
@@ -18,11 +18,11 @@ class MwsStep(db.Model):
     hours = db.Column(db.String(50))
     tech = db.Column(db.String(100))
     insp = db.Column(db.String(100))
-    timer_start_time = db.Column(db.String(50))  # For timer functionality
+    timer_start_time = db.Column(db.String(50))  
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Relationship to MwsPart
+    # Relasi Ke MwsPart
     mws_part = relationship('MwsPart', back_populates='steps')
 
     def to_dict(self):

@@ -33,9 +33,7 @@
   </header>
 
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <!-- PERUBAHAN: Menambahkan bagian kartu statistik -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-      <!-- Kartu Pengguna Aktif -->
       <div class="bg-white p-5 rounded-xl shadow-sm border flex items-center">
         <div class="p-3 bg-green-100 rounded-lg mr-4">
           <i class="fas fa-wifi text-green-600 text-xl"></i>
@@ -45,7 +43,6 @@
           <p class="text-2xl font-bold text-gray-900">{{ active_users_niks|length }}</p>
         </div>
       </div>
-      <!-- Kartu Pengguna Offline -->
       <div class="bg-white p-5 rounded-xl shadow-sm border flex items-center">
         <div class="p-3 bg-gray-200 rounded-lg mr-4">
           <i class="fas fa-moon text-gray-600 text-xl"></i>
@@ -55,7 +52,6 @@
           <p class="text-2xl font-bold text-gray-900">{{ users|length - active_users_niks|length }}</p>
         </div>
       </div>
-      <!-- Kartu Total Pengguna -->
       <div class="bg-white p-5 rounded-xl shadow-sm border flex items-center">
         <div class="p-3 bg-indigo-100 rounded-lg mr-4">
           <i class="fas fa-users text-indigo-600 text-xl"></i>
@@ -67,7 +63,6 @@
       </div>
     </div>
 
-    <!-- Tabel Pengguna -->
     <div class="bg-white rounded-lg shadow-md overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-sm text-left text-gray-600">
@@ -77,7 +72,6 @@
               <th scope="col" class="px-6 py-3 font-medium">NIK</th>
               <th scope="col" class="px-6 py-3 font-medium">Nama</th>
               <th scope="col" class="px-6 py-3 font-medium">Role</th>
-              <th scope="col" class="px-6 py-3 font-medium">Posisi</th>
               <th scope="col" class="px-6 py-3 font-medium text-right">Aksi</th>
             </tr>
           </thead>
@@ -104,7 +98,6 @@
                 {% set role_colors = { 'admin': 'bg-red-100 text-red-800', 'mechanic': 'bg-green-100 text-green-800', 'quality1': 'bg-yellow-100 text-yellow-800', 'quality2': 'bg-purple-100 text-purple-800' } %}
                 <span class="px-3 py-1 text-xs font-semibold leading-tight rounded-full {{ role_colors.get(user_data.role, 'bg-gray-100 text-gray-800') }}"> {{ user_data.role | capitalize }} </span>
               </td>
-              <td class="px-6 py-4 text-gray-800 whitespace-nowrap">{{ user_data.position }}</td>
               <td class="px-6 py-4 text-right whitespace-nowrap space-x-4">
                 <button onclick="openUserModal('{{ nik }}')" class="font-medium text-indigo-600 hover:text-indigo-900 transition-colors">Edit</button>
                 <button onclick="openDeleteModal('{{ nik }}', '{{ user_data.name }}')" class="font-medium text-red-600 hover:text-red-900 transition-colors">Hapus</button>
@@ -118,7 +111,6 @@
   </main>
 </div>
 
-<!-- Modal Tambah/Edit Pengguna (Tidak ada perubahan) -->
 <div id="user-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 overflow-y-auto h-full w-full z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
   <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
     <div class="fixed inset-0" aria-hidden="true"></div>
@@ -164,7 +156,7 @@
                   />
                   <p id="password-help" class="mt-2 text-xs text-gray-500">Wajib diisi untuk pengguna baru. Kosongkan jika tidak ingin mengubah.</p>
                 </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 gap-4">
                   <div>
                     <label for="role" class="block text-sm font-medium text-gray-700">Role</label>
                     <select id="role" name="role" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
@@ -180,24 +172,6 @@
                       {% endif %}
                     </select>
                   </div>
-                  <div>
-                    <label for="position" class="block text-sm font-medium text-gray-700">Posisi / Jabatan</label>
-                    <input
-                      type="text"
-                      name="position"
-                      id="position"
-                      class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label for="description" class="block text-sm font-medium text-gray-700">Deskripsi</label>
-                  <input
-                    type="text"
-                    name="description"
-                    id="description"
-                    class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  />
                 </div>
               </div>
             </div>
@@ -223,7 +197,6 @@
   </div>
 </div>
 
-<!-- Modal Hapus Pengguna (Tidak ada perubahan) -->
 <div id="delete-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 overflow-y-auto h-full w-full z-50 hidden" aria-labelledby="delete-modal-title" role="dialog" aria-modal="true">
   <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
     <div class="fixed inset-0" aria-hidden="true"></div>
@@ -264,7 +237,6 @@
 
 <script>
   document.addEventListener("DOMContentLoaded", function () {
-    // Get CSRF token from meta tag or cookie
     function getCSRFToken() {
       const token = document.querySelector('meta[name="csrf-token"]');
       return token ? token.getAttribute("content") : "";
@@ -316,15 +288,12 @@
           nikInput.value = data.nik;
           document.getElementById("name").value = data.name;
           document.getElementById("role").value = data.role;
-          document.getElementById("position").value = data.position;
-          document.getElementById("description").value = data.description;
         } catch (error) {
           alert("Gagal mengambil data pengguna.");
           console.error("Fetch error:", error);
           return;
         }
       } else {
-        // Add Mode
         modalTitle.textContent = "Tambah Pengguna Baru";
         nikInput.readOnly = false;
         nikOriginalInput.value = "";

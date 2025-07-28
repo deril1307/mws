@@ -1,4 +1,4 @@
-{% extends "shared/base.html" %} {% block title %}Login - Sistem MWS Aircraft Maintenance{% endblock %} {% block content %}
+{% extends "shared/base.html" %} {% block title %}Customer Login - Sistem MWS{% endblock %} {% block content %}
 
 <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
   <div id="login-card" class="max-w-md w-full">
@@ -6,7 +6,7 @@
       <div class="relative inline-block">
         <img src="{{ url_for('static', filename='img/logo PT DI.jpeg') }}" alt="Logo PT DI" class="w-24 h-24 sm:w-32 sm:h-32 mx-auto mb-4 object-contain rounded-full shadow-lg bg-white p-2" />
       </div>
-      <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">Maintenance WorkSheet</h1>
+      <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">Customer Portal</h1>
       <p class="text-sm text-gray-600">PT Dirgantara Indonesia</p>
     </div>
 
@@ -19,7 +19,7 @@
         </div>
         <div class="mt-4 sm:mt-6 transform translate-y-4 opacity-0" id="success-text">
           <p class="text-lg sm:text-xl font-semibold text-gray-800 mb-2">Login Berhasil!</p>
-          <p class="text-sm text-gray-500">Mengarahkan ke dashboard...</p>
+          <p class="text-sm text-gray-500">Mengarahkan ke portal Anda...</p>
           <div class="mt-4">
             <div class="inline-flex items-center space-x-2">
               <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
@@ -31,8 +31,8 @@
 
       <div id="login-content" class="p-6 sm:p-8">
         <div class="text-center mb-6">
-          <h2 class="text-xl sm:text-2xl font-semibold text-gray-800 mb-2">Selamat Datang</h2>
-          <p class="text-gray-500 text-sm">Masuk dengan NIK dan password Anda</p>
+          <h2 class="text-xl sm:text-2xl font-semibold text-gray-800 mb-2">Selamat Datang, Customer</h2>
+          <p class="text-gray-500 text-sm">Masuk dengan username dan password Anda</p>
         </div>
 
         <div id="flash-container" class="mb-4"></div>
@@ -41,20 +41,17 @@
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 
           <div class="space-y-2">
-            <label for="nik" class="block text-sm font-medium text-gray-700">NIK</label>
+            <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
             <div class="relative">
               <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <i class="fas fa-user text-gray-400 text-sm"></i>
               </div>
               <input
                 type="text"
-                id="nik"
-                name="nik"
+                id="username"
+                name="username"
                 required
-                maxlength="6"
-                pattern="\d{6}"
-                title="Harus berupa 6 digit angka"
-                placeholder="Contoh: 000001"
+                placeholder="Masukkan username Anda"
                 class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 text-sm sm:text-base"
               />
             </div>
@@ -91,123 +88,24 @@
         </form>
       </div>
     </div>
-
-    <div class="text-center mt-6">
-      <a href="{{ url_for('login_customer') }}" class="inline-flex items-center text-sm font-medium text-blue-700 hover:text-indigo-800 hover:underline transition-colors duration-200">
-        <i class="fas fa-user-tie mr-2"></i>
-        Login sebagai Customer
-      </a>
-    </div>
-    <div class="mt-6 p-4 sm:p-6 bg-white/80 backdrop-blur-sm rounded-xl border border-gray-200 shadow-lg">
-      <h6 class="font-semibold text-gray-700 mb-3 text-center text-sm sm:text-base">
-        <i class="fas fa-users mr-2 text-blue-600"></i>
-        Gunakan Akun Demo (Klik untuk mengisi)
-      </h6>
-      <div id="demo-accounts" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs sm:text-sm">
-        <button type="button" class="demo-account-btn" data-nik="000001" data-password="123">
-          <div class="flex items-center space-x-2">
-            <div class="w-2 h-2 bg-red-500 rounded-full"></div>
-            <div>
-              <div class="font-semibold text-gray-800">Admin</div>
-              <div class="text-gray-500">000001 / 123</div>
-            </div>
-          </div>
-        </button>
-
-        <button type="button" class="demo-account-btn" data-nik="000002" data-password="123">
-          <div class="flex items-center space-x-2">
-            <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
-            <div>
-              <div class="font-semibold text-gray-800">Mechanic</div>
-              <div class="text-gray-500">000002 / 123</div>
-            </div>
-          </div>
-        </button>
-
-        <button type="button" class="demo-account-btn" data-nik="000003" data-password="123">
-          <div class="flex items-center space-x-2">
-            <div class="w-2 h-2 bg-green-500 rounded-full"></div>
-            <div>
-              <div class="font-semibold text-gray-800">Quality 1</div>
-              <div class="text-gray-500">000003 / 123</div>
-            </div>
-          </div>
-        </button>
-
-        <button type="button" class="demo-account-btn" data-nik="000004" data-password="123">
-          <div class="flex items-center space-x-2">
-            <div class="w-2 h-2 bg-yellow-500 rounded-full"></div>
-            <div>
-              <div class="font-semibold text-gray-800">Quality 2</div>
-              <div class="text-gray-500">000004 / 123</div>
-            </div>
-          </div>
-        </button>
-
-        <button type="button" class="demo-account-btn col-span-1 sm:col-span-2" data-nik="000005" data-password="123">
-          <div class="flex items-center justify-center space-x-2">
-            <div class="w-2 h-2 bg-purple-500 rounded-full"></div>
-            <div>
-              <div class="font-semibold text-gray-800">Super Admin</div>
-              <div class="text-gray-500">000005 / 123</div>
-            </div>
-          </div>
-        </button>
-      </div>
-    </div>
   </div>
 </div>
-
-<style>
-  .demo-account-btn {
-    padding: 12px 16px;
-    border-radius: 8px;
-    background-color: white;
-    border: 1px solid #e5e7eb;
-    text-align: left;
-    cursor: pointer;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  }
-
-  .demo-account-btn:hover {
-    background-color: #f8fafc;
-    border-color: #3b82f6;
-  }
-
-  /* Loading animation */
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
-
-  /* Responsive adjustments */
-  @media (max-width: 640px) {
-    .demo-account-btn {
-      padding: 10px 12px;
-    }
-  }
-</style>
 
 <script>
   document.addEventListener("DOMContentLoaded", function () {
     const loginForm = document.getElementById("login-form");
-    const loginCard = document.getElementById("login-card");
     const flashContainer = document.getElementById("flash-container");
     const submitButton = document.getElementById("submit-button");
     const submitButtonText = document.getElementById("submit-button-text");
     const successOverlay = document.getElementById("success-overlay");
     const successIcon = document.getElementById("success-icon");
     const successText = document.getElementById("success-text");
-    const loginContent = document.getElementById("login-content");
-    const nikInput = document.getElementById("nik");
     const passwordInput = document.getElementById("password");
 
     // Login form submission
     loginForm.addEventListener("submit", function (e) {
       e.preventDefault();
 
-      // Disable button and show loading state
       submitButton.disabled = true;
       submitButtonText.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Memproses...';
       flashContainer.innerHTML = "";
@@ -215,16 +113,27 @@
       const formData = new FormData(loginForm);
       const csrfToken = document.querySelector('input[name="csrf_token"]').value;
 
-      fetch("{{ url_for('login') }}", {
+      fetch("{{ url_for('login_customer') }}", {
         method: "POST",
         headers: {
           "X-CSRFToken": csrfToken,
         },
         body: formData,
       })
-        .then((response) => response.json().then((data) => ({ ok: response.ok, data })))
+        .then((response) => {
+          if (response.ok) {
+            return response.json().then((data) => {
+              if (data.redirect_url) {
+                return { ok: true, data: data };
+              } else {
+                return { ok: false, data: { message: "Respons tidak valid dari server." } };
+              }
+            });
+          }
+          return response.json().then((data) => ({ ok: false, data: data }));
+        })
         .then(({ ok, data }) => {
-          if (ok && data.redirect_url) {
+          if (ok) {
             successOverlay.style.opacity = "1";
             successOverlay.style.visibility = "visible";
             setTimeout(() => {
@@ -236,12 +145,13 @@
             }, 150);
             setTimeout(() => {
               window.location.href = data.redirect_url;
-            }, 300);
+            }, 1200); // Beri sedikit waktu untuk animasi
           } else {
+            // Jika gagal
             const errorMessage = `
-              <div class="mb-4 p-4 rounded-lg text-sm bg-red-50 border border-red-200 text-red-700 flex items-center">
+              <div class="p-4 rounded-lg text-sm bg-red-50 border border-red-200 text-red-700 flex items-center">
                 <i class="fas fa-exclamation-triangle mr-2"></i>
-                ${data.message}
+                ${data.message || "Terjadi kesalahan tidak diketahui."}
               </div>
             `;
             flashContainer.innerHTML = errorMessage;
@@ -252,7 +162,7 @@
         .catch((error) => {
           console.error("Error:", error);
           const errorMessage = `
-            <div class="mb-4 p-4 rounded-lg text-sm bg-red-50 border border-red-200 text-red-700 flex items-center">
+            <div class="p-4 rounded-lg text-sm bg-red-50 border border-red-200 text-red-700 flex items-center">
               <i class="fas fa-wifi mr-2"></i>
               Terjadi kesalahan jaringan. Silakan coba lagi.
             </div>
@@ -268,26 +178,12 @@
       togglePassword.addEventListener("click", function () {
         const type = passwordInput.getAttribute("type") === "password" ? "text" : "password";
         passwordInput.setAttribute("type", type);
-
-        const icon = this.querySelector("i");
-        icon.classList.toggle("fa-eye");
-        icon.classList.toggle("fa-eye-slash");
+        this.querySelector("i").classList.toggle("fa-eye");
+        this.querySelector("i").classList.toggle("fa-eye-slash");
       });
     }
 
-    const demoButtons = document.querySelectorAll(".demo-account-btn");
-    demoButtons.forEach((button) => {
-      button.addEventListener("click", function () {
-        nikInput.value = this.dataset.nik;
-        passwordInput.value = this.dataset.password;
-
-        setTimeout(() => {
-          submitButton.focus();
-        }, 100);
-      });
-    });
-
-    nikInput.focus();
+    document.getElementById("username").focus();
   });
 </script>
 

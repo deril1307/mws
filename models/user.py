@@ -1,9 +1,7 @@
-# models/user.py
 # type: ignore
 from . import db
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
-# Tambahkan import datetime
 from datetime import datetime, timezone
 
 class User(UserMixin, db.Model):
@@ -15,7 +13,6 @@ class User(UserMixin, db.Model):
     password = db.Column(db.String(256), nullable=False)
     role = db.Column(db.String(50))
     position = db.Column(db.String(100))
-    description = db.Column(db.Text)
     last_seen = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     def set_password(self, password_to_hash):
@@ -26,7 +23,7 @@ class User(UserMixin, db.Model):
 
     def get_id(self):
         """Required by Flask-Login: return unique identifier as string"""
-        return str(self.nik)
+        return f"user-{self.id}"
 
     @property
     def is_authenticated(self):
@@ -50,7 +47,6 @@ class User(UserMixin, db.Model):
             'name': self.name,
             'role': self.role,
             'position': self.position,
-            'description': self.description,
             'last_seen': self.last_seen.isoformat() if self.last_seen else None
         }
 

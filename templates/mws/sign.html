@@ -4,17 +4,43 @@
     <div class="space-y-4">
       <div>
         <label class="block text-sm font-bold text-gray-700 mb-1">Start Date</label>
-        {% if user.role == 'mechanic' %}
-        <input type="date" value="{{ part.startDate }}" onchange="updateDates('{{ part_id }}', 'startDate', this.value)" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
-        {% else %}
+        {% if user.role == 'mechanic' %} {# <<< PERUBAHAN DIMULAI >>> #}
+        <input
+          type="date"
+          value="{{ part.startDate }}"
+          onchange="updateDates('{{ part_id }}', 'startDate', this.value)"
+          class="w-full px-3 py-2 border border-gray-300 rounded-lg {% if is_mws_locked %}bg-gray-100 cursor-not-allowed{% else %}focus:ring-2 focus:ring-blue-500{% endif %}"
+          {%
+          if
+          is_mws_locked
+          %}disabled
+          title="MWS harus di Approved oleh Admin & Superadmin terlebih dahulu."
+          {%
+          endif
+          %}
+        />
+        {# <<< PERUBAHAN SELESAI >>> #} {% else %}
         <input type="date" value="{{ part.startDate }}" disabled class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed" />
         {% endif %}
       </div>
       <div>
         <label class="block text-sm font-bold text-gray-700 mb-1">Finish Date</label>
-        {% if user.role == 'mechanic' %}
-        <input type="date" value="{{ part.finishDate }}" onchange="updateDates('{{ part_id }}', 'finishDate', this.value)" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
-        {% else %}
+        {% if user.role == 'mechanic' %} {# <<< PERUBAHAN DIMULAI >>> #}
+        <input
+          type="date"
+          value="{{ part.finishDate }}"
+          onchange="updateDates('{{ part_id }}', 'finishDate', this.value)"
+          class="w-full px-3 py-2 border border-gray-300 rounded-lg {% if is_mws_locked %}bg-gray-100 cursor-not-allowed{% else %}focus:ring-2 focus:ring-blue-500{% endif %}"
+          {%
+          if
+          is_mws_locked
+          %}disabled
+          title="MWS harus di Approved oleh Admin & Superadmin terlebih dahulu."
+          {%
+          endif
+          %}
+        />
+        {# <<< PERUBAHAN SELESAI >>> #} {% else %}
         <input type="date" value="{{ part.finishDate }}" disabled class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed" />
         {% endif %}
       </div>
@@ -22,8 +48,10 @@
         <label for="total-duration" class="block text-sm font-bold text-gray-700 mb-1">Total Durasi Pengerjaan</label>
         <div id="total-duration-container" class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed flex items-center">
           <i class="fas fa-stopwatch text-gray-500 mr-2"></i>
-          <span id="total-duration-display" class="font-mono font-semibold text-gray-900">0.00</span>
-          <span class="text-sm text-gray-600 ml-2">Jam</span>
+
+          <span id="total-duration-display" class="font-mono font-semibold text-gray-900"> {{ part.total_duration or '00:00' }} </span>
+
+          <span class="text-sm text-gray-600 ml-2">HH:MM</span>
         </div>
       </div>
     </div>
@@ -43,10 +71,10 @@
             </div>
             <p class="text-xs text-gray-500 mt-1 ml-6">{{ part.preparedDate }}</p>
             {% else %}
-            <p class="text-sm text-gray-500 italic mt-1">Menunggu tanda tangan Admin...</p>
+            <p class="text-sm text-gray-500 italic mt-1">Menunggu Approved Admin...</p>
             {% endif %}
           </div>
-          {% if user.role == 'admin' and not part.preparedBy %}
+          {% if not part.preparedBy and user.role == 'admin' %}
           <button
             onclick="signDocument('{{ part_id }}', 'prepared')"
             class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium shadow hover:shadow-md transform hover:-translate-y-0.5 transition-all duration-200"
@@ -54,7 +82,12 @@
             <i class="fas fa-signature mr-1"></i> Sign
           </button>
           {% elif part.preparedBy %}
-          <i class="fas fa-check-circle text-2xl text-green-500"></i>
+          <div class="flex items-center space-x-2">
+            <i class="fas fa-check-circle text-2xl text-green-500"></i>
+            {% if user.role in ['admin', 'superadmin'] %}
+            <button onclick="cancelSignature('{{ part_id }}', 'prepared', 'Anda yakin ingin membatalkan Approved Prepared By?')" class="px-3 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600">Batal</button>
+            {% endif %}
+          </div>
           {% endif %}
         </div>
       </div>
@@ -70,10 +103,10 @@
             </div>
             <p class="text-xs text-gray-500 mt-1 ml-6">{{ part.approvedDate }}</p>
             {% else %}
-            <p class="text-sm text-gray-500 italic mt-1">Menunggu tanda tangan Superadmin...</p>
+            <p class="text-sm text-gray-500 italic mt-1">Menunggu Approved Superadmin...</p>
             {% endif %}
           </div>
-          {% if user.role == 'superadmin' and not part.approvedBy %}
+          {% if not part.approvedBy and user.role == 'superadmin' %}
           <button
             onclick="signDocument('{{ part_id }}', 'approved')"
             class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium shadow hover:shadow-md transform hover:-translate-y-0.5 transition-all duration-200"
@@ -81,7 +114,12 @@
             <i class="fas fa-signature mr-1"></i> Sign
           </button>
           {% elif part.approvedBy %}
-          <i class="fas fa-check-circle text-2xl text-green-500"></i>
+          <div class="flex items-center space-x-2">
+            <i class="fas fa-check-circle text-2xl text-green-500"></i>
+            {% if user.role in ['admin', 'superadmin'] %}
+            <button onclick="cancelSignature('{{ part_id }}', 'approved', 'Anda yakin ingin membatalkan Approved Approved By?')" class="px-3 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600">Batal</button>
+            {% endif %}
+          </div>
           {% endif %}
         </div>
       </div>
@@ -97,10 +135,10 @@
             </div>
             <p class="text-xs text-gray-500 mt-1 ml-6">{{ part.verifiedDate }}</p>
             {% else %}
-            <p class="text-sm text-gray-500 italic mt-1">Menunggu tanda tangan Quality...</p>
+            <p class="text-sm text-gray-500 italic mt-1">Menunggu Approved Quality...</p>
             {% endif %}
           </div>
-          {% if user.role == 'quality2' and not part.verifiedBy %}
+          {% if not part.verifiedBy and user.role == 'quality2' %}
           <button
             onclick="signDocument('{{ part_id }}', 'verified')"
             class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium shadow hover:shadow-md transform hover:-translate-y-0.5 transition-all duration-200"
@@ -108,7 +146,12 @@
             <i class="fas fa-signature mr-1"></i> Sign
           </button>
           {% elif part.verifiedBy %}
-          <i class="fas fa-check-circle text-2xl text-green-500"></i>
+          <div class="flex items-center space-x-2">
+            <i class="fas fa-check-circle text-2xl text-green-500"></i>
+            {% if user.role in ['admin', 'superadmin'] %}
+            <button onclick="cancelSignature('{{ part_id }}', 'verified', 'Anda yakin ingin membatalkan Approved Verified By?')" class="px-3 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600">Batal</button>
+            {% endif %}
+          </div>
           {% endif %}
         </div>
       </div>
@@ -118,21 +161,17 @@
 <script>
   function signDocument(partId, type) {
     if (!confirm("Apakah Anda yakin ingin menandatangani dokumen ini? Tindakan ini tidak dapat diurungkan.")) return;
-
-    let signingPartId = partId;
-    let signingType = type;
-
-    console.log(`Sending to server: partId=${signingPartId}, type=${signingType}`);
+    console.log(`Sending to server: partId=${partId}, type=${type}`);
 
     fetch("/sign_document", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ partId: signingPartId, type: signingType }),
+      body: JSON.stringify({ partId: partId, type: type }),
     })
       .then((r) => r.json())
       .then((d) => {
         if (d.success) {
-          showNotification("Dokumen berhasil ditandatangani.", "success");
+          showNotification("Dokumen berhasil di Approved.", "success");
           location.reload();
         } else {
           showNotification("Error: " + d.error, "error");

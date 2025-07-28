@@ -342,24 +342,6 @@
         {% endif %}
       </div>
       <div class="overflow-x-auto">
-        {# <<< PERUBAHAN DIMULAI >>> #}
-        {% set is_mws_locked = not (part.preparedBy and part.approvedBy) %}
-
-        {% if is_mws_locked and user.role != 'customer' %}
-        <div class="m-4 p-4 bg-yellow-100 text-yellow-800 border-l-4 border-yellow-500 rounded-md shadow-sm">
-            <div class="flex">
-                <div class="flex-shrink-0">
-                    <i class="fas fa-lock h-5 w-5 text-yellow-500"></i>
-                </div>
-                <div class="ml-3">
-                    <p class="text-sm font-semibold">MWS Terkunci</p>
-                    <p class="text-sm">Lembar kerja ini belum dapat diisi. Harap tunggu hingga Admin Approved bagian <strong>"Prepared By"</strong> dan Superadmin Approved bagian <strong>"Approved By"</strong>.</p>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-        {# <<< PERUBAHAN SELESAI >>> #}
-
         <table class="worksheet-table w-full">
          <thead class="bg-gray-50">
               <tr>
@@ -423,9 +405,7 @@
               <td class="p-1 align-top border-b">
                 {# Input MAN hanya untuk mekanik #}
                 {% if user.role == 'mechanic' and step.status == 'pending' %}
-                {# <<< PERUBAHAN DIMULAI >>> #}
-                <input type="text" id="man-{{ step.no }}" class="w-full rounded border-gray-300 text-center" value="{{ step.man }}" onchange="updateStepField('{{ part_id }}', {{ step.no }}, 'man', this.value)" {% if is_mws_locked %}disabled title="MWS terkunci hingga 'Prepared By' dan 'Approved By' ditandatangani."{% endif %}>
-                {# <<< PERUBAHAN SELESAI >>> #}
+                <input type="text" id="man-{{ step.no }}" class="w-full rounded border-gray-300 text-center" value="{{ step.man }}" onchange="updateStepField('{{ part_id }}', {{ step.no }}, 'man', this.value)">
                 {% else %}
                 <div class="text-center p-3">
                   <span class="text-sm font-semibold text-gray-900">{{ step.man if step.man else 'N/A' }}</span>
@@ -440,18 +420,23 @@
                       {{ step.hours if step.hours else '00:00' }}
                   </span>
                   {% if step.get('timer_start_time') %}
-                  {# <<< PERUBAHAN DIMULAI >>> #}
-                  <button onclick="stopTimer('{{ part_id }}', {{ step.no }})" class="w-full px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs" {% if is_mws_locked %}disabled title="MWS terkunci hingga 'Prepared By' dan 'Approved By' ditandatangani."{% endif %}>Stop</button>
+                  <button onclick="stopTimer('{{ part_id }}', {{ step.no }})" class="w-full px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs">Stop</button>
                   {% else %}
-                  <button onclick="startTimer('{{ part_id }}', {{ step.no }})" class="w-full px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs" {% if is_mws_locked %}disabled title="MWS terkunci hingga 'Prepared By' dan 'Approved By' ditandatangani."{% endif %}>Start</button>
-                  {# <<< PERUBAHAN SELESAI >>> #}
+                  <button onclick="startTimer('{{ part_id }}', {{ step.no }})" class="w-full px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs">Start</button>
                   {% endif %}
                 </div>
                 {% else %}
                 {# Tampilan read-only untuk peran lain, termasuk customer #}
                 <div class="text-center p-3">
                   <span id="hours-display-{{ step.no }}" class="text-xs font-mono font-semibold text-gray-900">
-                    {{ step.hours if step.hours else 'N/A' }}
+                    {% if step.hours %}
+                      {% set total_minutes = step.hours|float %}
+                      {% set hours = (total_minutes // 60)|int %}
+                      {% set minutes = (total_minutes % 60)|int %}
+                      {{ '%02d:%02d'|format(hours, minutes) }}
+                    {% else %}
+                      N/A
+                    {% endif %}
                   </span>
                 </div>
                 {% endif %}
@@ -460,15 +445,13 @@
                 {# Tombol Approved hanya untuk mekanik #}
                 {% if user.role == 'mechanic' and step.status == 'pending' %}
                 <div class="p-3 min-h-[40px] flex items-center justify-center">
-                  {# <<< PERUBAHAN DIMULAI >>> #}
-                  <button onclick="approveStep('{{ part_id }}', {{ step.no }})" class="px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded text-sm font-medium" {% if is_mws_locked %}disabled title="MWS terkunci hingga 'Prepared By' dan 'Approved By' ditandatangani."{% endif %}>Approved</button>
-                  {# <<< PERUBAHAN SELESAI >>> #}
+                  <button onclick="approveStep('{{ part_id }}', {{ step.no }})" class="px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded text-sm font-medium">Approved</button>
                 </div>
                 {% else %}
                 {# Tampilan read-only untuk peran lain, termasuk customer #}
                 <div class="p-3 min-h-[40px] flex items-center justify-center">
                   <span class="text-sm font-semibold text-gray-900 break-words text-center leading-tight max-w-full block">
-                    {% if step.tech == 'Approved' %}
+                    {% if step.status == 'in_progress' or step.status == 'completed' %}
                       Approved
                       {% if user.role in ['admin', 'superadmin'] %}
                       <br>
@@ -485,9 +468,7 @@
                  {# Tombol Finish hanya untuk quality1 #}
                 {% if user.role == 'quality1' and step.status == 'in_progress' %}
                 <div class="p-3 min-h-[40px] flex items-center justify-center">
-                  {# <<< PERUBAHAN DIMULAI >>> #}
-                  <button onclick="finishStep('{{ part_id }}', {{ step.no }})" class="px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded text-sm font-medium" {% if is_mws_locked %}disabled title="MWS terkunci hingga 'Prepared By' dan 'Approved By' ditandatangani."{% endif %}>Finish</button>
-                  {# <<< PERUBAHAN SELESAI >>> #}
+                  <button onclick="finishStep('{{ part_id }}', {{ step.no }})" class="px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded text-sm font-medium">Finish</button>
                 </div>
                 {% else %}
                 {# Tampilan read-only untuk peran lain, termasuk customer #}
@@ -815,29 +796,18 @@
           body: JSON.stringify({ partId, stepNo, field, value })
         })
         .then((r) => r.json())
-        .then((d) => {
-            if (d.success) {
-                console.log("Field updated")
-            } else {
-                showNotification("Error: " + d.error, "error");
-                // Optional: revert the UI change if the backend fails
-                location.reload();
-            }
-        })
-        .catch((e) => showNotification("Terjadi kesalahan jaringan.", "error"));
+        .then((d) => (d.success ? console.log("Field updated") : showNotification("Error: " + d.error, "error")))
+        .catch((e) => showNotification("Error", "error"));
     }
 
     function approveStep(partId, stepNo) {
       const manValue = document.getElementById(`man-${stepNo}`).value.trim();
       const hoursValue = document.getElementById(`hours-${stepNo}`).value.trim();
-      
-      const totalMinutes = parseHHMMToMinutes(hoursValue);
 
-      if (!manValue || totalMinutes <= 0) {
-        alert("Harap isi field MAN dan pastikan timer sudah dijalankan (total durasi harus lebih dari 0 menit) sebelum melakukan approval.");
+      if (!manValue || !hoursValue || parseFloat(hoursValue) <= 0) {
+        alert("Harap isi field MAN dan jalankan timer sebelum melakukan approval.");
         return;
       }
-
       if (!confirm("Apakah Anda yakin ingin meng-approve langkah kerja ini?\n\nSetelah di-approve, Anda tidak dapat lagi mengedit field MAN dan HOURS.")) {
         return;
       }
@@ -848,7 +818,6 @@
 
     function cancelApproval(partId, stepNo) {
       if (confirm("Apakah Anda yakin ingin membatalkan approval?\n\nKonsekuensi: Langkah kerja akan kembali ke status pending, kata 'Approved' akan dihapus dari database, dan Anda dapat mengedit kembali field MAN, HOURS, dan menggunakan timer.")) {
-        updateStepField(partId, stepNo, "tech", ""); 
         updateStepStatus(partId, stepNo, "pending");
       }
     }
@@ -878,12 +847,10 @@
             location.reload();
           } else {
             alert("Error: " + d.error);
-            location.reload();
           }
         })
         .catch((e) => {
           alert("Terjadi kesalahan jaringan.");
-          location.reload();
         });
     }
     
