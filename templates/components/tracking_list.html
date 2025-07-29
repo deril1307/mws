@@ -3,9 +3,9 @@
   <div class="px-6 py-4 border-b border-gray-200 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
     <h2 class="text-xl font-semibold text-gray-800 flex items-center">
       {% if current_user.role == 'admin' %}
-      <i class="fas fa-list-alt mr-3 text-blue-600"></i>Kelola Semua MWS {% elif current_user.role == 'mechanic' %} <i class="fas fa-tasks mr-3 text-green-600"></i>Daftar MWS Tersedia {% elif current_user.role == 'quality1' %}
-      <i class="fas fa-search mr-3 text-orange-600"></i>MWS untuk Inspeksi {% elif current_user.role == 'quality2' %} <i class="fas fa-clipboard-check mr-3 text-purple-600"></i>MWS untuk Verifikasi {% elif current_user.role == 'superadmin'
-      %} <i class="fas fa-crown mr-3 text-red-600"></i>Kelola Semua MWS {% endif %}
+      <i class="fas mr-3 text-blue-600"></i>Maintenance WorkSheet {% elif current_user.role == 'mechanic' %} <i class="fas fa-tasks mr-3 text-green-600"></i>Maintenance WorkSheet{% elif current_user.role == 'quality1' %}
+      <i class="fas mr-3 text-orange-600"></i>Maintenance WorkSheet {% elif current_user.role == 'quality2' %} <i class="fas fa-clipboard-check mr-3 text-purple-600"></i>Maintenance WorkSheet{% elif current_user.role == 'superadmin' %}
+      <i class="fas mr-3 text-red-600"></i>Maintenance WorkSheet {% endif %}
     </h2>
 
     <div class="flex flex-col sm:flex-row gap-2 w-full md:w-auto">

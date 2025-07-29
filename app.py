@@ -144,7 +144,6 @@ def calculate_working_days_deadline(start_date, days):
     work_days_added = 0
     while work_days_added < days:
         deadline += timedelta(days=1)
-        # weekday() mengembalikan 0 untuk Senin dan 6 untuk Minggu
         if deadline.weekday() < 5: # Senin (0) sampai Jumat (4)
             work_days_added += 1
     return deadline
@@ -210,15 +209,12 @@ def require_role(*roles):
 @app.errorhandler(403)
 def forbidden(e):
     return render_error_page(e)
-
 @app.errorhandler(404)
 def page_not_found(e):
     return render_error_page(e)
-
 @app.errorhandler(429)
 def ratelimit_handler(e):
     return render_error_page(e)
-
 @app.errorhandler(500)
 def internal_server_error(e):
     return render_error_page(e)
@@ -249,10 +245,8 @@ def login():
     if request.method == 'POST':
         nik = request.form.get('nik')
         password = request.form.get('password')
-        
         if not nik or not password:
             return jsonify({'success': False, 'message': 'NIK dan password wajib diisi!'}), 400
-        
         try:
             user = User.query.filter_by(nik=nik).first()
             if user and user.check_password(password):
@@ -1373,7 +1367,6 @@ def get_stripping_status(part_id):
         mws_part = MwsPart.query.filter_by(part_id=part_id).first()
         if not mws_part:
             return jsonify({'success': False, 'error': 'Part tidak ditemukan'}), 404
-        
         stripping_status = mws_part.get_stripping_status()
         return jsonify({'success': True, 'status': stripping_status})
         
@@ -1388,14 +1381,10 @@ def get_stripping_status(part_id):
 @app.route('/mws/print/<part_id>')
 @require_role('admin', 'superadmin')
 def print_mws(part_id):
-    """
-    Generate printable Maintenance Work Sheet
-    """
     try:
         mws_part = MwsPart.query.filter_by(part_id=part_id).first()
         if not mws_part:
             return "MWS tidak ditemukan", 404
-        
         steps = MwsStep.query.filter_by(mws_part_id=mws_part.id).order_by(MwsStep.no).all()
         users = get_users_from_db()
         part_data = {
