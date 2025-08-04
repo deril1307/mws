@@ -1,5 +1,6 @@
+# type: ignore
 import os
-from dotenv import load_dotenv # type: ignore
+from dotenv import load_dotenv 
 load_dotenv()
 
 class Config:

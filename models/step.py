@@ -14,7 +14,10 @@ class MwsStep(db.Model):
     status = db.Column(db.String(50), default='pending')
     completedBy = db.Column(db.String(100))
     completedDate = db.Column(db.String(100))
-    man = db.Column(db.String(50))
+    
+    # Changed 'man' to Text to store a JSON list of NIKs
+    man = db.Column(db.Text, default='[]')
+    
     hours = db.Column(db.String(50))
     tech = db.Column(db.String(100))
     insp = db.Column(db.String(100))
@@ -22,8 +25,36 @@ class MwsStep(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Relasi Ke MwsPart
+    # Relasi Ke MwsPar
     mws_part = relationship('MwsPart', back_populates='steps')
+
+    def get_mechanics(self):
+            """Get list of mechanics (NIKs) from JSON string, handling bad data."""
+            if not self.man:
+                return []
+            try:
+                # Coba muat data dari JSON
+                data = json.loads(self.man)
+                # PASTIKAN hasilnya adalah sebuah list sebelum dikembalikan
+                if isinstance(data, list):
+                    return data
+                else:
+                    # Jika datanya bukan list (misal: integer 0 atau 1),
+                    # kembalikan list kosong untuk mencegah error.
+                    return []
+            except (json.JSONDecodeError, TypeError):
+                # Jika data sama sekali bukan format JSON yang valid,
+                # kembalikan list kosong.
+                return []
+
+    def add_mechanic(self, nik):
+        """Add a mechanic's NIK to the list, avoiding duplicates."""
+        mechanics = self.get_mechanics()
+        if nik not in mechanics:
+            mechanics.append(nik)
+            self.man = json.dumps(mechanics)
+            return True
+        return False
 
     def to_dict(self):
         """Convert MwsStep to dictionary format compatible with existing templates"""
@@ -41,7 +72,7 @@ class MwsStep(db.Model):
             'status': self.status,
             'completedBy': self.completedBy or '',
             'completedDate': self.completedDate or '',
-            'man': self.man or '',
+            'man': self.get_mechanics(), # Return a list of NIKs
             'hours': self.hours or '',
             'tech': self.tech or '',
             'insp': self.insp or ''

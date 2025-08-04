@@ -1,0 +1,123 @@
+<div id="toast-notification" class="fixed top-5 right-5 z-[100] transition-transform duration-300 translate-x-[150%]">
+  <div id="toast-content" class="flex items-center w-full max-w-xs p-4 text-gray-500 bg-white rounded-lg shadow-lg" role="alert"></div>
+</div>
+<div id="confirmation-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-[110] flex justify-center items-center">
+  <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm mx-4">
+    <div class="text-center">
+      <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100">
+        <svg class="h-6 w-6 text-yellow-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z" />
+        </svg>
+      </div>
+      <h3 class="text-lg leading-6 font-medium text-gray-900 mt-4" id="modal-title">Konfirmasi Perubahan</h3>
+      <div class="mt-2">
+        <p class="text-sm text-gray-500">Apakah Anda yakin ingin menyimpan perubahan pada Informasi MWS?</p>
+      </div>
+    </div>
+    <div class="mt-5 sm:mt-6 grid grid-cols-2 gap-3">
+      <button
+        id="modal-btn-cancel"
+        type="button"
+        class="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+      >
+        Batal
+      </button>
+      <button
+        id="modal-btn-save"
+        type="button"
+        class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+      >
+        Yakin, Simpan
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+  #toast-notification.show {
+    transform: translateX(0);
+  }
+</style>
+
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-6">
+  <div class="flex justify-between items-center mb-4 pb-4 border-b border-gray-200">
+    <h2 class="text-lg font-semibold text-gray-800">Informasi MWS</h2>
+    {% if user.role in ['admin', 'superadmin'] %}
+    <div>
+      <button id="edit-mws-btn" onclick="toggleEditMode(true)" class="text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors">
+        <i class="sm:mr-1"></i>
+        <span class="hidden sm:inline">Edit Informasi</span>
+      </button>
+      <button id="finish-mws-btn" onclick="saveMwsInfo('{{ part_id }}')" class="hidden text-sm font-medium text-green-600 hover:text-green-800 transition-colors">
+        <i class="fas fa-check sm:mr-1"></i>
+        <span class="hidden sm:inline">Selesai</span>
+      </button>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-6 text-sm">
+    <div>
+      <label class="block font-bold text-gray-700 mb-1">Tittle / Part Name</label>
+      <p class="text-gray-900 mws-info-view">{{ part.tittle }}</p>
+      <input type="text" data-field="tittle" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.tittle }}" />
+    </div>
+    <div>
+      <label class="block font-bold text-gray-700 mb-1">Part Number</label>
+      <p class="text-gray-900 mws-info-view">{{ part.partNumber }}</p>
+      <input type="text" data-field="partNumber" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.partNumber }}" />
+    </div>
+    <div>
+      <label class="block font-bold text-gray-700 mb-1">Ref</label>
+      <p class="text-gray-900 mws-info-view">{{ part.ref }}</p>
+      <input type="text" data-field="ref" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.ref }}" />
+    </div>
+    <div>
+      <label class="block font-bold text-gray-700 mb-1">Component Order</label>
+      <p class="text-gray-900 mws-info-view">{{ part.jobType or 'N/A' }}</p>
+      <input type="text" data-field="jobType" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.jobType or '' }}" />
+    </div>
+    <div>
+      <label class="block font-bold text-gray-700 mb-1">Customer</label>
+      <p class="text-gray-900 mws-info-view">{{ part.customer }}</p>
+      <input type="text" data-field="customer" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.customer }}" />
+    </div>
+    <div>
+      <label class="block font-bold text-gray-700 mb-1">A/C Type</label>
+      <p class="text-gray-900 mws-info-view">{{ part.acType }}</p>
+      <input type="text" data-field="acType" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.acType }}" />
+    </div>
+    <div>
+      <label class="block font-bold text-gray-700 mb-1">Serial Number</label>
+      <p class="text-gray-900 mws-info-view">{{ part.serialNumber }}</p>
+      <input type="text" data-field="serialNumber" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.serialNumber }}" />
+    </div>
+    <div>
+      <label class="block font-bold text-gray-700 mb-1">WBS No.</label>
+      <p class="text-gray-900 mws-info-view">{{ part.wbsNo }}</p>
+      <input type="text" data-field="wbsNo" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.wbsNo }}" />
+    </div>
+    <div>
+      <label class="block font-bold text-gray-700 mb-1">Worksheet No.</label>
+      <p class="text-gray-900 mws-info-view">{{ part.worksheetNo }}</p>
+      <input type="text" data-field="worksheetNo" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.worksheetNo }}" />
+    </div>
+    <div>
+      <label class="block font-bold text-gray-700 mb-1">IWO No.</label>
+      <p class="text-gray-900 mws-info-view">{{ part.iwoNo }}</p>
+      <input type="text" data-field="iwoNo" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.iwoNo }}" />
+    </div>
+    <div>
+      <label class="block font-bold text-gray-700 mb-1">Shop Area</label>
+      <p class="text-gray-900 mws-info-view">{{ part.shopArea }}</p>
+      <input type="text" data-field="shopArea" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.shopArea }}" />
+    </div>
+    <div>
+      <label class="block font-bold text-gray-700 mb-1">Revision</label>
+      <p class="text-gray-900 mws-info-view">{{ part.revision }}</p>
+      <input type="text" data-field="revision" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.revision }}" />
+    </div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/info_mws_logic.js') }}" defer></script>

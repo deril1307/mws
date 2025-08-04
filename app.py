@@ -1,16 +1,19 @@
 # type: ignore
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash 
-from datetime import datetime, timezone, timedelta
 from flask_wtf.csrf import CSRFProtect, validate_csrf
-from wtforms import ValidationError
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from sqlalchemy import or_ 
+from flask_migrate import Migrate
 from flask_compress import Compress
+from wtforms import ValidationError
+
+from datetime import datetime, timezone, timedelta
+
+from sqlalchemy import or_ 
 import json
 from config.settings import Config
-from flask_migrate import Migrate
+
 from models import db
 from models.user import User
 from models.mws import MwsPart
@@ -27,6 +30,7 @@ app.config.from_object(Config)
 db.init_app(app)
 migrate = Migrate(app, db) 
 csrf = CSRFProtect(app)
+
 
 # Flask-Limiter Setup
 limiter = Limiter(
@@ -136,7 +140,6 @@ def create_database_tables():
 
 
 def calculate_working_days_deadline(start_date, days):
-
     if not isinstance(start_date, datetime.date):
         return None
         
@@ -192,7 +195,6 @@ def render_error_page(error):
     ), error_code
 
 def require_role(*roles):
-    """Decorator untuk membatasi akses berdasarkan role"""
     def decorator(f):
         def decorated_function(*args, **kwargs):
             if not current_user.is_authenticated:
@@ -238,7 +240,7 @@ def get_users_from_db():
     
 @app.route('/') 
 @app.route('/login', methods=['GET', 'POST'])
-@limiter.limit("20 per minute", methods=["POST"])  
+@limiter.limit("20 per minute", methods=["POST"])
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
@@ -246,17 +248,15 @@ def login():
         nik = request.form.get('nik')
         password = request.form.get('password')
         if not nik or not password:
-            return jsonify({'success': False, 'message': 'NIK dan password wajib diisi!'}), 400
-        try:
-            user = User.query.filter_by(nik=nik).first()
-            if user and user.check_password(password):
-                login_user(user, remember=False)
-                return jsonify({'success': True, 'redirect_url': url_for('dashboard')})
-            return jsonify({'success': False, 'message': 'NIK atau password salah!'}), 401
-        except Exception as e:
-            print(f"Error during login: {e}")
-            return jsonify({'success': False, 'message': 'Terjadi kesalahan sistem!'}), 500
+            return jsonify(success=False, message='NIK dan password wajib diisi!'), 400
+
+        user = User.query.filter_by(nik=nik).first()
+        if user and user.check_password(password):
+            login_user(user)
+            return jsonify(success=True, redirect_url=url_for('dashboard'))
+        return jsonify(success=False, message='NIK atau password salah!'), 401
     return render_template('auth/login.html')
+
 
 @app.route('/login-customer', methods=['GET', 'POST']) 
 @limiter.limit("20 per minute", methods=["POST"])  
@@ -586,28 +586,15 @@ def create_mws():
             req_data = request.get_json()
             if not req_data:
                 return jsonify({'success': False, 'error': 'Request body harus berupa JSON.'}), 400
-            
             tittle_name = req_data.get('tittle_name')
             job_type = req_data.get('jobType')
             customer_name = req_data.get('customer', '') 
-            
             if not tittle_name or not job_type:
                 return jsonify({'success': False, 'error': 'Tittle dan Jenis Pekerjaan wajib diisi.'}), 400
-            
             part_count = MwsPart.query.count() + 1
             part_id = f"MWS-{part_count:03d}"
-            
-            # --- BLOK INI DIHAPUS ---
-            # target_date = None
-            # if req_data.get('targetDate'):
-            #     try:
-            #         target_date = datetime.strptime(req_data.get('targetDate'), '%Y-%m-%d').date()
-            #     except (ValueError, TypeError):
-            #         pass
-            
             customer_obj = Customer.query.filter_by(company_name=customer_name).first()
             customer_id_to_set = customer_obj.id if customer_obj else None
-
             new_mws = MwsPart(
                 part_id=part_id,
                 partNumber=req_data.get('partNumber', ''),
@@ -623,18 +610,15 @@ def create_mws():
                 iwoNo=req_data.get('iwoNo', ''),
                 shopArea=req_data.get('shopArea', ''),
                 revision=req_data.get('revision', '1'),
-                # targetDate=target_date,  # <-- BARIS INI DIHAPUS
                 status='pending',
                 currentStep=1 
             )
-            
             db.session.add(new_mws)
             db.session.flush()  
             steps_template = JOB_STEPS_TEMPLATES.get(job_type, [])
             if not steps_template:
                 db.session.rollback()
                 return jsonify({'success': False, 'error': f'Template langkah untuk jenis pekerjaan "{job_type}" tidak ditemukan.'}), 400
-
             for step_data in steps_template:
                 step = MwsStep(
                     mws_part_id=new_mws.id, 
@@ -654,7 +638,7 @@ def create_mws():
             db.session.rollback()
             app.logger.error(f"Error saat membuat MWS: {e}", exc_info=True)
             return jsonify({'success': False, 'error': 'Terjadi kesalahan internal pada server.'}), 500
-    return render_template('mws/create_mws.html')
+    return render_template('maintenance_forms/create_mws.html')
 
 
 @app.route('/delete_mws/<part_id>', methods=['DELETE'])
@@ -686,17 +670,30 @@ def mws_detail(part_id):
             return redirect(url_for('dashboard'))
         
         users = get_users_from_db()
+        mechanics = User.query.filter_by(role='mechanic').all()
+        mechanics_data = {m.nik: m.to_dict() for m in mechanics}
+
         part_dict = mws_part.to_dict()
         
-        return render_template('mws/mws_detail.html', 
+        # --- PENAMBAHAN LOGIKA UNTUK CEK STATUS MEKANIK ---
+        is_busy_based_on_tech = False
+        is_busy_based_on_insp = False
+        if current_user.is_authenticated and current_user.role == 'mechanic':
+            is_busy_based_on_tech = is_mechanic_on_active_step(current_user.nik, condition='TECH')
+            is_busy_based_on_insp = is_mechanic_on_active_step(current_user.nik, condition='INSP')
+        # --- AKHIR PENAMBAHAN ---
+
+        return render_template('maintenance_forms/mws_detail.html', 
                              part=part_dict, 
                              part_id=part_id, 
-                             users=users)
+                             users=users,
+                             all_mechanics=mechanics_data,
+                             is_busy_based_on_tech=is_busy_based_on_tech,
+                             is_busy_based_on_insp=is_busy_based_on_insp)
     except Exception as e:
         print(f"Error getting MWS detail: {e}")
         flash('Terjadi kesalahan saat memuat data!', 'error')
         return redirect(url_for('dashboard'))
-
 
 @app.route('/update_mws_info', methods=['POST'])
 @login_required
@@ -732,8 +729,6 @@ def update_mws_info():
                         continue
                 else:
                     setattr(mws_part, key, value)
-        
-        # Update stripping deadline if start date changed
         if mws_part.startDate != old_start_date:
             mws_part.update_stripping_deadline()
         
@@ -892,10 +887,10 @@ def update_step_field():
         
         if not step:
             return jsonify({'success': False, 'error': 'Step not found'}), 404
-        
-        if field in ['man', 'hours', 'tech']:
+    
+        if field in ['man', 'hours']:
             if current_user.role != 'mechanic':
-                return jsonify({'success': False, 'error': 'Hanya mekanik yang dapat mengubah MAN, Hours, dan TECH'}), 403
+                return jsonify({'success': False, 'error': 'Hanya mekanik yang dapat mengubah MAN dan Hours'}), 403
         
         if field == 'insp':
             if current_user.role != 'quality1':
@@ -1023,20 +1018,15 @@ def update_step_after_submission():
         man_val = req_data.get('man')
         hours_val = req_data.get('hours')
         tech_val = req_data.get('tech')
-        
+    
         if not all([part_id, step_no, man_val, hours_val, tech_val]):
             return jsonify({'success': False, 'error': 'Data tidak lengkap'}), 400
-        
         mws_part = MwsPart.query.filter_by(part_id=part_id).first()
         if not mws_part:
-            return jsonify({'success': False, 'error': 'Part tidak ditemukan'}), 404
-            
-        # <<< PERUBAHAN DIMULAI >>>
+            return jsonify({'success': False, 'error': 'Part tidak ditemukan'}), 404 
         is_ready, error_response, status_code = check_mws_readiness(mws_part)
         if not is_ready:
             return error_response, status_code
-        # <<< PERUBAHAN SELESAI >>>
-
         step = MwsStep.query.filter_by(
             mws_part_id=mws_part.id,
             no=step_no
@@ -1104,7 +1094,7 @@ def update_dates():
         print(f"Error updating dates: {e}")
         return jsonify({'error': 'Database error'}), 500
 
-@csrf.exempt
+
 @app.route('/sign_document', methods=['POST'])
 @login_required
 @limiter.limit("20 per minute")
@@ -1146,15 +1136,11 @@ def sign_document():
 # NEW ROUTE FOR CANCELLING SIGNATURES
 # =====================================================================
 
-@csrf.exempt
+
 @app.route('/cancel_signature', methods=['POST'])
 @require_role('admin', 'superadmin')
 @limiter.limit("20 per minute")
 def cancel_signature():
-    """
-    Route untuk membatalkan signature (prepared, approved, verified)
-    dan menghapus teks "Approved" dari database
-    """
     try:
         part_id = request.json.get('partId')
         sign_type = request.json.get('type')
@@ -1328,21 +1314,26 @@ def set_urgent_status(part_id):
         if action == 'request' and current_user.role == 'mechanic':
             mws_part.urgent_request = True
         
-        # Kondisi baru untuk mekanik membatalkan permintaan urgensi
+        # Kondisi untuk mekanik membatalkan permintaan urgensi
         elif action == 'cancel_request' and current_user.role == 'mechanic':
             mws_part.urgent_request = False
         
         # Kondisi untuk admin/superadmin menyetujui permintaan
         elif action == 'approve' and current_user.role in ['admin', 'superadmin']:
             mws_part.is_urgent = True
-            mws_part.urgent_request = False
+            mws_part.urgent_request = False # Permintaan selesai, flag di-reset
             
+        # ## PERUBAHAN ##: Kondisi baru untuk admin/superadmin menolak permintaan urgensi
+        elif action == 'reject_request' and current_user.role in ['admin', 'superadmin']:
+            mws_part.is_urgent = False # Pastikan status urgent tidak aktif
+            mws_part.urgent_request = False # Permintaan ditolak, flag di-reset
+            
+        # Kondisi untuk admin/superadmin mengubah status urgent secara langsung (toggle)
         elif action == 'toggle' and current_user.role in ['admin', 'superadmin']:
             mws_part.is_urgent = not mws_part.is_urgent
-
+            # Jika status urgent di-toggle, maka permintaan yang mungkin ada dianggap selesai
             mws_part.urgent_request = False
             
-    
         else:
             return jsonify({'success': False, 'error': 'Aksi tidak diizinkan untuk peran Anda.'}), 403
         
@@ -1388,7 +1379,7 @@ def print_mws(part_id):
         steps = MwsStep.query.filter_by(mws_part_id=mws_part.id).order_by(MwsStep.no).all()
         users = get_users_from_db()
         part_data = {
-             'title': mws_part.tittle,
+            'title': mws_part.tittle,
             'part_number': mws_part.partNumber,
             'customer': mws_part.customer,
             'serial_number': mws_part.serialNumber,
@@ -1401,29 +1392,42 @@ def print_mws(part_id):
             'reference': mws_part.ref,
             'manual_reference': getattr(mws_part, 'manual_reference', 'Chp. 34-12-24, 15 MAY 1987'),
             'steps': [],
-            'prepared_by_name': users.get(mws_part.preparedBy, {}).get('name'),
+            'prepared_by_text': mws_part.preparedBy,
             'prepared_date': mws_part.preparedDate,
-            'approved_by_name': users.get(mws_part.approvedBy, {}).get('name'),
+            'approved_by_text': mws_part.approvedBy,
             'approved_date': mws_part.approvedDate,
-            'verified_by_name': users.get(mws_part.verifiedBy, {}).get('name'),
+            'verified_by_text': mws_part.verifiedBy,
             'verified_date': mws_part.verifiedDate,
             'start_date': mws_part.startDate,
             'finish_date': mws_part.finishDate,
         }
-        
         for step in steps:
+            man_niks = []
+            try:
+                if step.man and isinstance(step.man, str):
+                    parsed_man = json.loads(step.man)
+                    if isinstance(parsed_man, list):
+                        man_niks = parsed_man
+            except (json.JSONDecodeError, TypeError):
+                man_niks = []
+            man_names_with_nik = []
+            for nik in man_niks:
+                user_info = users.get(nik, {'name': 'Unknown'})
+                man_names_with_nik.append(f"{user_info['name']} ({nik})")
+            man_power_data = {'total': len(man_niks), 'names': man_names_with_nik}
+
             step_data = {
                 'no': step.no,
                 'description': step.description,
-                'man_power': step.man or '',
+                'details': step.get_details(),
+                'man_power': man_power_data,
                 'hours': step.hours or '',
                 'technician': step.tech or '',
                 'inspector': step.insp or ''
             }
             part_data['steps'].append(step_data)
         
-
-        return render_template('mws/print_mws.html', part=part_data)
+        return render_template('maintenance_forms/print_mws.html', part=part_data)
         
     except Exception as e:
         import traceback
@@ -1432,6 +1436,227 @@ def print_mws(part_id):
         return "Terjadi kesalahan internal saat membuat halaman cetak.", 500
 
 
+# =====================================================================
+# KOLOM MAN (Progress)
+# =====================================================================
+
+# --- FUNGSI BARU UNTUK MENGECEK APAKAH MEKANIK SIBUK ---
+def is_mechanic_on_active_step(nik, condition='TECH'):
+    """
+    Mengecek apakah seorang mekanik sedang sign on di sebuah step aktif.
+    
+    Args:
+        nik (str): NIK mekanik yang akan dicek.
+        condition (str): Kondisi untuk dianggap "selesai". 
+                         'TECH' -> bebas jika step.tech == 'Approved'.
+                         'INSP' -> bebas jika step.status == 'completed'.
+    
+    Returns:
+        bool: True jika mekanik sibuk, False jika tidak.
+    """
+    nik_pattern = f'"{nik}"'
+    active_step = None
+    
+    # --- PERUBAHAN LOGIKA ---
+    if condition == 'TECH':
+        # Mekanik dianggap SIBUK jika ada step yang di-sign on olehnya,
+        # statusnya 'in_progress', DAN belum di-approve olehnya (TECH).
+        active_step = MwsStep.query.filter(
+            MwsStep.man.contains(nik_pattern),
+            MwsStep.status == 'in_progress',
+            MwsStep.tech != 'Approved'
+        ).first()
+    elif condition == 'INSP':
+        # Mekanik dianggap SIBUK jika ada step yang di-sign on olehnya
+        # DAN statusnya masih 'in_progress' (belum 'completed').
+        active_step = MwsStep.query.filter(
+            MwsStep.man.contains(nik_pattern),
+            MwsStep.status == 'in_progress'
+        ).first()
+    # --- AKHIR PERUBAHAN ---
+        
+    return active_step is not None
+
+
+@app.route('/mws/<part_id>/assign_mechanics', methods=['POST'])
+@require_role('admin', 'superadmin')
+@limiter.limit("20 per minute")
+def assign_mechanics_to_mws(part_id):
+    try:
+        mws_part = MwsPart.query.filter_by(part_id=part_id).first()
+        if not mws_part:
+            return jsonify({'success': False, 'error': 'MWS tidak ditemukan.'}), 404
+        data = request.get_json()
+        niks = data.get('mechanic_niks')
+        if not isinstance(niks, list):
+            return jsonify({'success': False, 'error': 'Data NIK tidak valid.'}), 400
+        mws_part.set_assigned_mechanics(niks)
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Mekanik berhasil ditugaskan.'})
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error assigning mechanics: {e}")
+        return jsonify({'success': False, 'error': 'Terjadi kesalahan pada server.'}), 500
+
+
+@app.route('/step/add_mechanic', methods=['POST'])
+@require_role('mechanic')
+@limiter.limit("50 per minute")
+def add_mechanic_to_step():
+    try:
+        data = request.get_json()
+        part_id = data.get('partId')
+        step_no = data.get('stepNo')
+        mechanik_nik = current_user.nik
+
+        mws_part = MwsPart.query.filter_by(part_id=part_id).first()
+        if not mws_part:
+            return jsonify({'success': False, 'error': 'MWS tidak ditemukan.'}), 404
+
+        step = MwsStep.query.filter_by(mws_part_id=mws_part.id, no=step_no).first()
+        if not step:
+            return jsonify({'success': False, 'error': 'Langkah kerja tidak ditemukan.'}), 404
+            
+        if mechanik_nik not in mws_part.get_assigned_mechanics():
+            return jsonify({'success': False, 'error': 'Anda tidak ditugaskan untuk MWS ini.'}), 403
+
+        # --- Validasi Terpusat (Logika tidak berubah, tetap di sini) ---
+        
+        # KONDISI 1 (AKTIF): Mekanik tidak bisa Sign On jika belum Approve (TECH) di step lain.
+        if is_mechanic_on_active_step(mechanik_nik, condition='TECH'):
+            return jsonify({'success': False, 'error': 'Anda sudah Sign On di step lain yang masih aktif. Selesaikan (Approve by TECH) terlebih dahulu.'}), 409
+
+        # # KONDISI 2 (NON-AKTIF): Mekanik tidak bisa Sign On jika belum Approved by INSP di step lain.
+        # if is_mechanic_on_active_step(mechanik_nik, condition='INSP'):
+        #     return jsonify({'success': False, 'error': 'Anda sudah Sign On di step lain yang belum selesai (Approved by INSP). Selesaikan tugas tersebut terlebih dahulu.'}), 409
+        
+        step.add_mechanic(mechanik_nik)
+        if step.status == 'pending':
+            step.status = 'in_progress'
+            update_mws_status(mws_part) 
+
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Anda berhasil Sign On ke langkah ini.'})
+
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error adding mechanic to step: {e}")
+        return jsonify({'success': False, 'error': 'Terjadi kesalahan pada server.'}), 500
+    
+
+@app.route('/step/remove_mechanic', methods=['POST'])
+@require_role('admin', 'superadmin')
+@limiter.limit("50 per minute")
+def remove_mechanic_from_step():
+    try:
+        data = request.get_json()
+        part_id = data.get('partId')
+        step_no = data.get('stepNo')
+        nik_to_remove = data.get('nik')
+        if not all([part_id, step_no, nik_to_remove]):
+            return jsonify({'success': False, 'error': 'Data tidak lengkap (membutuhkan partId, stepNo, nik).'}), 400
+        mws_part = MwsPart.query.filter_by(part_id=part_id).first()
+        if not mws_part:
+            return jsonify({'success': False, 'error': 'MWS tidak ditemukan.'}), 404
+        step = MwsStep.query.filter_by(mws_part_id=mws_part.id, no=step_no).first()
+        if not step:
+            return jsonify({'success': False, 'error': 'Langkah kerja tidak ditemukan.'}), 404
+        try:
+            mechanics_list = json.loads(step.man) if step.man else []
+            if not isinstance(mechanics_list, list):
+                 mechanics_list = [] 
+        except json.JSONDecodeError:
+            mechanics_list = []
+        if nik_to_remove in mechanics_list:
+            mechanics_list.remove(nik_to_remove)
+            step.man = json.dumps(mechanics_list)
+            if not mechanics_list and step.status == 'in_progress':
+                step.status = 'pending'
+                update_mws_status(mws_part)
+            db.session.commit()
+            return jsonify({'success': True, 'message': f'Mekanik {nik_to_remove} berhasil dihapus.'})
+        else:
+            return jsonify({'success': False, 'error': 'Mekanik tidak ditemukan pada langkah kerja ini.'}), 404
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error saat menghapus mekanik dari step: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': 'Terjadi kesalahan internal pada server.'}), 500
+
+
+
+# duplicate
+@app.route('/duplicate_mws/<original_part_id>', methods=['POST'])
+@require_role('admin', 'superadmin')
+@limiter.limit("20 per minute")
+def duplicate_mws(original_part_id):
+    try:
+        # 1. Temukan MWS asli untuk dijadikan template
+        original_mws = MwsPart.query.filter_by(part_id=original_part_id).first()
+        if not original_mws:
+            return jsonify({'success': False, 'error': 'MWS asli untuk duplikasi tidak ditemukan.'}), 404
+
+        # 2. Dapatkan jenis pekerjaan dan periksa ketersediaan template langkah kerja
+        job_type = original_mws.jobType
+        steps_template = JOB_STEPS_TEMPLATES.get(job_type, [])
+        if not steps_template:
+            return jsonify({'success': False, 'error': f'Template langkah untuk jenis pekerjaan "{job_type}" tidak ditemukan.'}), 400
+
+        # 3. Buat Part ID baru yang unik
+        part_count = MwsPart.query.count() + 1
+        new_part_id = f"MWS-{part_count:03d}"
+
+        # 4. Buat MWS baru dengan menyalin data spesifik
+        new_mws = MwsPart(
+            # Kolom baru atau yang di-reset
+            part_id=new_part_id,
+            serialNumber='', # 
+            status='pending',
+            currentStep=1,
+            # Kolom yang disalin dari MWS asli
+            partNumber=original_mws.partNumber,
+            tittle=original_mws.tittle,
+            jobType=original_mws.jobType,
+            ref=original_mws.ref,
+            customer=original_mws.customer,
+            customer_id=original_mws.customer_id,
+            acType=original_mws.acType,
+            wbsNo=original_mws.wbsNo,
+            worksheetNo=original_mws.worksheetNo,
+            iwoNo=original_mws.iwoNo,
+            shopArea=original_mws.shopArea,
+            revision=original_mws.revision,
+        )
+
+        # 5. Tambahkan ke sesi dan flush untuk mendapatkan ID baru
+        db.session.add(new_mws)
+        db.session.flush()
+
+        # 6. Buat langkah-langkah kerja baru untuk MWS baru
+        for step_data in steps_template:
+            step = MwsStep(
+                mws_part_id=new_mws.id,
+                no=step_data.get('no'),
+                description=step_data.get('description'),
+                status='pending',
+                man='[]',
+                hours='',
+                tech='',
+                insp=''
+            )
+            step.set_details(step_data.get('details', []))
+            db.session.add(step)
+
+        # 7. Commit semua perubahan ke database
+        db.session.commit()
+
+        # 8. Kembalikan respons sukses dengan URL MWS baru untuk pengalihan
+        redirect_url = url_for('mws_detail', part_id=new_part_id)
+        return jsonify({'success': True, 'newPartId': new_part_id, 'redirect_url': redirect_url}), 201
+
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error saat menduplikasi MWS: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': 'Terjadi kesalahan internal pada server saat duplikasi.'}), 500
 # =====================================================================
 # MENJALANKAN APLIKASI
 # =====================================================================

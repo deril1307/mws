@@ -1,5 +1,4 @@
-{% extends "shared/base.html" %} {% block title %}Quality CUDR - Sistem Aircraft Maintenance{% endblock %} {% from "components/tracking_list.html" import render_tracking_list %} {% block content %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% extends "shared/base.html" %} {% block title %}Quality CUDR - Sistem Aircraft Maintenance{% endblock %} {% from "monitoring/tracking_list.html" import render_tracking_list %} {% block content %}
 
 <style>
   /* CSS BARU UNTUK MODAL LOGOUT */
@@ -46,7 +45,7 @@
       <div class="flex justify-between items-center py-3 sm:py-4">
         <div class="flex items-center">
           <div class="mr-3 sm:mr-4">
-            <img src="{{ url_for('static', filename='img/logo PT DI.jpeg') }}" alt="Logo PT DI" class="h-8 w-auto rounded-md shadow-sm" />
+            <img src="{{ url_for('static', filename='img/logo PT DI.webp') }}" alt="Logo PT DI" class="h-8 w-auto rounded-md shadow-sm" />
           </div>
           <div>
             <h1 class="text-lg sm:text-xl font-bold text-gray-800">Quality CUDR</h1>
@@ -97,7 +96,7 @@
       </div>
     </div>
 
-    {{ render_tracking_list(parts, users, user) }} {% include 'components/status_chart.html' with context %}
+    {{ render_tracking_list(parts, users, user) }} {% include 'monitoring/status_chart.html' with context %}
   </div>
 </div>
 

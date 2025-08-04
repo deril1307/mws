@@ -18,7 +18,7 @@
 <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
   <h2 class="text-2xl font-semibold text-gray-900 mb-6">Tracking Maintenance Work Sheet</h2>
 
-  <div class="bg-white p-6 rounded-xl shadow-sm border mb-8">{% from 'components/tracking_list.html' import render_tracking_list %} {{ render_tracking_list(parts, users, current_user) }}</div>
+  <div class="bg-white p-6 rounded-xl shadow-sm border mb-8">{% from 'monitoring/tracking_list.html' import render_tracking_list %} {{ render_tracking_list(parts, users, current_user) }}</div>
 </main>
 
 <div id="logout-modal" class="fixed inset-0 z-50 items-center justify-center bg-gray-900 bg-opacity-50 hidden">
@@ -38,14 +38,13 @@
     </div>
   </div>
 </div>
-
 <script>
   document.addEventListener("DOMContentLoaded", (event) => {
     const logoutButton = document.getElementById("logout-button");
     const logoutModal = document.getElementById("logout-modal");
     const cancelButton = document.getElementById("cancel-button");
     logoutButton.addEventListener("click", function (e) {
-      e.preventDefault(); // Mencegah aksi default
+      e.preventDefault();
       logoutModal.classList.remove("hidden");
       logoutModal.classList.add("flex");
     });

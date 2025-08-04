@@ -156,22 +156,20 @@
                   />
                   <p id="password-help" class="mt-2 text-xs text-gray-500">Wajib diisi untuk pengguna baru. Kosongkan jika tidak ingin mengubah.</p>
                 </div>
-                <div class="grid grid-cols-1 gap-4">
-                  <div>
-                    <label for="role" class="block text-sm font-medium text-gray-700">Role</label>
-                    <select id="role" name="role" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-                      {% if user.role == 'superadmin' %}
-                      <option value="admin">Admin</option>
-                      <option value="mechanic">Mechanic</option>
-                      <option value="quality1">Quality 1</option>
-                      <option value="quality2">Quality 2</option>
-                      {% elif user.role == 'admin' %}
-                      <option value="mechanic">Mechanic</option>
-                      <option value="quality1">Quality 1</option>
-                      <option value="quality2">Quality 2</option>
-                      {% endif %}
-                    </select>
-                  </div>
+                <div>
+                  <label for="role" class="block text-sm font-medium text-gray-700">Role</label>
+                  <select id="role" name="role" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                    {% if user.role == 'superadmin' %}
+                    <option value="admin">Admin</option>
+                    <option value="mechanic">Mechanic</option>
+                    <option value="quality1">Quality 1</option>
+                    <option value="quality2">Quality 2</option>
+                    {% elif user.role == 'admin' %}
+                    <option value="mechanic">Mechanic</option>
+                    <option value="quality1">Quality 1</option>
+                    <option value="quality2">Quality 2</option>
+                    {% endif %}
+                  </select>
                 </div>
               </div>
             </div>
@@ -235,161 +233,5 @@
   </div>
 </div>
 
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    function getCSRFToken() {
-      const token = document.querySelector('meta[name="csrf-token"]');
-      return token ? token.getAttribute("content") : "";
-    }
-
-    const userModal = document.getElementById("user-modal");
-    const userForm = document.getElementById("user-form");
-    const modalTitle = document.getElementById("modal-title");
-    const nikInput = document.getElementById("nik");
-    const nikOriginalInput = document.getElementById("nik_original");
-    const passwordInput = document.getElementById("password");
-    const passwordHelp = document.getElementById("password-help");
-
-    const deleteModal = document.getElementById("delete-modal");
-    const userToDeleteName = document.getElementById("user-to-delete-name");
-    const confirmDeleteButton = document.getElementById("confirm-delete-button");
-    const cancelDeleteButton = document.getElementById("cancel-delete-button");
-    let nikToDelete = null;
-
-    // Function to open the Add/Edit modal
-    window.openUserModal = async (nik = null) => {
-      userForm.reset();
-      nikInput.classList.remove("bg-gray-100");
-
-      if (nik) {
-        // Edit Mode
-        modalTitle.textContent = "Edit Pengguna";
-        nikInput.readOnly = true;
-        nikInput.classList.add("bg-gray-100"); // Visual cue for readonly
-        nikOriginalInput.value = nik;
-        passwordInput.placeholder = "Kosongkan jika tidak diubah";
-        passwordHelp.textContent = "Kosongkan jika tidak ingin mengubah password.";
-        passwordInput.required = false;
-
-        try {
-          const response = await fetch(`/users/${nik}`, {
-            headers: {
-              "X-CSRFToken": getCSRFToken(),
-            },
-          });
-          if (!response.ok) throw new Error("Network response was not ok.");
-          const data = await response.json();
-
-          if (data.error) {
-            alert("Error: " + data.error);
-            return;
-          }
-
-          nikInput.value = data.nik;
-          document.getElementById("name").value = data.name;
-          document.getElementById("role").value = data.role;
-        } catch (error) {
-          alert("Gagal mengambil data pengguna.");
-          console.error("Fetch error:", error);
-          return;
-        }
-      } else {
-        modalTitle.textContent = "Tambah Pengguna Baru";
-        nikInput.readOnly = false;
-        nikOriginalInput.value = "";
-        passwordInput.placeholder = "";
-        passwordHelp.textContent = "Password wajib diisi untuk pengguna baru.";
-        passwordInput.required = true;
-      }
-      userModal.classList.remove("hidden");
-    };
-
-    // Function to close the Add/Edit modal
-    window.closeUserModal = () => {
-      userModal.classList.add("hidden");
-    };
-
-    // Function to open the Delete modal
-    window.openDeleteModal = (nik, name) => {
-      nikToDelete = nik;
-      userToDeleteName.textContent = name;
-      deleteModal.classList.remove("hidden");
-    };
-
-    // Function to close the Delete modal
-    window.closeDeleteModal = () => {
-      deleteModal.classList.add("hidden");
-    };
-
-    cancelDeleteButton.addEventListener("click", closeDeleteModal);
-
-    // Event handler for form submission (Add/Edit)
-    userForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      const isEditMode = nikOriginalInput.value !== "";
-      if (!isEditMode && !passwordInput.value) {
-        alert("Password wajib diisi untuk pengguna baru.");
-        return;
-      }
-
-      const formData = new FormData(userForm);
-      const data = Object.fromEntries(formData.entries());
-
-      // Don't send empty password on edit unless intended
-      if (isEditMode && data.password === "") {
-        delete data.password;
-      }
-
-      try {
-        const response = await fetch("/users", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": getCSRFToken(),
-          },
-          body: JSON.stringify(data),
-        });
-        if (!response.ok) throw new Error("Server responded with an error.");
-        const result = await response.json();
-
-        if (result.success) {
-          closeUserModal();
-          location.reload();
-        } else {
-          alert("Error: " + (result.error || "Gagal menyimpan data."));
-        }
-      } catch (error) {
-        alert("Terjadi kesalahan jaringan.");
-        console.error("Submit error:", error);
-      }
-    });
-
-    // Event handler for the delete confirmation button
-    confirmDeleteButton.addEventListener("click", async () => {
-      if (!nikToDelete) return;
-
-      try {
-        const response = await fetch(`/users/${nikToDelete}`, {
-          method: "DELETE",
-          headers: {
-            "X-CSRFToken": getCSRFToken(),
-          },
-        });
-        if (!response.ok) throw new Error("Server responded with an error.");
-        const result = await response.json();
-
-        if (result.success) {
-          closeDeleteModal();
-          location.reload();
-        } else {
-          alert("Error: " + (result.error || "Gagal menghapus pengguna."));
-        }
-      } catch (error) {
-        alert("Terjadi kesalahan jaringan.");
-        console.error("Delete error:", error);
-      }
-    });
-  });
-</script>
+<script src="{{ url_for('static', filename='js/manage_user_logic.js') }}"></script>
 {% endblock %}

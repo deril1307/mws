@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Maintenance Work Sheet - Print</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 0.5in;
+      }
+
+      /* Tambahkan ini untuk perhitungan box model yang lebih baik */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      @media print {
+        body {
+          -webkit-print-color-adjust: exact;
+          color-adjust: exact;
+        }
+        .no-print {
+          display: none !important;
+        }
+      }
+      body {
+        font-family: Arial, sans-serif;
+        font-size: 10px;
+        line-height: 1.3;
+        margin: 0;
+        background: white;
+      }
+      .worksheet-container {
+        width: 100%;
+        max-width: 184mm;
+        margin: 0 auto;
+        /* PERUBAHAN: Mengubah border menjadi garis ganda */
+        border: 4px double #000;
+        background: white;
+      }
+      .field-label {
+        font-weight: bold;
+        font-size: 9px;
+        white-space: nowrap;
+        margin-right: 5px;
+      }
+      .field-value {
+        word-break: break-all;
+        font-size: 10px;
+        min-height: 12px;
+      }
+
+      /* Final Header Structure */
+      .header-main {
+        display: flex;
+        border-bottom: 1px solid #000;
+        min-height: 120px;
+      }
+      .logo-col {
+        flex: 0 0 90px;
+        padding: 5px;
+        border-right: 1px solid #000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .center-stack-col {
+        flex: 2;
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid #000;
+        text-align: center;
+      }
+      .main-title-div {
+        font-size: 16px;
+        font-weight: bold;
+        padding: 10px;
+        border-bottom: 1px solid #000;
+        flex-shrink: 0;
+      }
+      .center-stack-col .header-field {
+        padding: 5px 8px;
+        text-align: left;
+        border-bottom: 1px solid #000;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+      .center-stack-col .header-field:last-child {
+        border-bottom: none;
+      }
+
+      .right-stack-col {
+        flex: 1.5;
+        display: flex;
+        flex-direction: column;
+      }
+      .right-stack-col .header-field {
+        padding: 4px 6px;
+        border-bottom: 1px solid #000;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+      .right-stack-col .header-field:last-child {
+        border-bottom: none;
+      }
+
+      /* Bottom Grid for Part/Customer Info (3-COLUMN LAYOUT) */
+      .info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        border-bottom: 1px solid #000;
+      }
+      .grid-item {
+        padding: 5px 8px;
+        min-height: 30px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+      .info-grid .grid-item:nth-child(3n-2),
+      .info-grid .grid-item:nth-child(3n-1) {
+        border-right: 1px solid #000;
+      }
+      .info-grid .grid-item:nth-child(-n + 3) {
+        border-bottom: 1px solid #000;
+      }
+
+      /* Table Styles */
+      .steps-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .steps-table th,
+      .steps-table td {
+        /* PERUBAHAN: Mengubah border menjadi lebih tipis */
+        border: 0.5pt solid #000;
+        padding: 4px;
+        text-align: left;
+        vertical-align: top;
+      }
+      .steps-table th {
+        background-color: #f0f0f0;
+        /* PERUBAHAN: Menghilangkan cetak tebal */
+        font-weight: normal;
+        text-align: center;
+      }
+      .th-description {
+        font-weight: normal;
+        font-size: 8px;
+        line-height: 1.2;
+      }
+
+      /* Signature & Footer */
+      .signature-section {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr 1fr;
+        border-top: 1px solid #000;
+      }
+      .signature-box {
+        border-right: 1px solid #000;
+        padding: 5px;
+        min-height: 80px;
+      }
+      .signature-box:last-child {
+        border-right: none;
+      }
+      .signature-title {
+        font-weight: bold;
+        font-size: 9px;
+      }
+      .signature-content {
+        font-size: 9px;
+        line-height: 1.3;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .signature-space {
+        min-height: 40px;
+      }
+      .footer-info {
+        text-align: center;
+        font-size: 8px;
+        margin-top: 10px;
+        padding: 5px;
+        border-top: 1px solid #000;
+      }
+
+      /* Button Styles */
+      .action-buttons {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1000;
+        display: flex;
+        gap: 10px;
+      }
+      .print-button,
+      .close-button {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-family: Arial, sans-serif;
+        font-size: 14px;
+      }
+      .close-button {
+        background: #6c757d;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="action-buttons no-print">
+      <button class="close-button" onclick="window.close()">Close</button>
+      <button class="print-button" onclick="window.print()">Print</button>
+    </div>
+    <div class="worksheet-container">
+      <div class="header-main">
+        <div class="logo-col">
+          <img src="{{ url_for('static', filename='img/Logo PT DI.jpeg') }}" alt="Logo PT DI" style="width: 100%; height: auto; max-width: 70px" />
+        </div>
+
+        <div class="center-stack-col">
+          <div class="main-title-div">MAINTENANCE WORK SHEET</div>
+          <div class="header-field">
+            <span class="field-label">Tittle</span>
+            <div class="field-value">{{ part.title }}</div>
+          </div>
+          <div class="header-field">
+            <span class="field-label">Ref</span>
+            <div class="field-value">{{ part.reference }}<br />{{ part.manual_reference }}</div>
+          </div>
+        </div>
+
+        <div class="right-stack-col">
+          <div class="header-field">
+            <span class="field-label">WBS No</span>
+            <div class="field-value">{{ part.wbs_no }}</div>
+          </div>
+          <div class="header-field">
+            <span class="field-label">WORKSHEET NO</span>
+            <div class="field-value">{{ part.worksheet_no }}</div>
+          </div>
+          <div class="header-field">
+            <span class="field-label">IWO NO</span>
+            <div class="field-value">{{ part.iwo_no }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="info-grid">
+        <div class="grid-item">
+          <span class="field-label">PART NUMBER</span>
+          <div class="field-value">{{ part.part_number }}</div>
+        </div>
+        <div class="grid-item">
+          <span class="field-label">A/C TYPE</span>
+          <div class="field-value">{{ part.ac_type }}</div>
+        </div>
+        <div class="grid-item">
+          <span class="field-label">SHOP AREA</span>
+          <div class="field-value">{{ part.shop_area }}</div>
+        </div>
+        <div class="grid-item">
+          <span class="field-label">CUSTOMER</span>
+          <div class="field-value">{{ part.customer }}</div>
+        </div>
+        <div class="grid-item">
+          <span class="field-label">SERIAL NUMBER</span>
+          <div class="field-value">{{ part.serial_number }}</div>
+        </div>
+        <div class="grid-item">
+          <span class="field-label">REVISION</span>
+          <div class="field-value">{{ part.revision }}</div>
+        </div>
+      </div>
+
+      <table class="steps-table">
+        <thead>
+          <tr>
+            <th class="step-no">NO<br /><span class="th-description"></span></th>
+            <th class="step-description">DESCRIPTION<br /><span class="th-description"></span></th>
+            <th class="step-man">MAN<br /><span class="th-description"></span></th>
+            <th class="step-hours">HOURS</th>
+            <th class="step-tech">TECH<br /><span class="th-description"></span></th>
+            <th class="step-insp">INSP<br /><span class="th-description"></span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for step in part.steps %}
+          <tr>
+            <td class="step-no">{{ step.no }}</td>
+            <td class="step-description">
+              {{ step.description }} {% if step.details %}
+              <ul class="details-list">
+                {% for detail in step.details %}
+                <li>- {{ detail }}</li>
+                {% endfor %}
+              </ul>
+              {% endif %}
+            </td>
+            <td class="step-man">
+              {% if step.man_power and step.man_power.total > 0 %}<strong>Total: {{ step.man_power.total }}</strong>
+              <ul class="mechanic-list">
+                {% for name in step.man_power.names %}
+                <li>{{ name }}</li>
+                {% endfor %}
+              </ul>
+              {% else %} N/A {% endif %}
+            </td>
+            <td class="step-hours">{% if step.hours and step.hours not in ['0', '0.00', '00:00'] %}{{ step.hours }}{% else %}N/A{% endif %}</td>
+            <td class="step-tech">{{ step.technician or 'N/A' }}</td>
+            <td class="step-insp">{{ step.inspector or 'N/A' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <div class="signature-section">
+        <div class="signature-box">
+          <div class="signature-title">PREPARED BY:</div>
+          <div class="signature-content">
+            <div class="approval-status">{{ part.prepared_by_text or '' }}</div>
+            <div class="signature-space"></div>
+            <div>DATE: {{ part.prepared_date or '' }}</div>
+          </div>
+        </div>
+        <div class="signature-box">
+          <div class="signature-title">APPROVED BY:</div>
+          <div class="signature-content">
+            <div class="approval-status">{{ part.approved_by_text or '' }}</div>
+            <div class="signature-space"></div>
+            <div>DATE: {{ part.approved_date or '' }}</div>
+          </div>
+        </div>
+        <div class="signature-box">
+          <div class="signature-title">VERIFIED BY:</div>
+          <div class="signature-content">
+            <div class="approval-status">{{ part.verified_by_text or '' }}</div>
+            <div class="signature-space"></div>
+            <div>DATE: {{ part.verified_date or '' }}</div>
+          </div>
+        </div>
+        <div class="signature-box">
+          <div class="signature-title">START DATE:</div>
+          <div class="signature-content">
+            <div>{{ part.start_date or '' }}</div>
+            <hr style="border-top: 1px solid #000; margin: 5px 0" />
+            <strong>FINISHED DATE:</strong><br />
+            <div>{{ part.finish_date or '' }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="footer-info">AS-2200-012RO, Maintenance Work Sheet for MRO C, Rev. 9, Issue Date Aug. 13, 2024</div>
+    </div>
+  </body>
+</html>

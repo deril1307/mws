@@ -1,13 +1,12 @@
 {% extends "shared/base.html" %} {% block title %}Login - Sistem MWS Aircraft Maintenance{% endblock %} {% block content %}
-
 <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
   <div id="login-card" class="max-w-md w-full">
     <div class="text-center mb-8">
       <div class="relative inline-block">
-        <img src="{{ url_for('static', filename='img/logo PT DI.jpeg') }}" alt="Logo PT DI" class="w-24 h-24 sm:w-32 sm:h-32 mx-auto mb-4 object-contain rounded-full shadow-lg bg-white p-2" />
+        <img src="{{ url_for('static', filename='img/logo PT DI.webp') }}" alt="Logo PT DI" class="w-24 h-24 sm:w-32 sm:h-32 mx-auto mb-4 object-contain rounded-full shadow-lg bg-white p-2" />
       </div>
-      <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">Maintenance WorkSheet</h1>
-      <p class="text-sm text-gray-600">PT Dirgantara Indonesia</p>
+      <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">MAINTENANCE WORK SHEET</h1>
+      <p class="text-sm text-gray-600">PT DIRGANTARA INDONESIA</p>
     </div>
 
     <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden relative">
@@ -32,14 +31,13 @@
       <div id="login-content" class="p-6 sm:p-8">
         <div class="text-center mb-6">
           <h2 class="text-xl sm:text-2xl font-semibold text-gray-800 mb-2">Selamat Datang</h2>
-          <p class="text-gray-500 text-sm">Masuk dengan NIK dan password Anda</p>
+          <p class="text-gray-500 text-sm">Masuk dengan NIK dan password</p>
         </div>
 
         <div id="flash-container" class="mb-4"></div>
 
-        <form id="login-form" method="POST" class="space-y-5">
+        <form id="login-form" method="POST" class="space-y-5" data-login-url="{{ url_for('login') }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-
           <div class="space-y-2">
             <label for="nik" class="block text-sm font-medium text-gray-700">NIK</label>
             <div class="relative">
@@ -59,7 +57,6 @@
               />
             </div>
           </div>
-
           <div class="space-y-2">
             <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
             <div class="relative">
@@ -79,7 +76,6 @@
               </button>
             </div>
           </div>
-
           <button
             id="submit-button"
             type="submit"
@@ -113,7 +109,6 @@
             </div>
           </div>
         </button>
-
         <button type="button" class="demo-account-btn" data-nik="000002" data-password="123">
           <div class="flex items-center space-x-2">
             <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
@@ -123,7 +118,6 @@
             </div>
           </div>
         </button>
-
         <button type="button" class="demo-account-btn" data-nik="000003" data-password="123">
           <div class="flex items-center space-x-2">
             <div class="w-2 h-2 bg-green-500 rounded-full"></div>
@@ -133,7 +127,6 @@
             </div>
           </div>
         </button>
-
         <button type="button" class="demo-account-btn" data-nik="000004" data-password="123">
           <div class="flex items-center space-x-2">
             <div class="w-2 h-2 bg-yellow-500 rounded-full"></div>
@@ -143,7 +136,6 @@
             </div>
           </div>
         </button>
-
         <button type="button" class="demo-account-btn col-span-1 sm:col-span-2" data-nik="000005" data-password="123">
           <div class="flex items-center justify-center space-x-2">
             <div class="w-2 h-2 bg-purple-500 rounded-full"></div>
@@ -168,20 +160,15 @@
     cursor: pointer;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   }
-
   .demo-account-btn:hover {
     background-color: #f8fafc;
     border-color: #3b82f6;
   }
-
-  /* Loading animation */
   @keyframes spin {
     to {
       transform: rotate(360deg);
     }
   }
-
-  /* Responsive adjustments */
   @media (max-width: 640px) {
     .demo-account-btn {
       padding: 10px 12px;
@@ -189,106 +176,5 @@
   }
 </style>
 
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const loginForm = document.getElementById("login-form");
-    const loginCard = document.getElementById("login-card");
-    const flashContainer = document.getElementById("flash-container");
-    const submitButton = document.getElementById("submit-button");
-    const submitButtonText = document.getElementById("submit-button-text");
-    const successOverlay = document.getElementById("success-overlay");
-    const successIcon = document.getElementById("success-icon");
-    const successText = document.getElementById("success-text");
-    const loginContent = document.getElementById("login-content");
-    const nikInput = document.getElementById("nik");
-    const passwordInput = document.getElementById("password");
-
-    // Login form submission
-    loginForm.addEventListener("submit", function (e) {
-      e.preventDefault();
-
-      // Disable button and show loading state
-      submitButton.disabled = true;
-      submitButtonText.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Memproses...';
-      flashContainer.innerHTML = "";
-
-      const formData = new FormData(loginForm);
-      const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-
-      fetch("{{ url_for('login') }}", {
-        method: "POST",
-        headers: {
-          "X-CSRFToken": csrfToken,
-        },
-        body: formData,
-      })
-        .then((response) => response.json().then((data) => ({ ok: response.ok, data })))
-        .then(({ ok, data }) => {
-          if (ok && data.redirect_url) {
-            successOverlay.style.opacity = "1";
-            successOverlay.style.visibility = "visible";
-            setTimeout(() => {
-              successIcon.style.transform = "scale(1)";
-            }, 50);
-            setTimeout(() => {
-              successText.style.transform = "translateY(0)";
-              successText.style.opacity = "1";
-            }, 150);
-            setTimeout(() => {
-              window.location.href = data.redirect_url;
-            }, 300);
-          } else {
-            const errorMessage = `
-              <div class="mb-4 p-4 rounded-lg text-sm bg-red-50 border border-red-200 text-red-700 flex items-center">
-                <i class="fas fa-exclamation-triangle mr-2"></i>
-                ${data.message}
-              </div>
-            `;
-            flashContainer.innerHTML = errorMessage;
-            submitButton.disabled = false;
-            submitButtonText.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i>Masuk';
-          }
-        })
-        .catch((error) => {
-          console.error("Error:", error);
-          const errorMessage = `
-            <div class="mb-4 p-4 rounded-lg text-sm bg-red-50 border border-red-200 text-red-700 flex items-center">
-              <i class="fas fa-wifi mr-2"></i>
-              Terjadi kesalahan jaringan. Silakan coba lagi.
-            </div>
-          `;
-          flashContainer.innerHTML = errorMessage;
-          submitButton.disabled = false;
-          submitButtonText.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i>Masuk';
-        });
-    });
-
-    const togglePassword = document.getElementById("togglePassword");
-    if (togglePassword) {
-      togglePassword.addEventListener("click", function () {
-        const type = passwordInput.getAttribute("type") === "password" ? "text" : "password";
-        passwordInput.setAttribute("type", type);
-
-        const icon = this.querySelector("i");
-        icon.classList.toggle("fa-eye");
-        icon.classList.toggle("fa-eye-slash");
-      });
-    }
-
-    const demoButtons = document.querySelectorAll(".demo-account-btn");
-    demoButtons.forEach((button) => {
-      button.addEventListener("click", function () {
-        nikInput.value = this.dataset.nik;
-        passwordInput.value = this.dataset.password;
-
-        setTimeout(() => {
-          submitButton.focus();
-        }, 100);
-      });
-    });
-
-    nikInput.focus();
-  });
-</script>
-
+<script src="{{ url_for('static', filename='js/login_logic.js') }}" defer></script>
 {% endblock %}

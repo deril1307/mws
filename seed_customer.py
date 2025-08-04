@@ -6,21 +6,13 @@ def seed_customers():
     Fungsi untuk mengisi data awal ke tabel customers.
     """
     with app.app_context():
-        print("Menghapus data customer lama...")
-        Customer.query.delete()
-        db.session.commit()
-        print("Data customer lama berhasil dihapus.")
         customers_to_add = [
             {
-                "username": "rokaf",
+                "username": "tes",
                 "password": "123",
-                "company_name": "ROKAF"
-            },
-            {
-                "username": "thai",
-                "password": "123",
-                "company_name": "THAI"
+                "company_name": "tes"
             }
+         
         ]
 
         print("Menambahkan data customer baru...")

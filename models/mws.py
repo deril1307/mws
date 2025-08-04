@@ -22,7 +22,11 @@ class MwsPart(db.Model):
     revision = db.Column(db.String(50), default='1')
     status = db.Column(db.String(50), default='pending')
     currentStep = db.Column(db.Integer, default=0)
-    assignedTo = db.Column(db.String(50))
+    assignedTo = db.Column(db.String(50)) # This field seems legacy, can be reviewed later.
+    
+    # New field to store assigned mechanic NIKs as a JSON string
+    assigned_mechanics = db.Column(db.Text, nullable=True, default='[]')
+
     startDate = db.Column(db.Date)
     finishDate = db.Column(db.Date)
     preparedBy = db.Column(db.String(100))
@@ -46,6 +50,20 @@ class MwsPart(db.Model):
     # Kolom dan relasi baru
     customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'), nullable=True)
     customer_rel = relationship('Customer', back_populates='mws_parts')
+
+    # Helper functions for assigned_mechanics
+    def set_assigned_mechanics(self, nik_list):
+        """Set assigned mechanics as a JSON string."""
+        self.assigned_mechanics = json.dumps(nik_list)
+
+    def get_assigned_mechanics(self):
+        """Get assigned mechanics as a list."""
+        if self.assigned_mechanics:
+            try:
+                return json.loads(self.assigned_mechanics)
+            except (json.JSONDecodeError, TypeError):
+                return []
+        return []
 
     def calculate_stripping_deadline(self):
         """Calculate stripping deadline (20 working days from start date)"""
@@ -155,6 +173,7 @@ class MwsPart(db.Model):
             'status': self.status,
             'currentStep': self.currentStep,
             'assignedTo': self.assignedTo,
+            'assigned_mechanics': self.get_assigned_mechanics(), # Return list of NIKs
             'startDate': self.startDate.isoformat() if self.startDate else '',
             'finishDate': self.finishDate.isoformat() if self.finishDate else '',
             'preparedBy': self.preparedBy or '',

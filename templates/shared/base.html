@@ -5,8 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{% block title %}Sistem Aircraft Maintenance Work Sheet{% endblock %}</title>
     <meta name="csrf-token" content="{{ csrf_token() }}" />
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
+    <!-- Font Awesome Lokal -->
+    <link href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}" rel="stylesheet" />
+
+    <!-- SweetAlert2 Lokal -->
+    <script src="{{ url_for('static', filename='vendor/sweetalert2/sweetalert2.min.js') }}"></script>
+
+    <!-- CSS Utama Anda -->
     <link href="{{ url_for('static', filename='css/output.css') }}" rel="stylesheet" />
+
+    <script src="{{ url_for('static', filename='vendor/chartjs/chart.umd.min.js') }}"></script>
+
+    <script src="{{ url_for('static', filename='vendor/chartjs/chartjs-plugin-datalabels.min.js') }}"></script>
 
     <style>
       .role-admin {
@@ -117,94 +127,6 @@
   <body class="bg-gray-50 min-h-screen">
     {% block content %}{% endblock %}
 
-    <script>
-      /**
-       * Fungsi generik untuk mengirim data ke server menggunakan metode POST.
-       * Fungsi ini sudah menyertakan CSRF token secara otomatis.
-       * @param {string} endpoint - Alamat URL tujuan di server.
-       * @param {object} data - Objek JavaScript yang akan dikirim.
-       * @returns {Promise} - Mengembalikan promise dari proses fetch.
-       */
-      function updateField(endpoint, data) {
-        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute("content");
-
-        // Mengembalikan fetch promise agar bisa di-chain di fungsi lain
-        return fetch(endpoint, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": csrfToken,
-          },
-          body: JSON.stringify(data),
-        });
-      }
-
-      /**
-       * Menampilkan notifikasi sementara di pojok kanan atas.
-       * @param {string} message - Pesan yang akan ditampilkan.
-       * @param {string} type - Tipe notifikasi ('success' atau 'error').
-       */
-      function showNotification(message, type) {
-        const notification = document.createElement("div");
-        notification.className = `fixed top-4 right-4 px-4 py-2 rounded-lg text-white z-50 shadow-lg animate-pulse ${type === "success" ? "bg-green-500" : "bg-red-500"}`;
-        notification.textContent = message;
-        document.body.appendChild(notification);
-
-        setTimeout(() => {
-          notification.remove();
-        }, 3000);
-      }
-
-      /**
-       * Fungsi untuk menandatangani dokumen.
-       * Me-reload halaman HANYA JIKA proses berhasil.
-       * @param {string} type - Tipe tanda tangan ('prepared', 'approved', 'verified').
-       * @param {string} partId - ID dari MWS yang akan ditandatangani.
-       */
-      function signDocument(type, partId) {
-        if (!confirm(`Apakah Anda yakin ingin menandatangani sebagai "${type}"?`)) {
-          return;
-        }
-
-        updateField("/sign_document", { type: type, partId: partId })
-          .then((response) => response.json())
-          .then((data) => {
-            if (data.success) {
-              showNotification("Dokumen berhasil ditandatangani.", "success");
-              setTimeout(() => location.reload(), 1500); // Reload setelah notifikasi muncul
-            } else {
-              showNotification("Gagal: " + (data.error || "Aksi tidak diizinkan."), "error");
-            }
-          })
-          .catch((error) => {
-            console.error("Error:", error);
-            showNotification("Terjadi kesalahan pada jaringan.", "error");
-          });
-      }
-
-      // --- Fungsi utilitas untuk UI ---
-
-      function toggleMobileMenu() {
-        const menu = document.getElementById("mobile-menu");
-        menu.classList.toggle("hidden");
-      }
-
-      function initResponsiveTables() {
-        const tables = document.querySelectorAll(".worksheet-table");
-        tables.forEach((table) => {
-          if (table.parentElement.classList.contains("overflow-x-auto")) return;
-
-          const wrapper = document.createElement("div");
-          wrapper.className = "overflow-x-auto";
-          table.parentNode.insertBefore(wrapper, table);
-          wrapper.appendChild(table);
-        });
-      }
-
-      // Initialize on page load
-      document.addEventListener("DOMContentLoaded", function () {
-        initResponsiveTables();
-      });
-    </script>
+    <script src="{{ url_for('static', filename='js/base.js') }}" defer></script>
   </body>
 </html>

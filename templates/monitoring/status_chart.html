@@ -1,0 +1,64 @@
+<div class="mt-8 grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+  {% set total_parts = parts|length %} {% set completed_parts = parts.values()|selectattr('status', 'equalto', 'completed')|list|length %} {% set in_progress_parts = parts.values()|selectattr('status', 'equalto', 'in_progress')|list|length
+  %} {% set pending_parts = parts.values()|selectattr('status', 'equalto', 'pending')|list|length %}
+
+  <div class="bg-white p-5 rounded-xl shadow-sm border flex items-center card-hover">
+    <div class="p-3 bg-blue-100 rounded-lg mr-4"><i class="fas fa-clipboard-list text-blue-600 text-xl"></i></div>
+    <div>
+      <p class="text-sm font-medium text-gray-600">Total WorkSheet</p>
+      <p id="total-ws-stat" class="text-2xl font-bold text-gray-900">{{ total_parts }}</p>
+    </div>
+  </div>
+
+  <div class="bg-white p-5 rounded-xl shadow-sm border flex items-center card-hover">
+    <div class="p-3 bg-blue-100 rounded-lg mr-4"><i class="fas fa-check-circle text-blue-600 text-xl"></i></div>
+    <div>
+      <p class="text-sm font-medium text-gray-600">WorkSheet Finish</p>
+      <p id="completed-ws-stat" class="text-2xl font-bold text-gray-900">{{ completed_parts }}</p>
+    </div>
+  </div>
+
+  <div class="bg-white p-5 rounded-xl shadow-sm border flex items-center card-hover">
+    <div class="p-3 bg-green-100 rounded-lg mr-4"><i class="fas fa-clock text-green-600 text-xl"></i></div>
+    <div>
+      <p class="text-sm font-medium text-gray-600">Worksheet In Progress</p>
+      <p id="inprogress-ws-stat" class="text-2xl font-bold text-gray-900">{{ in_progress_parts }}</p>
+    </div>
+  </div>
+
+  <div class="bg-white p-5 rounded-xl shadow-sm border flex items-center card-hover">
+    <div class="p-3 bg-red-100 rounded-lg mr-4"><i class="fas fa-pause-circle text-red-600 text-xl"></i></div>
+    <div>
+      <p class="text-sm font-medium text-gray-600">WorkSheet Pending</p>
+      <p id="pending-ws-stat" class="text-2xl font-bold text-gray-900">{{ pending_parts }}</p>
+    </div>
+  </div>
+</div>
+
+<div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-8">
+  <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-4">
+    <h2 class="text-xl font-semibold text-gray-800 flex items-center mb-4 md:mb-0">
+      <i class="fas fa-chart-pie mr-3 text-green-600"></i>Grafik Status
+      <span id="customer-chart-label" class="ml-2 text-sm font-normal text-gray-500"></span>
+    </h2>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
+    <div style="height: 300px; position: relative">
+      <canvas id="mwsStatusChart"></canvas>
+    </div>
+    <div style="height: 300px; position: relative">
+      <canvas id="mwsStatusBarChart"></canvas>
+    </div>
+    <div style="height: 300px; position: relative">
+      <canvas id="mwsUrgencyChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Data ini spesifik untuk halaman ini, jadi tetap dipertahankan.
+  const originalData = {{ parts | tojson }};
+</script>
+
+<script src="{{ url_for('static', filename='js/chart_logic.js') }}" defer></script>

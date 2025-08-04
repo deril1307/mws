@@ -1,8 +1,5 @@
-{% extends "shared/base.html" %} {% block title %}Admin Dashboard - Sistem Aircraft Maintenance{% endblock %} {% from "components/tracking_list.html" import render_tracking_list %} {% block content %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
+{% extends "shared/base.html" %} {% block title %}Admin Dashboard - Sistem Aircraft Maintenance{% endblock %} {% from "monitoring/tracking_list.html" import render_tracking_list %} {% block content %}
 <style>
-  /* [Tidak ada perubahan pada CSS custom Anda] */
   #notification-dropdown {
     transition: opacity 0.2s ease-out, transform 0.2s ease-out;
   }
@@ -73,7 +70,7 @@
       <div class="flex justify-between items-center py-3 sm:py-4">
         <div class="flex items-center">
           <div class="mr-3 sm:mr-4">
-            <img src="{{ url_for('static', filename='img/logo PT DI.jpeg') }}" alt="Logo PT DI" class="h-8 w-auto rounded-md shadow-sm" />
+            <img src="{{ url_for('static', filename='img/logo PT DI.webp') }}" alt="Logo PT DI" class="h-8 w-auto rounded-md shadow-sm" />
           </div>
           <div>
             <h1 class="text-lg sm:text-xl font-bold text-gray-800">Admin Dashboard</h1>
@@ -148,41 +145,42 @@
   </div>
 
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <!-- PERUBAHAN: Menu dikembalikan warnanya -->
     <div class="bg-white p-4 sm:p-6 rounded-xl shadow-sm border mb-8">
-      <h3 class="text-base sm:text-lg font-semibold text-gray-800 mb-4">Menu</h3>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-        <a href="{{ url_for('create_mws') }}" class="block p-3 sm:p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors duration-200 text-center focus:outline-none focus:ring-2 focus:ring-blue-500">
-          <div class="flex flex-col items-center justify-center h-full">
-            <div class="p-2 sm:p-3 bg-blue-200 rounded-full mb-2">
-              <i class="fas fa-plus-circle text-blue-600 text-lg sm:text-xl"></i>
-            </div>
-            <p class="font-semibold text-sm sm:text-base text-blue-800">Buat MWS Baru</p>
-            <p class="text-xs text-blue-600">Tambah Work Sheet</p>
+      <div class="flex items-center justify-around space-x-4">
+        <a href="{{ url_for('create_mws') }}" class="flex flex-col items-center text-gray-600 hover:text-blue-600 transition-colors duration-200 group text-center w-1/3">
+          <div class="flex items-center justify-center h-16 w-16 bg-blue-100 group-hover:bg-blue-200 rounded-full transition-colors duration-200">
+            <i class="fas fa-plus-circle text-2xl text-blue-600 transition-colors duration-200"></i>
           </div>
+          <p class="mt-2 text-sm font-medium">Buat MWS Baru</p>
         </a>
-        <a href="{{ url_for('manage_users') }}" class="block p-3 sm:p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors duration-200 text-center focus:outline-none focus:ring-2 focus:ring-green-500">
-          <div class="flex flex-col items-center justify-center h-full">
-            <div class="p-2 sm:p-3 bg-green-200 rounded-full mb-2">
-              <i class="fas fa-users-cog text-green-600 text-lg sm:text-xl"></i>
-            </div>
-            <p class="font-semibold text-sm sm:text-base text-green-800">Kelola Tim</p>
-            <p class="text-xs text-green-600">Manajemen Pengguna</p>
+        <a href="{{ url_for('manage_users') }}" class="flex flex-col items-center text-gray-600 hover:text-green-600 transition-colors duration-200 group text-center w-1/3">
+          <div class="flex items-center justify-center h-16 w-16 bg-green-100 group-hover:bg-green-200 rounded-full transition-colors duration-200">
+            <i class="fas fa-users-cog text-2xl text-green-600 transition-colors duration-200"></i>
           </div>
+          <p class="mt-2 text-sm font-medium">Kelola Tim</p>
         </a>
-        <div class="p-3 sm:p-4 bg-purple-50 rounded-lg flex flex-col items-center justify-center">
-          <div class="p-2 sm:p-3 bg-purple-200 rounded-full mb-2">
-            <i class="fas fa-signature text-purple-600 text-lg sm:text-xl"></i>
+        <div class="flex flex-col items-center text-gray-600 text-center w-1/3">
+          <div class="flex items-center justify-center h-16 w-16 bg-yellow-100 rounded-full relative">
+            <i class="fas fa-signature text-2xl text-yellow-600"></i>
+            {% set unsigned_parts_count = parts.values()|selectattr('preparedBy', 'equalto', '')|list|length %} {% if unsigned_parts_count > 0 %}
+            <span class="absolute top-1 right-1 flex h-4 w-4">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-4 w-4 bg-yellow-500 text-white text-xs items-center justify-center">{{ unsigned_parts_count }}</span>
+            </span>
+            {% endif %}
           </div>
-          <p class="font-semibold text-sm sm:text-base text-purple-800">Prepared By</p>
-          {% set unsigned_parts_count = parts.values()|selectattr('preparedBy', 'equalto', '')|list|length %}
-          <div class="mt-1 bg-white w-full text-center py-1 rounded-lg">
-            <span class="text-md font-bold {% if unsigned_parts_count > 0 %}text-yellow-600{% else %}text-green-600{% endif %}">{{ unsigned_parts_count }}</span>
-            <span class="text-xs text-gray-600"> Menunggu Tanda Tangan</span>
-          </div>
+          <p class="mt-2 text-sm font-medium">Prepared By</p>
+          <p class="text-xs text-gray-500">
+            <span class="font-bold {% if unsigned_parts_count > 0 %}text-yellow-600{% else %}text-green-600{% endif %}">{{ unsigned_parts_count }}</span>
+            menunggu
+          </p>
         </div>
       </div>
     </div>
-    {{ render_tracking_list(parts, users, user) }} {% include 'components/status_chart.html' with context %}
+    <!-- AKHIR PERUBAHAN -->
+
+    {{ render_tracking_list(parts, users, user) }} {% include 'monitoring/status_chart.html' with context %}
   </div>
 </div>
 
