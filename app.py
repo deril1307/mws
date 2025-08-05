@@ -369,9 +369,17 @@ def admin_dashboard():
 @require_role('mechanic')
 def mechanic_dashboard():
     try:
-        parts = MwsPart.query.all()
+        # --- PERUBAHAN DIMULAI ---
+        # Filter MWS berdasarkan NIK mekanik yang login.
+        # Pencarian dilakukan di dalam kolom 'assigned_mechanics' yang berisi JSON string.
+        mechanic_nik_pattern = f'"{current_user.nik}"'
+        parts = MwsPart.query.filter(
+            MwsPart.assigned_mechanics.contains(mechanic_nik_pattern)
+        ).all()
+        # --- PERUBAHAN SELESAI ---
+
         parts_dict = {}
-        for part in parts:
+        for part in parts: # Sekarang 'parts' sudah berisi data yang terfilter
             parts_dict[part.part_id] = part.to_dict()
         
         users = get_users_from_db()
@@ -383,7 +391,7 @@ def mechanic_dashboard():
         print(f"Error in mechanic dashboard: {e}")
         return render_template('mechanic/mechanic_dashboard.html', 
                              parts={},
-                             users={}) 
+                             users={})
 
 @app.route('/quality1-dashboard')
 @require_role('quality1')

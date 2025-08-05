@@ -151,7 +151,6 @@
   </div>
 
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-    <!-- PERUBAHAN: Menu diubah menjadi minimalis -->
     <div class="bg-white p-4 sm:p-6 rounded-xl shadow-sm border mb-8">
       <div class="flex items-center justify-around space-x-4">
         <a href="{{ url_for('create_mws') }}" class="flex flex-col items-center text-gray-600 hover:text-blue-600 transition-colors duration-200 group text-center w-1/3">
@@ -184,9 +183,8 @@
         </div>
       </div>
     </div>
-    <!-- AKHIR PERUBAHAN -->
-
-    {{ render_tracking_list(parts, users, user) }} {% include 'monitoring/status_chart.html' with context %}
+    {% include 'monitoring/status_chart.html' with context %}
+    {{ render_tracking_list(parts, users, user) }}
   </div>
 </div>
 

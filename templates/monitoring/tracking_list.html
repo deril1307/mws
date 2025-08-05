@@ -66,7 +66,18 @@
       </div>
     </div>
 
-    {% set relevant_parts = [] %} {% for part_id, part in parts.items() %} {% set _ = relevant_parts.append((part_id, part)) %} {% endfor %} {% if relevant_parts %}
+    {% set relevant_parts = [] %} 
+    {% for part_id, part in parts.items() %} 
+        {% if current_user.role == 'mechanic' %}
+            {% if current_user.nik in part.get('assigned_mechanics', []) %}
+                {% set _ = relevant_parts.append((part_id, part)) %}
+            {% endif %}
+        {% else %}
+            {% set _ = relevant_parts.append((part_id, part)) %}
+        {% endif %}
+    {% endfor %} 
+
+    {% if relevant_parts %}
     <div id="parts-container" class="space-y-6">
       {% for part_id, part in relevant_parts | sort(attribute='1.is_urgent', reverse=True) | sort(attribute='1.urgent_request', reverse=True) %}
       <div

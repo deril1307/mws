@@ -202,7 +202,34 @@ document.addEventListener("DOMContentLoaded", function () {
   initializeLiveTimers();
   checkStrippingStatus();
   setInterval(checkStrippingStatus, 5 * 60 * 1000); // Check every 5 minutes
+
+  // --- Event Listeners for Assign Mechanic Modal ---
+  if (currentUserRole === "admin" || currentUserRole === "superadmin") {
+    const searchInput = document.getElementById("mechanic-search-input");
+    const checkAllBox = document.getElementById("check-all-mechanics");
+    const individualCheckboxes = document.querySelectorAll('.individual-mechanic-checkbox');
+
+    if (searchInput) {
+      searchInput.addEventListener("input", filterMechanicList);
+    }
+
+    if (checkAllBox) {
+      checkAllBox.addEventListener('click', (e) => {
+        document.querySelectorAll('.mechanic-item:not([style*="display: none"]) .individual-mechanic-checkbox').forEach(checkbox => {
+          checkbox.checked = e.target.checked;
+        });
+        updateCheckAllState();
+      });
+    }
+
+    if (individualCheckboxes.length > 0) {
+      individualCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('click', updateCheckAllState);
+      });
+    }
+  }
 });
+
 
 // --- Role-Specific Functions ---
 
@@ -464,24 +491,75 @@ if (currentUserRole !== "customer") {
 
 // --- Admin/Superadmin Functions ---
 if (currentUserRole === "admin" || currentUserRole === "superadmin") {
+
+  /**
+   * Updates the state of the "Check All" checkbox based on individual checkbox states.
+   */
+  function updateCheckAllState() {
+    const checkAllBox = document.getElementById("check-all-mechanics");
+    const visibleCheckboxes = document.querySelectorAll('.mechanic-item:not([style*="display: none"]) .individual-mechanic-checkbox');
+    
+    if (visibleCheckboxes.length === 0) {
+        checkAllBox.checked = false;
+        checkAllBox.indeterminate = false;
+        return;
+    }
+
+    const totalVisible = visibleCheckboxes.length;
+    const totalChecked = Array.from(visibleCheckboxes).filter(cb => cb.checked).length;
+
+    if (totalChecked === totalVisible) {
+      checkAllBox.checked = true;
+      checkAllBox.indeterminate = false;
+    } else if (totalChecked > 0) {
+      checkAllBox.checked = false;
+      checkAllBox.indeterminate = true;
+    } else {
+      checkAllBox.checked = false;
+      checkAllBox.indeterminate = false;
+    }
+  }
+
+  /**
+   * Filters the mechanic list based on the search input and updates the "Check All" state.
+   */
+  function filterMechanicList() {
+    const searchTerm = document.getElementById("mechanic-search-input").value.toLowerCase();
+    document.querySelectorAll(".mechanic-item").forEach((item) => {
+      const name = item.dataset.name;
+      const nik = item.dataset.nik;
+      if (name.includes(searchTerm) || nik.includes(searchTerm)) {
+        item.style.display = "flex";
+      } else {
+        item.style.display = "none";
+      }
+    });
+    // After filtering, always update the master checkbox state
+    updateCheckAllState();
+  }
+
   function openAssignModal() {
-    const allCheckboxes = document.querySelectorAll('input[name="mechanic_checkbox"]');
+    const allCheckboxes = document.querySelectorAll('.individual-mechanic-checkbox');
     allCheckboxes.forEach((checkbox) => {
       checkbox.checked = assignedMechanics.includes(checkbox.value);
     });
     const modal = document.getElementById("assign-mechanic-modal");
     modal.classList.remove("hidden");
     modal.classList.add("flex");
+    updateCheckAllState(); // Set initial state for "Check All"
   }
 
   function closeAssignModal() {
     const modal = document.getElementById("assign-mechanic-modal");
     modal.classList.add("hidden");
     modal.classList.remove("flex");
+    // Reset search and checkbox states when closing
+    document.getElementById("mechanic-search-input").value = "";
+    filterMechanicList(); 
   }
 
   function saveMechanicAssignments() {
-    const checkedBoxes = document.querySelectorAll('input[name="mechanic_checkbox"]:checked');
+    const checkedBoxes = document.querySelectorAll('.individual-mechanic-checkbox:checked');
     const selectedNiks = Array.from(checkedBoxes).map((checkbox) => checkbox.value);
     const selectedNames = Array.from(checkedBoxes).map((checkbox) => {
       return document.querySelector(`label[for="${checkbox.id}"]`).textContent.trim();
