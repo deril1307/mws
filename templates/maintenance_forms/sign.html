@@ -1,17 +1,4 @@
 <!-- Container untuk Tombol Aksi di Kanan Atas -->
-<div class="flex justify-end mb-4">
-  {% if user.role in ['admin', 'superadmin'] %}
-  <a
-    href="/mws/print/{{ part_id }}"
-    target="_blank"
-    class="inline-flex items-center px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg text-sm font-medium shadow hover:shadow-md transform hover:-translate-y-0.5 transition-all duration-200"
-  >
-    <i class="fas fa-print mr-2"></i>
-    Print MWS
-  </a>
-  {% endif %}
-</div>
-
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
   <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
     <h3 class="text-lg font-semibold text-gray-800 mb-4 pb-4 border-b">Tanggal & Durasi Pengerjaan</h3>

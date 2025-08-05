@@ -15,9 +15,12 @@ class MwsStep(db.Model):
     completedBy = db.Column(db.String(100))
     completedDate = db.Column(db.String(100))
     
+    # --- KOLOM BARU UNTUK PERENCANAAN PER STEP ---
+    planMan = db.Column(db.String(100), nullable=True)
+    planHours = db.Column(db.String(100), nullable=True)
+    # --- AKHIR KOLOM BARU ---
     # Changed 'man' to Text to store a JSON list of NIKs
     man = db.Column(db.Text, default='[]')
-    
     hours = db.Column(db.String(50))
     tech = db.Column(db.String(100))
     insp = db.Column(db.String(100))
@@ -72,7 +75,11 @@ class MwsStep(db.Model):
             'status': self.status,
             'completedBy': self.completedBy or '',
             'completedDate': self.completedDate or '',
-            'man': self.get_mechanics(), # Return a list of NIKs
+             # --- TAMBAHAN planMan ---
+            'planMan': self.planMan or '',
+            'planHours': self.planHours or '',
+            # --- AKHIR planHours ---
+            'man': self.get_mechanics(),
             'hours': self.hours or '',
             'tech': self.tech or '',
             'insp': self.insp or ''

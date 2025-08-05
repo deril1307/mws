@@ -21,6 +21,31 @@ document.addEventListener("DOMContentLoaded", function () {
   const cancelDeleteButton = document.getElementById("cancel-delete-button");
   let nikToDelete = null;
 
+  // --- TAMBAHAN: Logika Pencarian Pengguna ---
+  const searchInput = document.getElementById("search-input");
+  const userTableBody = document.getElementById("user-table-body");
+  const userRows = userTableBody.querySelectorAll("tr");
+
+  searchInput.addEventListener("input", function () {
+    const searchTerm = this.value.toLowerCase().trim();
+
+    userRows.forEach((row) => {
+      const nikCell = row.cells[1];
+      const nameCell = row.cells[2];
+
+      if (nikCell && nameCell) {
+        const nikText = nikCell.textContent.toLowerCase();
+        const nameText = nameCell.textContent.toLowerCase();
+        if (nikText.includes(searchTerm) || nameText.includes(searchTerm)) {
+          row.style.display = "";
+        } else {
+          row.style.display = "none";
+        }
+      }
+    });
+  });
+  // --- AKHIR TAMBAHAN ---
+
   /**
    * Membuka modal untuk menambah atau mengedit pengguna.
    * @param {string|null} nik - NIK pengguna yang akan diedit. Jika null, mode tambah.

@@ -72,7 +72,10 @@
     </div>
   </div>
 
-  <div class="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-6">{{ render_tracking_list(parts, users, user) }} {% include 'monitoring/status_chart.html' with context %}</div>
+  <div class="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-6">
+    {% include 'monitoring/status_chart.html' with context %}
+    <div class="mt-6">{{ render_tracking_list(parts, users, user) }}</div>
+  </div>
 </div>
 <div id="logout-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
   <div id="logout-modal-overlay" class="absolute inset-0 bg-black bg-opacity-60 modal-overlay"></div>

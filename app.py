@@ -151,30 +151,76 @@ def calculate_working_days_deadline(start_date, days):
             work_days_added += 1
     return deadline
 
+# def update_mws_status(mws_part):
+#     """Update MWS status based on steps completion"""
+#     all_steps = MwsStep.query.filter_by(mws_part_id=mws_part.id).all()
+    
+#     if not all_steps:
+#         mws_part.status = 'pending'
+#         mws_part.currentStep = 0
+#         return
+    
+#     completed_steps = [s for s in all_steps if s.status == 'completed']
+#     in_progress_steps = [s for s in all_steps if s.status == 'in_progress']
+    
+#     if len(completed_steps) == len(all_steps):
+#         mws_part.status = 'completed'
+#         mws_part.currentStep = len(all_steps)
+#     elif in_progress_steps or completed_steps:
+#         mws_part.status = 'in_progress'
+#         if in_progress_steps:
+#             mws_part.currentStep = min(s.no for s in in_progress_steps)
+#         else:
+#             mws_part.currentStep = max(s.no for s in completed_steps) + 1 if completed_steps else 1
+#     else:
+#         mws_part.status = 'pending'
+#         mws_part.currentStep = 1 
+
+
 def update_mws_status(mws_part):
-    """Update MWS status based on steps completion"""
+    """
+    Memperbarui status MWS dan mengisi/mengosongkan finishDate secara otomatis.
+    """
     all_steps = MwsStep.query.filter_by(mws_part_id=mws_part.id).all()
     
     if not all_steps:
         mws_part.status = 'pending'
         mws_part.currentStep = 0
+        # --- PERUBAHAN ---
+        # Pastikan finishDate kosong jika tidak ada langkah kerja.
+        mws_part.finishDate = None 
+        # --- AKHIR PERUBAHAN ---
         return
     
     completed_steps = [s for s in all_steps if s.status == 'completed']
     in_progress_steps = [s for s in all_steps if s.status == 'in_progress']
     
+    # --- LOGIKA FINISHDATE (KONDISI TERPENUHI) DIMULAI DI SINI ---
     if len(completed_steps) == len(all_steps):
         mws_part.status = 'completed'
         mws_part.currentStep = len(all_steps)
+        # Jika semua langkah kerja sudah 'completed' dan finishDate belum terisi,
+        # maka isi dengan tanggal hari ini.
+        if not mws_part.finishDate:
+            mws_part.finishDate = datetime.now().date()
+    # --- LOGIKA FINISHDATE (KONDISI TERPENUHI) SELESAI ---
+
+    # --- LOGIKA FINISHDATE (KONDISI TIDAK TERPENUHI) DIMULAI DI SINI ---
     elif in_progress_steps or completed_steps:
         mws_part.status = 'in_progress'
+        # Jika pekerjaan tidak lagi berstatus 'completed' (misalnya ada step yang dibuka kembali),
+        # maka kosongkan kembali finishDate.
+        mws_part.finishDate = None
         if in_progress_steps:
             mws_part.currentStep = min(s.no for s in in_progress_steps)
         else:
             mws_part.currentStep = max(s.no for s in completed_steps) + 1 if completed_steps else 1
-    else:
+    else: # Jika tidak ada yang completed atau in_progress, berarti semua pending
         mws_part.status = 'pending'
-        mws_part.currentStep = 1 
+        mws_part.currentStep = 1
+        # Pastikan finishDate juga kosong jika status kembali ke 'pending'.
+        mws_part.finishDate = None
+    # --- LOGIKA FINISHDATE (KONDISI TIDAK TERPENUHI) SELESAI ---
 
 def render_error_page(error):
     """Fungsi generik untuk menampilkan halaman error."""
@@ -579,7 +625,6 @@ def delete_user(nik):
 # =====================================================================
 # ROUTE MWS (MAINTENANCE WORK SHEET) - DENGAN RATE LIMITING
 # =====================================================================
-
 @app.route('/create_mws', methods=['GET', 'POST'])
 @require_role('admin', 'superadmin')
 @limiter.limit("30 per minute")
@@ -590,19 +635,24 @@ def create_mws():
             validate_csrf(csrf_token)
         except ValidationError:
             return jsonify({'success': False, 'error': 'CSRF token tidak valid atau hilang.'}), 400
+            
         try:
             req_data = request.get_json()
             if not req_data:
                 return jsonify({'success': False, 'error': 'Request body harus berupa JSON.'}), 400
+            
             tittle_name = req_data.get('tittle_name')
             job_type = req_data.get('jobType')
-            customer_name = req_data.get('customer', '') 
+            customer_name = req_data.get('customer', '')
+            
             if not tittle_name or not job_type:
                 return jsonify({'success': False, 'error': 'Tittle dan Jenis Pekerjaan wajib diisi.'}), 400
+            
             part_count = MwsPart.query.count() + 1
             part_id = f"MWS-{part_count:03d}"
             customer_obj = Customer.query.filter_by(company_name=customer_name).first()
             customer_id_to_set = customer_obj.id if customer_obj else None
+            
             new_mws = MwsPart(
                 part_id=part_id,
                 partNumber=req_data.get('partNumber', ''),
@@ -610,8 +660,8 @@ def create_mws():
                 tittle=tittle_name,
                 jobType=job_type,
                 ref=req_data.get('ref', ''),
-                customer=customer_name, 
-                customer_id=customer_id_to_set, 
+                customer=customer_name,
+                customer_id=customer_id_to_set,
                 acType=req_data.get('acType', ''),
                 wbsNo=req_data.get('wbsNo', ''),
                 worksheetNo=req_data.get('worksheetNo', ''),
@@ -619,34 +669,87 @@ def create_mws():
                 shopArea=req_data.get('shopArea', ''),
                 revision=req_data.get('revision', '1'),
                 status='pending',
-                currentStep=1 
+                currentStep=1
             )
             db.session.add(new_mws)
-            db.session.flush()  
-            steps_template = JOB_STEPS_TEMPLATES.get(job_type, [])
-            if not steps_template:
-                db.session.rollback()
-                return jsonify({'success': False, 'error': f'Template langkah untuk jenis pekerjaan "{job_type}" tidak ditemukan.'}), 400
+            db.session.flush()
+
+            steps_template = None
+            
+            # Prioritas 1: Cari kecocokan persis di template yang ada
+            if job_type in JOB_STEPS_TEMPLATES:
+                steps_template = JOB_STEPS_TEMPLATES[job_type]
+                app.logger.info(f"Ditemukan kecocokan persis untuk job type: '{job_type}'")
+            else:
+                # Prioritas 2: Cari apakah job_type baru diawali dengan nama template yang ada
+                for key in JOB_STEPS_TEMPLATES.keys():
+                    if job_type.strip().startswith(key):
+                        steps_template = JOB_STEPS_TEMPLATES[key]
+                        app.logger.info(f"Job type '{job_type}' cocok dengan template '{key}'. Menggunakan template '{key}'.")
+                        break
+            
+            # Prioritas 3: Jika sama sekali tidak ada kecocokan, gunakan template LENGKAP sebagai default
+            if steps_template is None:
+                app.logger.info(f"Tidak ada kecocokan template. Job type '{job_type}' menggunakan template default lengkap (10 langkah).")
+                
+                # --- PERUBAHAN DI SINI: Menambahkan planMan dan planHours ke template default ---
+                steps_template = [
+                    {"no": 1, "description": "Incoming Record", "details": [], "status": "pending", "completedBy": "", "completedDate": "", "man": "", "hours": "", "tech": "", "insp": "", "planMan": "", "planHours": ""},
+                    {"no": 2, "description": "Functional Test", "details": [], "status": "pending", "completedBy": "", "completedDate": "", "man": "", "hours": "", "tech": "", "insp": "", "planMan": "", "planHours": ""},
+                    {"no": 3, "description": "Fault Isolation", "details": [], "status": "pending", "completedBy": "", "completedDate": "", "man": "", "hours": "", "tech": "", "insp": "", "planMan": "", "planHours": ""},
+                    {"no": 4, "description": "Disassembly", "details": [], "status": "pending", "completedBy": "", "completedDate": "", "man": "", "hours": "", "tech": "", "insp": "", "planMan": "", "planHours": ""},
+                    {"no": 5, "description": "Cleaning", "details": [], "status": "pending", "completedBy": "", "completedDate": "", "man": "", "hours": "", "tech": "", "insp": "", "planMan": "", "planHours": ""},
+                    {"no": 6, "description": "Check", "details": [], "status": "pending", "completedBy": "", "completedDate": "", "man": "", "hours": "", "tech": "", "insp": "", "planMan": "", "planHours": ""},
+                    {"no": 7, "description": "Assembly", "details": [], "status": "pending", "completedBy": "", "completedDate": "", "man": "", "hours": "", "tech": "", "insp": "", "planMan": "", "planHours": ""},
+                    {"no": 8, "description": "Functional Test", "details": [], "status": "pending", "completedBy": "", "completedDate": "", "man": "", "hours": "", "tech": "", "insp": "", "planMan": "", "planHours": ""},
+                    {"no": 9, "description": "FOD Control", "details": [], "status": "pending", "completedBy": "", "completedDate": "", "man": "", "hours": "", "tech": "", "insp": "", "planMan": "", "planHours": ""},
+                    {"no": 10, "description": "Final Inspection", "details": [], "status": "pending", "completedBy": "", "completedDate": "", "man": "", "hours": "", "tech": "", "insp": "", "planMan": "", "planHours": ""}
+                ]
+
             for step_data in steps_template:
+                # --- PERUBAHAN DI SINI: Menambahkan planMan dan planHours saat membuat MwsStep ---
                 step = MwsStep(
-                    mws_part_id=new_mws.id, 
+                    mws_part_id=new_mws.id,
                     no=step_data.get('no'),
                     description=step_data.get('description'),
                     status=step_data.get('status', 'pending'),
-                    man=step_data.get('man'),
-                    hours=step_data.get('hours'),
-                    tech=step_data.get('tech'),
-                    insp=step_data.get('insp')
+                    man=step_data.get('man', '[]'),
+                    hours=step_data.get('hours', ''),
+                    tech=step_data.get('tech', ''),
+                    insp=step_data.get('insp', ''),
+                    planMan=step_data.get('planMan', ''),      # <-- BARIS TAMBAHAN
+                    planHours=step_data.get('planHours', '')  # <-- BARIS TAMBAHAN
                 )
                 step.set_details(step_data.get('details', []))
                 db.session.add(step)
+            
             db.session.commit()
-            return jsonify({'success': True, 'partId': part_id}), 201 
+            return jsonify({'success': True, 'partId': part_id}), 201
+
         except Exception as e:
             db.session.rollback()
             app.logger.error(f"Error saat membuat MWS: {e}", exc_info=True)
             return jsonify({'success': False, 'error': 'Terjadi kesalahan internal pada server.'}), 500
-    return render_template('maintenance_forms/create_mws.html')
+
+    # Bagian GET (tidak berubah): Mengambil data job_types DARI DATABASE untuk dikirim ke frontend
+    try:
+        job_types_tuples = db.session.query(MwsPart.jobType).distinct().order_by(MwsPart.jobType).all()
+        all_job_types = [item[0] for item in job_types_tuples if item[0]]
+    except Exception as e:
+        app.logger.error(f"Gagal mengambil job_types untuk form: {e}")
+        all_job_types = []
+
+    return render_template('maintenance_forms/create_mws.html', job_types=all_job_types)
+
+    # Bagian GET (tidak berubah): Mengambil data job_types DARI DATABASE untuk dikirim ke frontend
+    try:
+        job_types_tuples = db.session.query(MwsPart.jobType).distinct().order_by(MwsPart.jobType).all()
+        all_job_types = [item[0] for item in job_types_tuples if item[0]]
+    except Exception as e:
+        app.logger.error(f"Gagal mengambil job_types untuk form: {e}")
+        all_job_types = []
+
+    return render_template('maintenance_forms/create_mws.html', job_types=all_job_types)
 
 
 @app.route('/delete_mws/<part_id>', methods=['DELETE'])
@@ -867,26 +970,79 @@ def delete_step(part_id, step_no):
         return jsonify({'success': False, 'error': 'Database error'}), 500
 
 
+# @app.route('/update_step_field', methods=['POST'])
+# @login_required
+# @limiter.limit("50 per minute")  
+# def update_step_field():
+#     try:
+#         req_data = request.json
+#         part_id = req_data.get('partId')
+#         step_no = req_data.get('stepNo')
+#         field = req_data.get('field')
+#         value = req_data.get('value')
+        
+#         mws_part = MwsPart.query.filter_by(part_id=part_id).first()
+#         if not mws_part:
+#             return jsonify({'success': False, 'error': 'Part not found'}), 404
+        
+#         # <<< PERUBAHAN DIMULAI >>>
+#         is_ready, error_response, status_code = check_mws_readiness(mws_part)
+#         if not is_ready:
+#             return error_response, status_code
+#         # <<< PERUBAHAN SELESAI >>>
+
+#         step = MwsStep.query.filter_by(
+#             mws_part_id=mws_part.id,
+#             no=step_no
+#         ).first()
+        
+#         if not step:
+#             return jsonify({'success': False, 'error': 'Step not found'}), 404
+    
+#         if field in ['man', 'hours']:
+#             if current_user.role != 'mechanic':
+#                 return jsonify({'success': False, 'error': 'Hanya mekanik yang dapat mengubah MAN dan Hours'}), 403
+        
+#         if field == 'insp':
+#             if current_user.role != 'quality1':
+#                 return jsonify({'success': False, 'error': 'Hanya Quality Inspector yang dapat mengubah INSP'}), 403
+#             print(f"Quality1 user {current_user.nik} updating INSP field to: {value}")
+        
+#         setattr(step, field, value)
+#         print(f"Updated step {step_no} field '{field}' to '{value}' for part {part_id}")
+#         db.session.commit()
+#         print(f"Database committed successfully")
+        
+#         return jsonify({'success': True})
+        
+#     except Exception as e:
+#         db.session.rollback()
+#         print(f"Error updating step field: {e}")
+#         return jsonify({'success': False, 'error': 'Database error'}), 500
+
 @app.route('/update_step_field', methods=['POST'])
 @login_required
 @limiter.limit("50 per minute")  
 def update_step_field():
+    """
+    Fungsi generik inilah yang menangani penyimpanan untuk 'planMan' dan 'planHours'.
+    Logika di sini sudah benar dan tidak perlu diubah.
+    """
     try:
         req_data = request.json
         part_id = req_data.get('partId')
         step_no = req_data.get('stepNo')
-        field = req_data.get('field')
+        field = req_data.get('field') # Ini akan berisi 'planMan' atau 'planHours'
         value = req_data.get('value')
         
         mws_part = MwsPart.query.filter_by(part_id=part_id).first()
         if not mws_part:
             return jsonify({'success': False, 'error': 'Part not found'}), 404
         
-        # <<< PERUBAHAN DIMULAI >>>
+        # Izinkan edit plan bahkan jika MWS belum siap (signed off)
         is_ready, error_response, status_code = check_mws_readiness(mws_part)
-        if not is_ready:
-            return error_response, status_code
-        # <<< PERUBAHAN SELESAI >>>
+        if not is_ready and field not in ['planMan', 'planHours']: 
+             return error_response, status_code
 
         step = MwsStep.query.filter_by(
             mws_part_id=mws_part.id,
@@ -896,6 +1052,12 @@ def update_step_field():
         if not step:
             return jsonify({'success': False, 'error': 'Step not found'}), 404
     
+        # --- KONTROL AKSES (Sudah Benar) ---
+        # Hanya admin dan superadmin yang boleh mengubah planMan dan planHours
+        if field in ['planMan', 'planHours']:
+            if current_user.role not in ['admin', 'superadmin']:
+                return jsonify({'success': False, 'error': 'Hanya Admin atau Superadmin yang dapat mengubah data perencanaan.'}), 403
+
         if field in ['man', 'hours']:
             if current_user.role != 'mechanic':
                 return jsonify({'success': False, 'error': 'Hanya mekanik yang dapat mengubah MAN dan Hours'}), 403
@@ -903,18 +1065,16 @@ def update_step_field():
         if field == 'insp':
             if current_user.role != 'quality1':
                 return jsonify({'success': False, 'error': 'Hanya Quality Inspector yang dapat mengubah INSP'}), 403
-            print(f"Quality1 user {current_user.nik} updating INSP field to: {value}")
         
+        # Mengatur atribut secara dinamis
         setattr(step, field, value)
-        print(f"Updated step {step_no} field '{field}' to '{value}' for part {part_id}")
         db.session.commit()
-        print(f"Database committed successfully")
         
         return jsonify({'success': True})
         
     except Exception as e:
         db.session.rollback()
-        print(f"Error updating step field: {e}")
+        app.logger.error(f"Error updating step field: {e}", exc_info=True)
         return jsonify({'success': False, 'error': 'Database error'}), 500
 
 @app.route('/update_step_status', methods=['POST']) 
@@ -1468,13 +1628,15 @@ def is_mechanic_on_active_step(nik, condition='TECH'):
     # --- PERUBAHAN LOGIKA ---
     if condition == 'TECH':
         # Mekanik dianggap SIBUK jika ada step yang di-sign on olehnya,
-        # statusnya 'in_progress', DAN belum di-approve olehnya (TECH).
+        # statusnya 'pending' ATAU 'in_progress', DAN belum di-approve olehnya (TECH).
+        # Ini mencakup kasus normal (in_progress) dan kasus setelah di-unapprove oleh admin (pending).
         active_step = MwsStep.query.filter(
             MwsStep.man.contains(nik_pattern),
-            MwsStep.status == 'in_progress',
+            MwsStep.status.in_(['pending', 'in_progress']), # <--- PERUBAHAN DI SINI
             MwsStep.tech != 'Approved'
         ).first()
     elif condition == 'INSP':
+        # Logika ini tidak perlu diubah, sudah benar.
         # Mekanik dianggap SIBUK jika ada step yang di-sign on olehnya
         # DAN statusnya masih 'in_progress' (belum 'completed').
         active_step = MwsStep.query.filter(
@@ -1484,7 +1646,6 @@ def is_mechanic_on_active_step(nik, condition='TECH'):
     # --- AKHIR PERUBAHAN ---
         
     return active_step is not None
-
 
 @app.route('/mws/<part_id>/assign_mechanics', methods=['POST'])
 @require_role('admin', 'superadmin')
@@ -1507,6 +1668,50 @@ def assign_mechanics_to_mws(part_id):
         return jsonify({'success': False, 'error': 'Terjadi kesalahan pada server.'}), 500
 
 
+# @app.route('/step/add_mechanic', methods=['POST'])
+# @require_role('mechanic')
+# @limiter.limit("50 per minute")
+# def add_mechanic_to_step():
+#     try:
+#         data = request.get_json()
+#         part_id = data.get('partId')
+#         step_no = data.get('stepNo')
+#         mechanik_nik = current_user.nik
+
+#         mws_part = MwsPart.query.filter_by(part_id=part_id).first()
+#         if not mws_part:
+#             return jsonify({'success': False, 'error': 'MWS tidak ditemukan.'}), 404
+
+#         step = MwsStep.query.filter_by(mws_part_id=mws_part.id, no=step_no).first()
+#         if not step:
+#             return jsonify({'success': False, 'error': 'Langkah kerja tidak ditemukan.'}), 404
+            
+#         if mechanik_nik not in mws_part.get_assigned_mechanics():
+#             return jsonify({'success': False, 'error': 'Anda tidak ditugaskan untuk MWS ini.'}), 403
+
+#         # --- Validasi Terpusat (Logika tidak berubah, tetap di sini) ---
+        
+#         # KONDISI 1 (AKTIF): Mekanik tidak bisa Sign On jika belum Approve (TECH) di step lain.
+#         if is_mechanic_on_active_step(mechanik_nik, condition='TECH'):
+#             return jsonify({'success': False, 'error': 'Anda sudah Sign On di step lain yang masih aktif. Selesaikan (Approve by TECH) terlebih dahulu.'}), 409
+
+#         # # KONDISI 2 (NON-AKTIF): Mekanik tidak bisa Sign On jika belum Approved by INSP di step lain.
+#         # if is_mechanic_on_active_step(mechanik_nik, condition='INSP'):
+#         #     return jsonify({'success': False, 'error': 'Anda sudah Sign On di step lain yang belum selesai (Approved by INSP). Selesaikan tugas tersebut terlebih dahulu.'}), 409
+        
+#         step.add_mechanic(mechanik_nik)
+#         if step.status == 'pending':
+#             step.status = 'in_progress'
+#             update_mws_status(mws_part) 
+
+#         db.session.commit()
+#         return jsonify({'success': True, 'message': 'Anda berhasil Sign On ke langkah ini.'})
+
+#     except Exception as e:
+#         db.session.rollback()
+#         app.logger.error(f"Error adding mechanic to step: {e}")
+#         return jsonify({'success': False, 'error': 'Terjadi kesalahan pada server.'}), 500
+    
 @app.route('/step/add_mechanic', methods=['POST'])
 @require_role('mechanic')
 @limiter.limit("50 per minute")
@@ -1528,16 +1733,22 @@ def add_mechanic_to_step():
         if mechanik_nik not in mws_part.get_assigned_mechanics():
             return jsonify({'success': False, 'error': 'Anda tidak ditugaskan untuk MWS ini.'}), 403
 
-        # --- Validasi Terpusat (Logika tidak berubah, tetap di sini) ---
-        
-        # KONDISI 1 (AKTIF): Mekanik tidak bisa Sign On jika belum Approve (TECH) di step lain.
+        # --- LOGIKA STARTDATE DIMULAI DI SINI ---
+        # Jika 'startDate' pada MWS ini belum terisi, artinya ini adalah aksi "Sign On"
+        # pertama kali untuk MWS ini oleh mekanik manapun.
+        if not mws_part.startDate:
+            # Set 'startDate' dengan tanggal hari ini.
+            mws_part.startDate = datetime.now().date()
+            # (Opsional) Jika Anda memiliki logika terkait deadline, panggil di sini.
+            if hasattr(mws_part, 'update_stripping_deadline'):
+                mws_part.update_stripping_deadline()
+        # --- LOGIKA STARTDATE SELESAI ---
+
+        # Validasi untuk memastikan mekanik tidak sedang aktif di step lain.
         if is_mechanic_on_active_step(mechanik_nik, condition='TECH'):
             return jsonify({'success': False, 'error': 'Anda sudah Sign On di step lain yang masih aktif. Selesaikan (Approve by TECH) terlebih dahulu.'}), 409
-
-        # # KONDISI 2 (NON-AKTIF): Mekanik tidak bisa Sign On jika belum Approved by INSP di step lain.
-        # if is_mechanic_on_active_step(mechanik_nik, condition='INSP'):
-        #     return jsonify({'success': False, 'error': 'Anda sudah Sign On di step lain yang belum selesai (Approved by INSP). Selesaikan tugas tersebut terlebih dahulu.'}), 409
         
+        # Menambahkan mekanik ke langkah kerja dan mengubah status jika perlu.
         step.add_mechanic(mechanik_nik)
         if step.status == 'pending':
             step.status = 'in_progress'

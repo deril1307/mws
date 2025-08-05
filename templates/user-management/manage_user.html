@@ -63,6 +63,20 @@
       </div>
     </div>
 
+    <div class="mb-4 flex justify-end">
+      <div class="relative max-w-md">
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <i class="fas fa-search text-gray-400"></i>
+        </div>
+        <input
+          type="text"
+          id="search-input"
+          placeholder="Cari NIK/Nama"
+          class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+        />
+      </div>
+    </div>
+
     <div class="bg-white rounded-lg shadow-md overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-sm text-left text-gray-600">
@@ -75,7 +89,7 @@
               <th scope="col" class="px-6 py-3 font-medium text-right">Aksi</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="user-table-body">
             {% for nik, user_data in users.items() %} {% set is_superadmin = user.role == 'superadmin' %} {% set is_admin = user.role == 'admin' %} {% set viewable_by_superadmin = user_data.role in ['admin', 'mechanic', 'quality1',
             'quality2'] %} {% set viewable_by_admin = user_data.role in ['mechanic', 'quality1', 'quality2'] %} {% if (is_superadmin and viewable_by_superadmin) or (is_admin and viewable_by_admin) %}
             <tr class="bg-white border-b border-gray-200 hover:bg-gray-50 transition-colors">

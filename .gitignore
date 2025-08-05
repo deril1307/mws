@@ -1,13 +1,28 @@
-# Folder Virtual Environment
+
+
+# Folder Virtual Environment Python
+# Mengabaikan folder virtual environment untuk menghindari memasukkan
+# library pihak ketiga ke dalam repositori.
 /venv
 
-# File Cache Python
+# File Cache dan Bytecode Python
+# Mengabaikan file cache yang dibuat secara otomatis oleh Python.
 __pycache__/
 *.pyc
 
-
+# File Environment
+# Sangat penting untuk mengabaikan file .env karena biasanya berisi
+# data sensitif seperti API key, password database, dll.
 .env
 
+# Folder Cadangan
+# Mengabaikan folder yang digunakan untuk backup.
 file_cadangan/
 
+# File Konfigurasi Hosting (Vercel)
+# Mengabaikan file konfigurasi spesifik untuk platform hosting.
 vercel.json
+
+# File Sertifikat Spesifik
+# Mengabaikan file sertifikat CA yang berada di dalam folder bertingkat.
+certs/data/ca.pem

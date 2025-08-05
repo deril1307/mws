@@ -198,6 +198,75 @@ function initializeLiveTimers() {
   });
 }
 
+// --- NEW FUNCTIONS for Plan Edit/Save ---
+
+/**
+ * Toggles the UI between view and edit mode for a plan field.
+ * @param {number} stepNo The step number.
+ * @param {('man'|'hours')} field The field to toggle ('man' or 'hours').
+ * @param {boolean} isEditing True to switch to edit mode, false for view mode.
+ */
+function togglePlanEdit(stepNo, field, isEditing) {
+  const viewMode = document.getElementById(`plan-${field}-view-${stepNo}`);
+  const editMode = document.getElementById(`plan-${field}-edit-${stepNo}`);
+
+  if (!viewMode || !editMode) {
+    console.error(`Elements for plan ${field} at step ${stepNo} not found.`);
+    return;
+  }
+
+  if (isEditing) {
+    viewMode.classList.add("hidden");
+    editMode.classList.remove("hidden");
+    document.getElementById(`plan-${field}-input-${stepNo}`).focus();
+  } else {
+    viewMode.classList.remove("hidden");
+    editMode.classList.add("hidden");
+  }
+}
+
+/**
+ * Saves a single plan field (man or hours) to the server.
+ * @param {string} partId The ID of the MWS part.
+ * @param {number} stepNo The number of the step to update.
+ * @param {('man'|'hours')} field The field to save.
+ */
+async function savePlan(partId, stepNo, field) {
+  const input = document.getElementById(`plan-${field}-input-${stepNo}`);
+  const value = input.value;
+  const button = event.currentTarget;
+  const originalHtml = button.innerHTML;
+
+  button.disabled = true;
+  button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+  const backendField = `plan${field.charAt(0).toUpperCase() + field.slice(1)}`;
+
+  try {
+    const response = await fetch("/update_step_field", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+      body: JSON.stringify({ partId, stepNo, field: backendField, value: value }),
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      showNotification(`Plan ${field} berhasil disimpan.`, "success");
+      document.getElementById(`plan-${field}-text-${stepNo}`).textContent = value || "N/A";
+      togglePlanEdit(stepNo, field, false);
+    } else {
+      showNotification(`Gagal menyimpan Plan ${field}: ` + data.error, "error");
+    }
+  } catch (error) {
+    console.error(`Network error saving plan ${field}:`, error);
+    showNotification("Terjadi kesalahan jaringan saat menyimpan.", "error");
+  } finally {
+    button.disabled = false;
+    button.innerHTML = originalHtml;
+  }
+}
+
 document.addEventListener("DOMContentLoaded", function () {
   initializeLiveTimers();
   checkStrippingStatus();
@@ -207,15 +276,15 @@ document.addEventListener("DOMContentLoaded", function () {
   if (currentUserRole === "admin" || currentUserRole === "superadmin") {
     const searchInput = document.getElementById("mechanic-search-input");
     const checkAllBox = document.getElementById("check-all-mechanics");
-    const individualCheckboxes = document.querySelectorAll('.individual-mechanic-checkbox');
+    const individualCheckboxes = document.querySelectorAll(".individual-mechanic-checkbox");
 
     if (searchInput) {
       searchInput.addEventListener("input", filterMechanicList);
     }
 
     if (checkAllBox) {
-      checkAllBox.addEventListener('click', (e) => {
-        document.querySelectorAll('.mechanic-item:not([style*="display: none"]) .individual-mechanic-checkbox').forEach(checkbox => {
+      checkAllBox.addEventListener("click", (e) => {
+        document.querySelectorAll('.mechanic-item:not([style*="display: none"]) .individual-mechanic-checkbox').forEach((checkbox) => {
           checkbox.checked = e.target.checked;
         });
         updateCheckAllState();
@@ -223,13 +292,12 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     if (individualCheckboxes.length > 0) {
-      individualCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('click', updateCheckAllState);
+      individualCheckboxes.forEach((checkbox) => {
+        checkbox.addEventListener("click", updateCheckAllState);
       });
     }
   }
 });
-
 
 // --- Role-Specific Functions ---
 
@@ -302,7 +370,7 @@ if (currentUserRole !== "customer") {
       .then((d) => {
         if (!d.success) {
           showNotification("Error: " + d.error, "error");
-          location.reload(); // Original code reloads on error here, preserving behavior
+          location.reload();
         }
       })
       .catch((e) => {
@@ -332,7 +400,6 @@ if (currentUserRole !== "customer") {
 
   function finishStep(partId, stepNo) {
     if (!confirm("Apakah Anda yakin ingin menyelesaikan langkah kerja ini?")) return;
-    // We call updateStepStatus directly which will handle the notification and reload.
     updateStepStatus(partId, stepNo, "completed", "Langkah kerja berhasil diselesaikan.");
   }
 
@@ -353,7 +420,6 @@ if (currentUserRole !== "customer") {
         if (d.success) {
           showNotificationAndReload(successMessage, "success");
         } else {
-          // This function in original code reloads on error, so we preserve it
           showNotificationAndReload("Error: " + d.error, "error");
         }
       })
@@ -491,22 +557,18 @@ if (currentUserRole !== "customer") {
 
 // --- Admin/Superadmin Functions ---
 if (currentUserRole === "admin" || currentUserRole === "superadmin") {
-
-  /**
-   * Updates the state of the "Check All" checkbox based on individual checkbox states.
-   */
   function updateCheckAllState() {
     const checkAllBox = document.getElementById("check-all-mechanics");
     const visibleCheckboxes = document.querySelectorAll('.mechanic-item:not([style*="display: none"]) .individual-mechanic-checkbox');
-    
+
     if (visibleCheckboxes.length === 0) {
-        checkAllBox.checked = false;
-        checkAllBox.indeterminate = false;
-        return;
+      checkAllBox.checked = false;
+      checkAllBox.indeterminate = false;
+      return;
     }
 
     const totalVisible = visibleCheckboxes.length;
-    const totalChecked = Array.from(visibleCheckboxes).filter(cb => cb.checked).length;
+    const totalChecked = Array.from(visibleCheckboxes).filter((cb) => cb.checked).length;
 
     if (totalChecked === totalVisible) {
       checkAllBox.checked = true;
@@ -520,9 +582,6 @@ if (currentUserRole === "admin" || currentUserRole === "superadmin") {
     }
   }
 
-  /**
-   * Filters the mechanic list based on the search input and updates the "Check All" state.
-   */
   function filterMechanicList() {
     const searchTerm = document.getElementById("mechanic-search-input").value.toLowerCase();
     document.querySelectorAll(".mechanic-item").forEach((item) => {
@@ -534,32 +593,30 @@ if (currentUserRole === "admin" || currentUserRole === "superadmin") {
         item.style.display = "none";
       }
     });
-    // After filtering, always update the master checkbox state
     updateCheckAllState();
   }
 
   function openAssignModal() {
-    const allCheckboxes = document.querySelectorAll('.individual-mechanic-checkbox');
+    const allCheckboxes = document.querySelectorAll(".individual-mechanic-checkbox");
     allCheckboxes.forEach((checkbox) => {
       checkbox.checked = assignedMechanics.includes(checkbox.value);
     });
     const modal = document.getElementById("assign-mechanic-modal");
     modal.classList.remove("hidden");
     modal.classList.add("flex");
-    updateCheckAllState(); // Set initial state for "Check All"
+    updateCheckAllState();
   }
 
   function closeAssignModal() {
     const modal = document.getElementById("assign-mechanic-modal");
     modal.classList.add("hidden");
     modal.classList.remove("flex");
-    // Reset search and checkbox states when closing
     document.getElementById("mechanic-search-input").value = "";
-    filterMechanicList(); 
+    filterMechanicList();
   }
 
   function saveMechanicAssignments() {
-    const checkedBoxes = document.querySelectorAll('.individual-mechanic-checkbox:checked');
+    const checkedBoxes = document.querySelectorAll(".individual-mechanic-checkbox:checked");
     const selectedNiks = Array.from(checkedBoxes).map((checkbox) => checkbox.value);
     const selectedNames = Array.from(checkedBoxes).map((checkbox) => {
       return document.querySelector(`label[for="${checkbox.id}"]`).textContent.trim();
