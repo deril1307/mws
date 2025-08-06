@@ -299,6 +299,11 @@ def login():
         user = User.query.filter_by(nik=nik).first()
         if user and user.check_password(password):
             login_user(user)
+            # <<< PERUBAHAN DI SINI >>>
+            # Set flag di session setelah login berhasil
+            if user.role == 'mechanic':
+                session['show_new_task_popup'] = True
+            # <<< AKHIR PERUBAHAN >>>
             return jsonify(success=True, redirect_url=url_for('dashboard'))
         return jsonify(success=False, message='NIK atau password salah!'), 401
     return render_template('auth/login.html')
@@ -414,36 +419,53 @@ def admin_dashboard():
 @app.route('/mechanic-dashboard')
 @require_role('mechanic')
 def mechanic_dashboard():
-    try:
-        # --- PERUBAHAN DIMULAI ---
-        # Ambil profil area dari user yang sedang login
-        profile = current_user.area
+    # <<< PERUBAHAN DI SINI >>>
+    # Ambil dan HAPUS flag dari session.
+    # Ini memastikan pop-up hanya muncul sekali per sesi login.
+    show_popup = session.pop('show_new_task_popup', False)
+    # <<< AKHIR PERUBAHAN >>>
 
-        # Jika mekanik tidak punya profil, atau profilnya tidak lengkap, tampilkan daftar kosong.
-        if not profile or not profile.assigned_customer or not profile.assigned_shop_area:
-            parts = []
-        else:
-            # Filter MWS yang customer DAN shopArea-nya cocok dengan profil area user.
+    try:
+        profile = current_user.area
+        parts = []
+        notifications = []
+
+        if profile and profile.assigned_customer and profile.assigned_shop_area:
             parts = MwsPart.query.filter_by(
                 customer=profile.assigned_customer,
                 shopArea=profile.assigned_shop_area
             ).all()
-        # --- AKHIR PERUBAHAN ---
+
+            notifications = MwsPart.query.filter(
+                MwsPart.customer == profile.assigned_customer,
+                MwsPart.shopArea == profile.assigned_shop_area,
+                MwsPart.status.in_(['pending', 'in_progress'])
+            ).order_by(MwsPart.is_urgent.desc(), MwsPart.status.asc()).all()
+
+        # Jika tidak ada notifikasi, jangan paksa tampilkan pop-up
+        if not notifications:
+            show_popup = False
 
         parts_dict = {}
         for part in parts:
             parts_dict[part.part_id] = part.to_dict()
         
         users = get_users_from_db()
+        
         return render_template('mechanic/mechanic_dashboard.html', 
                              parts=parts_dict,
-                             users=users) 
+                             users=users,
+                             notifications=notifications,
+                             show_popup=show_popup) 
                              
     except Exception as e:
         print(f"Error in mechanic dashboard: {e}")
+        
         return render_template('mechanic/mechanic_dashboard.html', 
                              parts={},
-                             users={})
+                             users={},
+                             notifications=[],
+                             show_popup=False)
     
 
 @app.route('/quality1-dashboard')
@@ -491,14 +513,14 @@ def quality2_dashboard():
 @limiter.limit("80 per minute")
 def superadmin_dashboard():
     try:
-        # Ambil data utama terlebih dahulu
         parts = MwsPart.query.all()
         parts_dict = {}
         for part in parts:
             parts_dict[part.part_id] = part.to_dict()
         
+        # Cukup ambil data permintaan urgensi. NIK peminta sudah ada di dalamnya.
         urgent_requests = MwsPart.query.filter_by(urgent_request=True, is_urgent=False).all()
-        
+    
         users = get_users_from_db()
 
         active_users_count = 0
@@ -521,8 +543,7 @@ def superadmin_dashboard():
                                parts={}, 
                                users={},
                                urgent_requests=[],
-                               active_users_count=0) 
-
+                               active_users_count=0)
 
 # =====================================================================
 # ROUTE MANAJEMEN PENGGUNA (ADMIN & SUPERADMIN) - DENGAN RATE LIMITING
@@ -841,6 +862,52 @@ def mws_detail(part_id):
         flash('Terjadi kesalahan saat memuat data!', 'error')
         return redirect(url_for('dashboard'))
 
+# @app.route('/update_mws_info', methods=['POST'])
+# @login_required
+# @limiter.limit("40 per minute") 
+# def update_mws_info():
+#     try:
+#         data = request.get_json()
+#         if not data:
+#             return jsonify({'success': False, 'error': 'Request JSON tidak valid.'}), 400
+        
+#         part_id = data.pop('partId', None)
+#         if not part_id:
+#             return jsonify({'success': False, 'error': 'Part ID tidak ditemukan dalam request.'}), 400
+        
+#         mws_part = MwsPart.query.filter_by(part_id=part_id).first()
+#         if not mws_part:
+#             return jsonify({'success': False, 'error': f'Part dengan ID {part_id} tidak ditemukan.'}), 404
+
+#         # Store old start date to check if it changed
+#         old_start_date = mws_part.startDate
+
+#         for key, value in data.items():
+#             if hasattr(mws_part, key):
+#                 # Perubahan di baris berikut: 'targetDate' dihapus dari list
+#                 if key in ['startDate', 'finishDate'] and value:
+#                     try:
+#                         if isinstance(value, str):
+#                             date_value = datetime.strptime(value, '%Y-%m-%d').date()
+#                             setattr(mws_part, key, date_value)
+#                         else:
+#                             setattr(mws_part, key, value)
+#                     except ValueError:
+#                         continue
+#                 else:
+#                     setattr(mws_part, key, value)
+#         if mws_part.startDate != old_start_date:
+#             mws_part.update_stripping_deadline()
+        
+#         db.session.commit()
+#         return jsonify({'success': True})
+        
+#     except Exception as e:
+#         db.session.rollback()
+#         print(f"Error updating MWS info: {e}")
+#         return jsonify({'success': False, 'error': 'Database error'}), 500
+
+
 @app.route('/update_mws_info', methods=['POST'])
 @login_required
 @limiter.limit("40 per minute") 
@@ -861,9 +928,12 @@ def update_mws_info():
         # Store old start date to check if it changed
         old_start_date = mws_part.startDate
 
+        # --- BAGIAN PENTING ADA DI SINI ---
+        # Loop ini secara dinamis akan memperbarui setiap field yang dikirim dari frontend
+        # selama nama field tersebut ada di model MwsPart.
         for key, value in data.items():
-            if hasattr(mws_part, key):
-                # Perubahan di baris berikut: 'targetDate' dihapus dari list
+            if hasattr(mws_part, key): # 'hasattr' memeriksa apakah field (misal: 'ref_logistic_ppc') ada di objek mws_part
+                # Logika khusus untuk kolom tanggal
                 if key in ['startDate', 'finishDate'] and value:
                     try:
                         if isinstance(value, str):
@@ -874,7 +944,9 @@ def update_mws_info():
                     except ValueError:
                         continue
                 else:
-                    setattr(mws_part, key, value)
+                    # Untuk semua field lain (termasuk VARCHAR baru Anda), langsung simpan nilainya.
+                    setattr(mws_part, key, value) 
+        
         if mws_part.startDate != old_start_date:
             mws_part.update_stripping_deadline()
         
@@ -1509,6 +1581,54 @@ def stop_timer():
         return jsonify({'success': False, 'error': 'Database error'}), 500
 
 
+# @app.route('/set_urgent_status/<part_id>', methods=['POST'])
+# @login_required
+# @limiter.limit("10 per minute")
+# def set_urgent_status(part_id):
+#     try:
+#         req_data = request.get_json()
+#         action = req_data.get('action')
+        
+#         mws_part = MwsPart.query.filter_by(part_id=part_id).first()
+#         if not mws_part:
+#             return jsonify({'success': False, 'error': 'Part tidak ditemukan'}), 404
+        
+#         # Kondisi untuk mekanik meminta urgensi
+#         if action == 'request' and current_user.role == 'mechanic':
+#             mws_part.urgent_request = True
+        
+#         # Kondisi untuk mekanik membatalkan permintaan urgensi
+#         elif action == 'cancel_request' and current_user.role == 'mechanic':
+#             mws_part.urgent_request = False
+        
+#         # Kondisi untuk admin/superadmin menyetujui permintaan
+#         elif action == 'approve' and current_user.role in ['admin', 'superadmin']:
+#             mws_part.is_urgent = True
+#             mws_part.urgent_request = False # Permintaan selesai, flag di-reset
+            
+#         # ## PERUBAHAN ##: Kondisi baru untuk admin/superadmin menolak permintaan urgensi
+#         elif action == 'reject_request' and current_user.role in ['admin', 'superadmin']:
+#             mws_part.is_urgent = False # Pastikan status urgent tidak aktif
+#             mws_part.urgent_request = False # Permintaan ditolak, flag di-reset
+            
+#         # Kondisi untuk admin/superadmin mengubah status urgent secara langsung (toggle)
+#         elif action == 'toggle' and current_user.role in ['admin', 'superadmin']:
+#             mws_part.is_urgent = not mws_part.is_urgent
+#             # Jika status urgent di-toggle, maka permintaan yang mungkin ada dianggap selesai
+#             mws_part.urgent_request = False
+            
+#         else:
+#             return jsonify({'success': False, 'error': 'Aksi tidak diizinkan untuk peran Anda.'}), 403
+        
+#         db.session.commit()
+#         return jsonify({'success': True, 'message': 'Status urgensi berhasil diperbarui.'})
+        
+#     except Exception as e:
+#         db.session.rollback()
+#         print(f"Error setting urgent status: {e}")
+#         return jsonify({'success': False, 'error': 'Database error'}), 500
+
+
 @app.route('/set_urgent_status/<part_id>', methods=['POST'])
 @login_required
 @limiter.limit("10 per minute")
@@ -1524,26 +1644,34 @@ def set_urgent_status(part_id):
         # Kondisi untuk mekanik meminta urgensi
         if action == 'request' and current_user.role == 'mechanic':
             mws_part.urgent_request = True
+            # Simpan NIK peminta ke kolom yang benar
+            mws_part.urgent_request_by = current_user.nik 
         
-        # Kondisi untuk mekanik membatalkan permintaan urgensi
+        # Kondisi untuk mekanik membatalkan permintaan
         elif action == 'cancel_request' and current_user.role == 'mechanic':
             mws_part.urgent_request = False
+            # Kosongkan NIK peminta
+            mws_part.urgent_request_by = None
         
         # Kondisi untuk admin/superadmin menyetujui permintaan
         elif action == 'approve' and current_user.role in ['admin', 'superadmin']:
             mws_part.is_urgent = True
-            mws_part.urgent_request = False # Permintaan selesai, flag di-reset
+            mws_part.urgent_request = False
+            # Biarkan NIK peminta tercatat untuk histori
             
-        # ## PERUBAHAN ##: Kondisi baru untuk admin/superadmin menolak permintaan urgensi
+        # Kondisi untuk admin/superadmin menolak permintaan
         elif action == 'reject_request' and current_user.role in ['admin', 'superadmin']:
-            mws_part.is_urgent = False # Pastikan status urgent tidak aktif
-            mws_part.urgent_request = False # Permintaan ditolak, flag di-reset
+            mws_part.is_urgent = False
+            mws_part.urgent_request = False
+            # Kosongkan NIK peminta
+            mws_part.urgent_request_by = None
             
-        # Kondisi untuk admin/superadmin mengubah status urgent secara langsung (toggle)
         elif action == 'toggle' and current_user.role in ['admin', 'superadmin']:
             mws_part.is_urgent = not mws_part.is_urgent
-            # Jika status urgent di-toggle, maka permintaan yang mungkin ada dianggap selesai
             mws_part.urgent_request = False
+            # Jika admin/SA yang toggle, kosongkan NIK peminta sebelumnya
+            if not mws_part.is_urgent:
+                 mws_part.urgent_request_by = None
             
         else:
             return jsonify({'success': False, 'error': 'Aksi tidak diizinkan untuk peran Anda.'}), 403

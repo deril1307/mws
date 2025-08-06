@@ -37,10 +37,78 @@
   .modal-overlay.is-hiding {
     animation: fadeOut 0.2s ease-in forwards;
   }
+
+  #status-summary-container {
+    transition: all 0.3s ease-in-out;
+  }
+
+  /* CSS BARU UNTUK STICKY STATUS SUMMARY */
+  #status-summary-container.is-sticky {
+    position: fixed;
+    left: 0;
+    right: 0;
+    /* z-index: 30; -- sedikit di bawah header utama (z-40) */
+    z-index: 30;
+
+    /* Meniru container max-w-7xl */
+    max-width: 100%;
+    margin: 0 auto;
+
+    /* Tampilan baru saat sticky */
+    background-color: rgba(255, 255, 255, 0.85); /* Sedikit transparan */
+    backdrop-filter: saturate(180%) blur(10px); /* Efek glassmorphism */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    border-bottom: 1px solid #e5e7eb;
+
+    /* Hapus margin atas dan bawah, ganti dengan padding */
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    padding-top: 0.5rem; /* 8px */
+    padding-bottom: 0.5rem; /* 8px */
+
+    /* Menjaga padding horizontal */
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  /* Saat sticky, ubah gaya di dalam kartu */
+  .is-sticky .status-card {
+    padding: 0.25rem 0.5rem; /* Padding lebih kecil */
+    background-color: transparent; /* Hapus background kartu */
+    box-shadow: none;
+    border: none;
+  }
+
+  .is-sticky .status-icon-wrapper {
+    padding: 0.3rem; /* Padding ikon lebih kecil */
+    margin-right: 0.75rem; /* Jarak kanan 12px */
+  }
+
+  .is-sticky .status-icon {
+    font-size: 1rem; /* Ukuran ikon lebih kecil (16px) */
+  }
+
+  /* Tata letak teks menjadi horizontal */
+  .is-sticky .status-text-block {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem; /* Jarak antara judul dan nilai */
+  }
+
+  .is-sticky .status-title {
+    font-size: 0.75rem; /* Ukuran font judul (12px) */
+    font-weight: 400; /* Normal */
+    color: #4b5563; /* Gray-600 */
+  }
+
+  .is-sticky .status-value {
+    font-size: 1rem; /* Ukuran font nilai (16px) */
+    font-weight: 600; /* Sedikit tebal (semibold) */
+  }
 </style>
 
 <div class="min-h-screen bg-gray-50">
-  <div class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
+  <div id="main-header" class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
     <div class="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
       <div class="flex justify-between items-center py-3 sm:py-4">
         <div class="flex items-center">
@@ -214,6 +282,58 @@
       hideLogoutModal();
       performLogout();
     });
+
+    // === LOGIKA BARU UNTUK STICKY STATUS SUMMARY ===
+    const header = document.getElementById("main-header");
+    const statusBar = document.getElementById("status-summary-container");
+
+    // Cek jika status bar ada di halaman ini
+    if (header && statusBar) {
+      const contentBelowStatusBar = statusBar.nextElementSibling; // Ini adalah div grafik
+      let placeholder = null;
+      const headerHeight = header.offsetHeight;
+
+      // Hitung posisi trigger (kapan status bar harus menjadi sticky)
+      // Yaitu, posisi atas status bar dikurangi tinggi header
+      const statusBarOffsetTop = statusBar.offsetTop;
+      const triggerPoint = statusBarOffsetTop - headerHeight;
+
+      window.addEventListener(
+        "scroll",
+        function () {
+          // Cek apakah posisi scroll sudah melewati titik trigger
+          if (window.scrollY >= triggerPoint) {
+            if (!statusBar.classList.contains("is-sticky")) {
+              // Tambahkan class sticky
+              statusBar.classList.add("is-sticky");
+              // Atur posisi top agar pas di bawah header
+              statusBar.style.top = `${headerHeight}px`;
+
+              // Buat dan sisipkan placeholder agar konten di bawahnya tidak "lompat"
+              if (!placeholder && contentBelowStatusBar) {
+                placeholder = document.createElement("div");
+                // Beri tinggi yang sama dengan tinggi asli status bar
+                placeholder.style.height = `${statusBar.offsetHeight}px`;
+                statusBar.parentNode.insertBefore(placeholder, contentBelowStatusBar);
+              }
+            }
+          } else {
+            // Jika scroll kembali ke atas, kembalikan ke kondisi normal
+            if (statusBar.classList.contains("is-sticky")) {
+              statusBar.classList.remove("is-sticky");
+              statusBar.style.top = ""; // Hapus inline style top
+
+              // Hapus placeholder
+              if (placeholder) {
+                placeholder.remove();
+                placeholder = null;
+              }
+            }
+          }
+        },
+        { passive: true }
+      ); // Opsi passive untuk performa scroll yang lebih baik
+    }
   });
 </script>
 {% endblock %}

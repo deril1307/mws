@@ -14,12 +14,11 @@ document.addEventListener("DOMContentLoaded", function () {
   const passwordInput = document.getElementById("password");
   const passwordHelp = document.getElementById("password-help");
 
-  // --- BAGIAN BARU: Ambil elemen untuk field mekanik ---
+  // Ambil elemen untuk field mekanik
   const roleSelect = document.getElementById("role");
   const mechanicFields = document.getElementById("mechanic-fields");
   const assignedCustomerInput = document.getElementById("assigned_customer");
   const assignedShopAreaInput = document.getElementById("assigned_shop_area");
-  // --- AKHIR BAGIAN BARU ---
 
   // Elemen-elemen modal untuk konfirmasi hapus
   const deleteModal = document.getElementById("delete-modal");
@@ -28,7 +27,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const cancelDeleteButton = document.getElementById("cancel-delete-button");
   let nikToDelete = null;
 
-  // Logika Pencarian Pengguna (tidak berubah)
+  // Logika Pencarian Pengguna
   const searchInput = document.getElementById("search-input");
   const userTableBody = document.getElementById("user-table-body");
   const userRows = userTableBody.querySelectorAll("tr");
@@ -50,18 +49,16 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
-  // --- FUNGSI BARU: Untuk menampilkan/menyembunyikan field mekanik ---
+  // Fungsi untuk menampilkan/menyembunyikan field mekanik
   function toggleMechanicFields() {
     if (roleSelect.value === "mechanic") {
       mechanicFields.classList.remove("hidden");
     } else {
       mechanicFields.classList.add("hidden");
-      // Kosongkan nilainya saat disembunyikan agar tidak terkirim data yang salah
       assignedCustomerInput.value = "";
       assignedShopAreaInput.value = "";
     }
   }
-  // --- AKHIR FUNGSI BARU ---
 
   /**
    * Membuka modal untuk menambah atau mengedit pengguna.
@@ -69,18 +66,18 @@ document.addEventListener("DOMContentLoaded", function () {
    */
   window.openUserModal = async (nik = null) => {
     userForm.reset();
-    nikInput.classList.remove("bg-gray-100");
+    // PERUBAHAN: Mengaktifkan kembali input NIK setiap kali modal dibuka
     nikInput.readOnly = false;
-
-    // Pastikan field mekanik tersembunyi saat reset
+    nikInput.classList.remove("bg-gray-100");
     mechanicFields.classList.add("hidden");
 
     if (nik) {
       // Mode Edit
       modalTitle.textContent = "Edit Pengguna";
-      nikInput.readOnly = true;
-      nikInput.classList.add("bg-gray-100");
-      nikOriginalInput.value = nik;
+      // PERUBAHAN: NIK sekarang bisa diedit, tidak lagi read-only.
+      // nikInput.readOnly = true; <-- BARIS INI DIHAPUS
+      // nikInput.classList.add("bg-gray-100"); <-- BARIS INI DIHAPUS
+      nikOriginalInput.value = nik; // Simpan NIK asli untuk referensi di backend
       passwordInput.placeholder = "Kosongkan jika tidak diubah";
       passwordHelp.textContent = "Kosongkan jika tidak ingin mengubah password.";
       passwordInput.required = false;
@@ -89,7 +86,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const response = await fetch(`/users/${nik}`, {
           headers: { "X-CSRFToken": getCSRFToken() },
         });
-        if (!response.ok) throw new Error("Gagal mendapatkan respons dari server.");
+        if (!response.ok) throw new Error("Gagal mendapatkan data pengguna dari server.");
         const data = await response.json();
 
         if (data.error) {
@@ -99,16 +96,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
         nikInput.value = data.nik;
         document.getElementById("name").value = data.name;
-        roleSelect.value = data.role; // Ganti 'role' menjadi 'roleSelect'
+        roleSelect.value = data.role;
 
-        // --- BAGIAN BARU: Isi data area jika user adalah mekanik ---
+        // Isi data area jika user adalah mekanik
         if (data.role === "mechanic") {
           assignedCustomerInput.value = data.assigned_customer || "";
           assignedShopAreaInput.value = data.assigned_shop_area || "";
         }
-        // --- AKHIR BAGIAN BARU ---
       } catch (error) {
-        alert("Gagal mengambil data pengguna.");
+        alert("Gagal mengambil data pengguna. " + error.message);
         console.error("Fetch error:", error);
         return;
       }
@@ -116,12 +112,11 @@ document.addEventListener("DOMContentLoaded", function () {
       // Mode Tambah
       modalTitle.textContent = "Tambah Pengguna Baru";
       nikOriginalInput.value = "";
-      passwordInput.placeholder = "";
+      passwordInput.placeholder = "Password wajib diisi";
       passwordHelp.textContent = "Password wajib diisi untuk pengguna baru.";
       passwordInput.required = true;
     }
 
-    // Panggil fungsi toggle SETELAH semua data diisi, untuk memastikan tampilan benar
     toggleMechanicFields();
     userModal.classList.remove("hidden");
   };
@@ -152,11 +147,10 @@ document.addEventListener("DOMContentLoaded", function () {
   // Event listener untuk tombol batal di modal hapus
   cancelDeleteButton.addEventListener("click", closeDeleteModal);
 
-  // --- EVENT LISTENER BARU: Panggil toggleMechanicFields saat role diubah ---
+  // Panggil toggleMechanicFields saat role diubah
   roleSelect.addEventListener("change", toggleMechanicFields);
-  // --- AKHIR EVENT LISTENER BARU ---
 
-  // Event handler untuk submit form (tambah/edit) - TIDAK ADA PERUBAHAN DI SINI
+  // Event handler untuk submit form (tambah/edit)
   userForm.addEventListener("submit", async (e) => {
     e.preventDefault();
 
@@ -173,12 +167,12 @@ document.addEventListener("DOMContentLoaded", function () {
       delete data.password;
     }
 
-    // Jika rolenya bukan mekanik, hapus data area agar tidak terkirim
     if (data.role !== "mechanic") {
       delete data.assigned_customer;
       delete data.assigned_shop_area;
     }
 
+    // PERUBAHAN: Logika penanganan error
     try {
       const response = await fetch("/users", {
         method: "POST",
@@ -188,22 +182,27 @@ document.addEventListener("DOMContentLoaded", function () {
         },
         body: JSON.stringify(data),
       });
-      if (!response.ok) throw new Error("Server memberikan respons error.");
+
+      // Selalu coba parse JSON, baik untuk sukses maupun error
       const result = await response.json();
 
-      if (result.success) {
+      if (response.ok && result.success) {
+        // Jika sukses
         closeUserModal();
         location.reload();
       } else {
-        alert("Error: " + (result.error || "Gagal menyimpan data."));
+        // Jika ada error dari server (misal: NIK duplikat)
+        // Tampilkan pesan error dari server, atau pesan default jika tidak ada.
+        alert("Error: " + (result.error || "Gagal menyimpan data. Silakan cek kembali input Anda."));
       }
     } catch (error) {
-      alert("Terjadi kesalahan pada jaringan.");
+      // Ini untuk error jaringan sejati (misal: server mati, tidak ada koneksi)
+      alert("Terjadi kesalahan pada jaringan. Tidak dapat menghubungi server.");
       console.error("Submit error:", error);
     }
   });
 
-  // Event handler untuk tombol konfirmasi hapus (tidak berubah)
+  // Event handler untuk tombol konfirmasi hapus
   confirmDeleteButton.addEventListener("click", async () => {
     if (!nikToDelete) return;
     try {
@@ -211,17 +210,16 @@ document.addEventListener("DOMContentLoaded", function () {
         method: "DELETE",
         headers: { "X-CSRFToken": getCSRFToken() },
       });
-      if (!response.ok) throw new Error("Server memberikan respons error.");
       const result = await response.json();
 
-      if (result.success) {
+      if (response.ok && result.success) {
         closeDeleteModal();
         location.reload();
       } else {
         alert("Error: " + (result.error || "Gagal menghapus pengguna."));
       }
     } catch (error) {
-      alert("Terjadi kesalahan pada jaringan.");
+      alert("Terjadi kesalahan pada jaringan saat menghapus.");
       console.error("Delete error:", error);
     }
   });

@@ -1,5 +1,6 @@
 {% extends "shared/base.html" %} {% block title %}Mechanic Dashboard - Sistem Aircraft Maintenance{% endblock %} {% from "monitoring/tracking_list.html" import render_tracking_list %} {% block content %}
 <style>
+  /* Animasi untuk modal pop-up dan overlay */
   @keyframes fadeIn {
     from {
       opacity: 0;
@@ -16,24 +17,44 @@
       opacity: 0;
     }
   }
-  @keyframes scaleIn {
+
+  /* MODIFIKASI: Animasi slide dari atas ke bawah */
+  @keyframes slideDown {
     from {
-      transform: scale(0.95);
+      transform: translateY(-100%);
       opacity: 0;
     }
     to {
-      transform: scale(1);
+      transform: translateY(0);
       opacity: 1;
     }
   }
-  .modal-overlay {
-    animation: fadeIn 0.2s ease-out forwards;
+
+  /* MODIFIKASI: Animasi slide ke atas saat menutup */
+  @keyframes slideUp {
+    from {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
   }
-  .modal-panel {
-    animation: scaleIn 0.2s ease-out forwards;
+
+  .modal-overlay {
+    animation: fadeIn 0.3s ease-out forwards;
+  }
+  .modal-panel-popup {
+    /* MODIFIKASI: Menggunakan class baru untuk panel pop-up */
+    animation: slideDown 0.4s ease-out forwards;
   }
   .modal-overlay.is-hiding {
-    animation: fadeOut 0.2s ease-in forwards;
+    animation: fadeOut 0.3s ease-in forwards;
+  }
+  /* MODIFIKASI: Menerapkan animasi slideUp saat menutup */
+  .modal-overlay.is-hiding .modal-panel-popup {
+    animation: slideUp 0.4s ease-in forwards;
   }
 </style>
 
@@ -49,23 +70,28 @@
             <h1 class="text-lg sm:text-xl font-bold text-gray-800">Mechanic Dashboard</h1>
           </div>
         </div>
-        <div class="relative">
-          <button id="user-menu-button" class="flex items-center space-x-2 px-2 py-2 sm:px-3 sm:py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500">
-            <div class="flex flex-col items-start">
-              <span class="font-medium text-sm text-gray-800">{{ user.name }}</span>
-              <span class="text-xs text-gray-500 hidden sm:inline">{{ user.position }}</span>
+
+        <div class="flex items-center space-x-4">
+          {% include 'notifikasi/notifikasi.html' with context %}
+
+          <div class="relative">
+            <button id="user-menu-button" class="flex items-center space-x-2 px-2 py-2 sm:px-3 sm:py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500">
+              <div class="flex flex-col items-start">
+                <span class="font-medium text-sm text-gray-800">{{ user.name }}</span>
+                <span class="text-xs text-gray-500 hidden sm:inline">{{ user.position }}</span>
+              </div>
+              <i id="user-menu-chevron" class="fas fa-chevron-down text-xs text-gray-600 transition-transform duration-200"></i>
+            </button>
+            <div id="user-menu" class="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg py-1 z-50 hidden ring-1 ring-black ring-opacity-5" style="transition: opacity 0.2s ease-out, transform 0.2s ease-out">
+              <div class="px-4 py-3 border-b">
+                <p class="text-sm font-semibold text-gray-900">{{ user.name }}</p>
+                <p class="text-sm text-gray-500 truncate">{{ user.position }}</p>
+              </div>
+              <a href="{{ url_for('view_profile') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profil</a>
+              <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Pengaturan</a>
+              <div class="border-t"></div>
+              <a href="{{ url_for('logout') }}" id="logout-button" class="block w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-50">Logout</a>
             </div>
-            <i id="user-menu-chevron" class="fas fa-chevron-down text-xs text-gray-600 transition-transform duration-200"></i>
-          </button>
-          <div id="user-menu" class="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg py-1 z-50 hidden ring-1 ring-black ring-opacity-5" style="transition: opacity 0.2s ease-out, transform 0.2s ease-out">
-            <div class="px-4 py-3 border-b">
-              <p class="text-sm font-semibold text-gray-900">{{ user.name }}</p>
-              <p class="text-sm text-gray-500 truncate">{{ user.position }}</p>
-            </div>
-            <a href="{{ url_for('view_profile') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profil</a>
-            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Pengaturan</a>
-            <div class="border-t"></div>
-            <a href="{{ url_for('logout') }}" id="logout-button" class="block w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-50">Logout</a>
           </div>
         </div>
       </div>
@@ -77,6 +103,7 @@
     <div class="mt-6">{{ render_tracking_list(parts, users, user) }}</div>
   </div>
 </div>
+
 <div id="logout-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
   <div id="logout-modal-overlay" class="absolute inset-0 bg-black bg-opacity-60 modal-overlay"></div>
   <div id="logout-modal-panel" class="relative bg-white rounded-lg shadow-xl w-full max-w-md m-4 modal-panel">
@@ -102,37 +129,59 @@
   </div>
 </div>
 
+<div id="new-task-popup" class="fixed inset-0 z-50 flex items-start justify-center pt-12 px-4 hidden modal-overlay">
+  <div class="relative bg-white rounded-lg shadow-xl w-full max-w-md mx-auto modal-panel-popup text-left overflow-hidden">
+    <div class="flex items-center justify-between p-4 border-b">
+      <h3 class="text-lg font-semibold text-gray-800 flex items-center">
+        <i class="fas fa-bell text-green-500 mr-3"></i>
+        Tugas Baru Untuk Anda
+      </h3>
+      <button id="popup-close-x-button" type="button" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 inline-flex items-center">
+        <i class="fas fa-times w-5 h-5"></i>
+        <span class="sr-only">Close modal</span>
+      </button>
+    </div>
+
+    <div id="popup-notification-list" class="max-h-80 overflow-y-auto p-2">
+      {% if notifications and notifications|length > 0 %} {% for task in notifications %}
+      <a href="{{ url_for('mws_detail', part_id=task.part_id) }}" class="block p-3 hover:bg-gray-100 rounded-lg mb-1 transition-colors duration-150">
+        <div class="flex items-start">
+          <div
+            class="flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center mr-3 {% if task.status == 'in_progress' %}bg-green-100 text-green-600{% elif task.status == 'pending' %}bg-yellow-100 text-yellow-600{% else %}bg-gray-100 text-gray-500{% endif %}"
+          >
+            {% if task.status == 'in_progress' %}<i class="fas fa-cogs"></i>{% elif task.status == 'pending' %}<i class="fas fa-pause-circle"></i>{% endif %}
+          </div>
+          <div class="flex-1">
+            <p class="text-sm text-gray-800 font-semibold">Tugas untuk <strong>{{ task.tittle }}</strong> ({{ task.partNumber }})</p>
+            <p class="text-xs font-bold mt-1 {% if task.status == 'in_progress' %}text-green-700{% elif task.status == 'pending' %}text-yellow-700{% endif %}">Status: {{ task.status|capitalize }}</p>
+            <p class="text-xs text-gray-500 mt-1">Customer: {{ task.customer }}</p>
+          </div>
+        </div>
+      </a>
+      {% endfor %} {% else %}
+      <div class="text-center py-10 px-4">
+        <i class="fas fa-check-circle text-gray-300 text-4xl mb-2"></i>
+        <p class="text-sm text-gray-500">Tidak ada pekerjaan baru yang menunggu.</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="border-t p-4 flex justify-end gap-3 bg-gray-50">
+      <button
+        id="popup-close-button"
+        type="button"
+        class="px-5 py-2 bg-green-600 text-white text-sm font-semibold rounded-lg shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200"
+      >
+        Mengerti
+      </button>
+    </div>
+  </div>
+</div>
+<script src="{{ url_for('static', filename='js/notifikasi_logic.js') }}" defer></script>
+
 <script>
   document.addEventListener("DOMContentLoaded", function () {
-    const userMenuButton = document.getElementById("user-menu-button");
-    const userMenu = document.getElementById("user-menu");
-    const userMenuChevron = document.getElementById("user-menu-chevron");
-
-    if (userMenuButton && userMenu) {
-      userMenuButton.addEventListener("click", function (event) {
-        event.stopPropagation();
-        const isHidden = userMenu.classList.toggle("hidden");
-
-        if (userMenuChevron) {
-          userMenuChevron.classList.toggle("rotate-180", !isHidden);
-        }
-        userMenu.style.transform = isHidden ? "scale(0.95)" : "scale(1)";
-        userMenu.style.opacity = isHidden ? "0" : "1";
-      });
-    }
-
-    window.addEventListener("click", function (event) {
-      if (userMenu && !userMenu.classList.contains("hidden") && userMenuButton && !userMenuButton.contains(event.target)) {
-        userMenu.classList.add("hidden");
-        if (userMenuChevron) {
-          userMenuChevron.classList.remove("rotate-180");
-        }
-        userMenu.style.transform = "scale(0.95)";
-        userMenu.style.opacity = "0";
-      }
-    });
-
-    // --- Modal Logout ---
+    // --- Logika untuk Modal Logout (tidak diubah) ---
     const logoutButton = document.getElementById("logout-button");
     const logoutModal = document.getElementById("logout-modal");
     const logoutModalOverlay = document.getElementById("logout-modal-overlay");
@@ -173,30 +222,71 @@
       requestAnimationFrame(() => {
         fadeOutDiv.style.opacity = "1";
       });
-
       setTimeout(() => {
         window.location.href = logoutButton.href;
       }, 300);
     }
 
-    if (logoutButton) {
-      logoutButton.addEventListener("click", showLogoutModal);
-    }
-    if (cancelButton) {
-      cancelButton.addEventListener("click", hideLogoutModal);
-    }
-    if (closeButton) {
-      closeButton.addEventListener("click", hideLogoutModal);
-    }
-    if (logoutModalOverlay) {
-      logoutModalOverlay.addEventListener("click", hideLogoutModal);
-    }
-    if (confirmButton) {
+    if (logoutButton) logoutButton.addEventListener("click", showLogoutModal);
+    if (cancelButton) cancelButton.addEventListener("click", hideLogoutModal);
+    if (closeButton) closeButton.addEventListener("click", hideLogoutModal);
+    if (logoutModalOverlay)
+      logoutModalOverlay.addEventListener("click", (e) => {
+        if (e.target === logoutModalOverlay) hideLogoutModal();
+      });
+    if (confirmButton)
       confirmButton.addEventListener("click", () => {
         hideLogoutModal();
         performLogout();
       });
+  });
+</script>
+
+{% if show_popup %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const modal = document.getElementById("new-task-popup");
+    const closeButton = document.getElementById("popup-close-button");
+    const closeXButton = document.getElementById("popup-close-x-button"); // MODIFIKASI: Mengambil tombol X baru
+    const overlay = document.querySelector("#new-task-popup");
+
+    const showModal = () => {
+      if (modal) modal.classList.remove("hidden");
+    };
+
+    const hideModal = () => {
+      if (modal) {
+        // MODIFIKASI: Menggunakan class is-hiding untuk memicu animasi keluar
+        modal.classList.add("is-hiding");
+        modal.addEventListener(
+          "animationend",
+          () => {
+            modal.classList.add("hidden");
+            modal.classList.remove("is-hiding");
+          },
+          { once: true }
+        );
+      }
+    };
+
+    // Tampilkan modal saat halaman dimuat
+    showModal();
+
+    // Tambahkan event listener untuk semua tombol tutup dan klik di luar area modal
+    if (closeButton) {
+      closeButton.addEventListener("click", hideModal);
+    }
+    if (closeXButton) {
+      // MODIFIKASI: Menambahkan event listener untuk tombol X
+      closeXButton.addEventListener("click", hideModal);
+    }
+    if (overlay) {
+      overlay.addEventListener("click", function (event) {
+        if (event.target === overlay) {
+          hideModal();
+        }
+      });
     }
   });
 </script>
-{% endblock %}
+{% endif %} {% endblock %}
