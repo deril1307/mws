@@ -1,15 +1,15 @@
 {% extends "shared/base.html" %} {% block title %}MWS {{ part.partNumber }} - Sistem Aircraft Maintenance{% endblock %} {% block extra_css %}
 <style>
-  /* --- EXISTING STYLES (NO CHANGES) --- */
+  /* --- STYLES TIDAK BERUBAH --- */
   .worksheet-table {
     table-layout: fixed;
     width: 100%;
-    min-width: 1200px; /* Lebarkan tabel untuk mengakomodasi header baru */
+    min-width: 1200px;
   }
   .worksheet-table th,
   .worksheet-table td {
     vertical-align: top;
-    border: 1px solid #e5e7eb; /* Gunakan border penuh untuk kejelasan */
+    border: 1px solid #e5e7eb;
     padding: 0.75rem;
   }
   .no-column { width: 50px; }
@@ -22,7 +22,6 @@
   .insp-column { width: 8%; min-width: 90px; }
   .status-column { width: 7%; min-width: 80px; }
   .action-column { width: 10%; min-width: 120px; }
-
   .tech-cell { max-width: 150px !important; min-width: 120px !important; width: 150px !important; }
   .tech-cell textarea, .tech-cell span {
     word-wrap: break-word; word-break: break-word; overflow-wrap: break-word;
@@ -30,8 +29,6 @@
   }
   .tech-cell span { display: inline-block; }
   .worksheet-table tbody tr:hover { background-color: #f9fafb; }
-  
-  /* --- NOTIFICATION STYLES (NO CHANGES) --- */
   .notification { position: fixed; top: 1rem; right: 1rem; padding: 1rem; border-radius: 0.5rem; color: white; z-index: 100; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); min-width: 320px; max-width: 400px; animation: slideIn 0.3s ease-out; }
   @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
   .notification.success { background-color: #10b981; }
@@ -51,39 +48,7 @@
 </style>
 {% endblock %} 
 
-{% block content %} 
-{% if user.role in ['admin', 'superadmin'] %}
-<div id="assign-mechanic-modal" class="fixed inset-0 bg-gray-800 bg-opacity-60 hidden items-center justify-center z-50">
-  <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg">
-    <h3 class="text-xl font-semibold mb-4">Tugaskan Mekanik untuk MWS Ini</h3>
-    <div class="relative mb-4">
-      <label for="mechanic-search-input" class="sr-only">Cari Mekanik</label>
-      <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fas fa-search text-gray-400"></i></div>
-      <input type="text" id="mechanic-search-input" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Cari Nama atau NIK Mekanik..." />
-    </div>
-    <div class="mb-4">
-      <label id="mechanic-list-label" class="block text-sm font-medium text-gray-700 mb-2">Pilih Mekanik (bisa lebih dari satu)</label>
-      <div class="flex items-center justify-between p-2 border-b border-t border-gray-200 mb-2">
-        <label for="check-all-mechanics" class="text-sm font-medium text-gray-700 cursor-pointer">Pilih Semua Mekanik</label>
-        <input type="checkbox" id="check-all-mechanics" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
-      </div>
-      <div id="mechanic-checkbox-list" role="listbox" aria-labelledby="mechanic-list-label" class="border border-gray-300 rounded-md p-3 h-60 overflow-y-auto space-y-2 bg-gray-50">
-        {% for nik, mech in all_mechanics.items() %}
-        <div class="flex items-center p-1 rounded-md hover:bg-gray-200 mechanic-item" data-name="{{ mech.name.lower() }}" data-nik="{{ nik.lower() }}">
-          <input id="mech-{{ nik }}" name="mechanic_checkbox" value="{{ nik }}" type="checkbox" class="individual-mechanic-checkbox h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
-          <label for="mech-{{ nik }}" class="ml-3 block text-sm font-medium text-gray-800 cursor-pointer w-full"> {{ mech.name }} <span class="text-gray-500">({{ nik }})</span> </label>
-        </div>
-        {% endfor %}
-      </div>
-    </div>
-    <div class="flex justify-end gap-4">
-      <button onclick="closeAssignModal()" class="px-4 py-2 bg-gray-200 rounded-md">Batal</button>
-      <button onclick="saveMechanicAssignments()" class="px-4 py-2 bg-blue-600 text-white rounded-md">Simpan</button>
-    </div>
-  </div>
-</div>
-{% endif %}
-
+{% block content %}
 <div class="min-h-screen bg-gray-50">
   <div id="stripping-notification" class="stripping-notification" style="display: none;">
     <div class="flex items-start space-x-2">
@@ -109,9 +74,6 @@
           </div>
         </div>
         <div class="flex items-center space-x-4">
-          {% if user.role in ['admin', 'superadmin'] %}
-          <button id="assign-mechanic-btn" onclick="openAssignModal()" class="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700"><i class="fas fa-users-cog mr-2"></i>Tugaskan Mekanik</button>
-          {% endif %}
           <span class="px-4 py-2 rounded-full text-sm font-medium {% if part.status == 'completed' %}bg-blue-500 text-white {% elif part.status == 'in_progress' %}bg-green-500 text-white {% else %}bg-red-500 text-white {% endif %}">
             {% if part.status == 'completed' %}Completed {% elif part.status == 'in_progress' %}In Progress {% else %}Menunggu{% endif %}
           </span>
@@ -137,20 +99,27 @@
         </div>
       </div>
       <div class="overflow-x-auto">
-        {% set is_mws_locked = not (part.preparedBy and part.approvedBy) %} 
+        {% set is_mws_locked = not (part.preparedBy and part.approvedBy and part.verifiedBy) %}
+
         {% if is_mws_locked and user.role == 'mechanic' %}
         <div class="m-4 p-4 bg-yellow-100 text-yellow-800 border-l-4 border-yellow-500 rounded-md shadow-sm">
           <div class="flex">
             <div class="flex-shrink-0"><i class="fas fa-lock h-5 w-5 text-yellow-500"></i></div>
-            <div class="ml-3"><p class="text-sm">Lembar kerja ini belum dapat diisi. Harap tunggu hingga Admin Approved bagian <strong>"Prepared By"</strong> dan Superadmin Approved bagian <strong>"Approved By"</strong>.</p></div>
+              <div class="ml-3">
+                <p class="text-sm">
+                  Lembar kerja ini belum dapat diisi. Harap tunggu hingga Admin Approved bagian 
+                  <strong>"Prepared By"</strong>, Superadmin Approved bagian 
+                  <strong>"Approved By"</strong>, dan Quality CUDR bagian 
+                  <strong>"Verified By"</strong>.
+                </p>
+              </div>
+
           </div>
         </div>
         {% endif %}
 
-        <!-- ==================== NEW TABLE STRUCTURE ==================== -->
         <table class="worksheet-table w-full">
           <thead class="bg-gray-100">
-            <!-- Row 1: Main Headers -->
             <tr>
               <th rowspan="2" class="no-column text-center p-3 text-sm font-semibold text-gray-700 align-middle">NO</th>
               <th rowspan="2" class="description-column text-left p-3 text-sm font-semibold text-gray-700 align-middle">DESCRIPTION</th>
@@ -161,7 +130,6 @@
               <th rowspan="2" class="status-column text-center p-3 text-sm font-semibold text-gray-700 align-middle">STATUS</th>
               <th rowspan="2" class="action-column text-center p-3 text-sm font-semibold text-gray-700 align-middle">{% if user.role in ['admin','superadmin'] %}AKSI{% else %}KETERANGAN{% endif %}</th>
             </tr>
-            <!-- Row 2: Sub-Headers -->
             <tr>
               <th class="plan-man-column text-center p-3 text-sm font-semibold text-gray-600 bg-blue-50">MAN</th>
               <th class="plan-hours-column text-center p-3 text-sm font-semibold text-gray-600 bg-blue-50">HOURS</th>
@@ -197,7 +165,6 @@
                 {% endif %}
               </td>
               
-              <!-- PLAN MAN -->
               <td class="plan-man-column align-top">
                   {% if user.role in ['admin', 'superadmin'] %}
                       <div id="plan-man-view-{{ step.no }}" class="flex items-center justify-between space-x-2">
@@ -217,7 +184,6 @@
                   {% endif %}
               </td>
 
-              <!-- PLAN HOURS -->
               <td class="plan-hours-column align-top">
                   {% if user.role in ['admin', 'superadmin'] %}
                       <div id="plan-hours-view-{{ step.no }}" class="flex items-center justify-between space-x-2">
@@ -237,7 +203,6 @@
                   {% endif %}
               </td>
 
-              <!-- ACTUAL MAN -->
               <td class="man-column align-top">
                 <div class="space-y-2">
                   {% set step_mechanics = step.man %}
@@ -255,16 +220,16 @@
                   </ul>
                   {% else %}
                   <p class="text-xs text-gray-500 italic">Belum ada mekanik.</p>
-                  {% endif %} 
-                  {% if user.role == 'mechanic' and user.nik in part.assigned_mechanics and user.nik not in step_mechanics and step.tech != 'Approved' %}
+                  {% endif %}
+
+                  {% if user.role == 'mechanic' and user.nik not in step_mechanics and step.tech != 'Approved' %}
                   <button onclick="addMeToStep('{{ part_id }}', {{ step.no }})" class="w-full mt-2 px-2 py-1 bg-green-500 hover:bg-green-600 text-white rounded text-xs font-bold {% if is_mws_locked or is_busy_based_on_tech %}opacity-50 cursor-not-allowed{% endif %}" {% if is_mws_locked %} disabled title="MWS terkunci. Tunggu approval dari Admin/Superadmin." {% elif is_busy_based_on_tech %} disabled title="Anda masih memiliki pekerjaan aktif di step lain. Selesaikan (Approve by TECH) terlebih dahulu." {% endif %}>
                     <i class="fas fa-sign-in-alt mr-1"></i> Sign On
                   </button>
                   {% endif %}
-                </div>
+                  </div>
               </td>
 
-              <!-- ACTUAL HOURS -->
               <td class="hours-column align-top">
                 <div class="flex flex-col items-center justify-center space-y-1" id="timer-controls-{{ step.no }}">
                   <input type="hidden" id="hours-{{ step.no }}" value="{{ step.hours or '00:00' }}" />
@@ -281,7 +246,6 @@
                 </div>
               </td>
 
-              <!-- TECH -->
               <td class="tech-column align-top tech-cell">
                 {% if user.role == 'mechanic' and user.nik in step.man and step.tech != 'Approved' %}
                 <div class="min-h-[40px] flex items-center justify-center">
@@ -306,7 +270,6 @@
                 {% endif %}
               </td>
 
-              <!-- INSP -->
               <td class="insp-column align-top">
                 {% if user.role == 'quality1' and step.status == 'in_progress' %}
                 <div class="min-h-[40px] flex items-center justify-center">
@@ -322,14 +285,12 @@
                 {% endif %}
               </td>
 
-              <!-- STATUS -->
               <td class="status-column text-center align-middle">
                 {% if step.status == 'completed' %}<i class="fas fa-check-circle text-blue-500 text-xl" title="Completed on {{ step.completedDate }}"></i>
                 {% elif step.status == 'in_progress' %}<i class="fas fa-clock text-green-500 text-xl" title="In Progress"></i>
                 {% else %}<i class="fas fa-exclamation-circle text-red-500 text-xl" title="Pending"></i>{% endif %}
               </td>
 
-              <!-- AKSI -->
               <td class="action-column text-center align-top">
                 {% if user.role != 'customer' %}
                 <div class="flex flex-col items-center justify-center space-y-2">
@@ -372,7 +333,7 @@
   const currentUserNik = "{{ user.nik }}";
   const partId = "{{ part_id }}";
   const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute("content");
-  const assignedMechanics = {{ part.assigned_mechanics|tojson }};
+  // Variabel 'assignedMechanics' sudah dihapus
 </script>
 <script src="{{ url_for('static', filename='js/mws_detail_logic.js') }}" defer></script>
 {% endblock %}

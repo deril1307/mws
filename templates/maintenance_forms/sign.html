@@ -5,7 +5,7 @@
     <div class="space-y-4">
       <div>
         <label class="block text-sm font-bold text-gray-700 mb-1">Start Date</label>
-        {% if user.role == 'mechanic' %} {# <<< PERUBAHAN DIMULAI >>> #}
+        {% if user.role == 'superadmin' %} {# <<< PERUBAHAN DIMULAI >>> #}
         <input
           type="date"
           value="{{ part.startDate }}"
@@ -26,7 +26,7 @@
       </div>
       <div>
         <label class="block text-sm font-bold text-gray-700 mb-1">Finish Date</label>
-        {% if user.role == 'mechanic' %} {# <<< PERUBAHAN DIMULAI >>> #}
+        {% if user.role == 'superadmin' %}
         <input
           type="date"
           value="{{ part.finishDate }}"

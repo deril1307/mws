@@ -14,6 +14,13 @@ document.addEventListener("DOMContentLoaded", function () {
   const passwordInput = document.getElementById("password");
   const passwordHelp = document.getElementById("password-help");
 
+  // --- BAGIAN BARU: Ambil elemen untuk field mekanik ---
+  const roleSelect = document.getElementById("role");
+  const mechanicFields = document.getElementById("mechanic-fields");
+  const assignedCustomerInput = document.getElementById("assigned_customer");
+  const assignedShopAreaInput = document.getElementById("assigned_shop_area");
+  // --- AKHIR BAGIAN BARU ---
+
   // Elemen-elemen modal untuk konfirmasi hapus
   const deleteModal = document.getElementById("delete-modal");
   const userToDeleteName = document.getElementById("user-to-delete-name");
@@ -21,18 +28,16 @@ document.addEventListener("DOMContentLoaded", function () {
   const cancelDeleteButton = document.getElementById("cancel-delete-button");
   let nikToDelete = null;
 
-  // --- TAMBAHAN: Logika Pencarian Pengguna ---
+  // Logika Pencarian Pengguna (tidak berubah)
   const searchInput = document.getElementById("search-input");
   const userTableBody = document.getElementById("user-table-body");
   const userRows = userTableBody.querySelectorAll("tr");
 
   searchInput.addEventListener("input", function () {
     const searchTerm = this.value.toLowerCase().trim();
-
     userRows.forEach((row) => {
       const nikCell = row.cells[1];
       const nameCell = row.cells[2];
-
       if (nikCell && nameCell) {
         const nikText = nikCell.textContent.toLowerCase();
         const nameText = nameCell.textContent.toLowerCase();
@@ -44,7 +49,19 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     });
   });
-  // --- AKHIR TAMBAHAN ---
+
+  // --- FUNGSI BARU: Untuk menampilkan/menyembunyikan field mekanik ---
+  function toggleMechanicFields() {
+    if (roleSelect.value === "mechanic") {
+      mechanicFields.classList.remove("hidden");
+    } else {
+      mechanicFields.classList.add("hidden");
+      // Kosongkan nilainya saat disembunyikan agar tidak terkirim data yang salah
+      assignedCustomerInput.value = "";
+      assignedShopAreaInput.value = "";
+    }
+  }
+  // --- AKHIR FUNGSI BARU ---
 
   /**
    * Membuka modal untuk menambah atau mengedit pengguna.
@@ -54,6 +71,9 @@ document.addEventListener("DOMContentLoaded", function () {
     userForm.reset();
     nikInput.classList.remove("bg-gray-100");
     nikInput.readOnly = false;
+
+    // Pastikan field mekanik tersembunyi saat reset
+    mechanicFields.classList.add("hidden");
 
     if (nik) {
       // Mode Edit
@@ -79,7 +99,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
         nikInput.value = data.nik;
         document.getElementById("name").value = data.name;
-        document.getElementById("role").value = data.role;
+        roleSelect.value = data.role; // Ganti 'role' menjadi 'roleSelect'
+
+        // --- BAGIAN BARU: Isi data area jika user adalah mekanik ---
+        if (data.role === "mechanic") {
+          assignedCustomerInput.value = data.assigned_customer || "";
+          assignedShopAreaInput.value = data.assigned_shop_area || "";
+        }
+        // --- AKHIR BAGIAN BARU ---
       } catch (error) {
         alert("Gagal mengambil data pengguna.");
         console.error("Fetch error:", error);
@@ -93,6 +120,9 @@ document.addEventListener("DOMContentLoaded", function () {
       passwordHelp.textContent = "Password wajib diisi untuk pengguna baru.";
       passwordInput.required = true;
     }
+
+    // Panggil fungsi toggle SETELAH semua data diisi, untuk memastikan tampilan benar
+    toggleMechanicFields();
     userModal.classList.remove("hidden");
   };
 
@@ -105,8 +135,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
   /**
    * Membuka modal konfirmasi penghapusan.
-   * @param {string} nik - NIK pengguna yang akan dihapus.
-   * @param {string} name - Nama pengguna untuk ditampilkan di modal.
    */
   window.openDeleteModal = (nik, name) => {
     nikToDelete = nik;
@@ -124,12 +152,15 @@ document.addEventListener("DOMContentLoaded", function () {
   // Event listener untuk tombol batal di modal hapus
   cancelDeleteButton.addEventListener("click", closeDeleteModal);
 
-  // Event handler untuk submit form (tambah/edit)
+  // --- EVENT LISTENER BARU: Panggil toggleMechanicFields saat role diubah ---
+  roleSelect.addEventListener("change", toggleMechanicFields);
+  // --- AKHIR EVENT LISTENER BARU ---
+
+  // Event handler untuk submit form (tambah/edit) - TIDAK ADA PERUBAHAN DI SINI
   userForm.addEventListener("submit", async (e) => {
     e.preventDefault();
 
     const isEditMode = nikOriginalInput.value !== "";
-    // Validasi password untuk pengguna baru
     if (!isEditMode && !passwordInput.value) {
       alert("Password wajib diisi untuk pengguna baru.");
       return;
@@ -138,9 +169,14 @@ document.addEventListener("DOMContentLoaded", function () {
     const formData = new FormData(userForm);
     const data = Object.fromEntries(formData.entries());
 
-    // Hapus properti password jika kosong dalam mode edit
     if (isEditMode && data.password === "") {
       delete data.password;
+    }
+
+    // Jika rolenya bukan mekanik, hapus data area agar tidak terkirim
+    if (data.role !== "mechanic") {
+      delete data.assigned_customer;
+      delete data.assigned_shop_area;
     }
 
     try {
@@ -157,7 +193,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
       if (result.success) {
         closeUserModal();
-        location.reload(); // Muat ulang halaman untuk menampilkan perubahan
+        location.reload();
       } else {
         alert("Error: " + (result.error || "Gagal menyimpan data."));
       }
@@ -167,7 +203,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  // Event handler untuk tombol konfirmasi hapus
+  // Event handler untuk tombol konfirmasi hapus (tidak berubah)
   confirmDeleteButton.addEventListener("click", async () => {
     if (!nikToDelete) return;
     try {
@@ -180,7 +216,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
       if (result.success) {
         closeDeleteModal();
-        location.reload(); // Muat ulang halaman untuk menampilkan perubahan
+        location.reload();
       } else {
         alert("Error: " + (result.error || "Gagal menghapus pengguna."));
       }

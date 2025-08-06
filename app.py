@@ -416,16 +416,22 @@ def admin_dashboard():
 def mechanic_dashboard():
     try:
         # --- PERUBAHAN DIMULAI ---
-        # Filter MWS berdasarkan NIK mekanik yang login.
-        # Pencarian dilakukan di dalam kolom 'assigned_mechanics' yang berisi JSON string.
-        mechanic_nik_pattern = f'"{current_user.nik}"'
-        parts = MwsPart.query.filter(
-            MwsPart.assigned_mechanics.contains(mechanic_nik_pattern)
-        ).all()
-        # --- PERUBAHAN SELESAI ---
+        # Ambil profil area dari user yang sedang login
+        profile = current_user.area
+
+        # Jika mekanik tidak punya profil, atau profilnya tidak lengkap, tampilkan daftar kosong.
+        if not profile or not profile.assigned_customer or not profile.assigned_shop_area:
+            parts = []
+        else:
+            # Filter MWS yang customer DAN shopArea-nya cocok dengan profil area user.
+            parts = MwsPart.query.filter_by(
+                customer=profile.assigned_customer,
+                shopArea=profile.assigned_shop_area
+            ).all()
+        # --- AKHIR PERUBAHAN ---
 
         parts_dict = {}
-        for part in parts: # Sekarang 'parts' sudah berisi data yang terfilter
+        for part in parts:
             parts_dict[part.part_id] = part.to_dict()
         
         users = get_users_from_db()
@@ -438,6 +444,7 @@ def mechanic_dashboard():
         return render_template('mechanic/mechanic_dashboard.html', 
                              parts={},
                              users={})
+    
 
 @app.route('/quality1-dashboard')
 @require_role('quality1')
@@ -545,15 +552,15 @@ def get_user(nik):
         if not user:
             return jsonify({'error': 'User not found'}), 404
         
-        return jsonify({
-            'nik': user.nik, 
-            'name': user.name, 
-            'role': user.role,
-            'position': user.position
-        })
+        # --- PERUBAHAN DIMULAI ---
+        # Menggunakan to_dict() yang sudah dimodifikasi untuk menyertakan data penugasan.
+        return jsonify(user.to_dict())
+        # --- PERUBAHAN SELESAI ---
+
     except Exception as e:
         print(f"Error getting user: {e}")
         return jsonify({'error': 'Database error'}), 500
+
 
 
 @app.route('/users', methods=['POST'])
@@ -566,35 +573,53 @@ def save_user():
         nik_original = req_data.get('nik_original')
         if not nik:
             return jsonify({'success': False, 'error': 'NIK tidak boleh kosong.'}), 400
+
+        user_to_update = None
+        # Logika untuk mencari atau membuat user baru
         if nik_original:
             user_to_update = User.query.filter_by(nik=nik_original).first()
             if not user_to_update:
                 return jsonify({'success': False, 'error': 'Pengguna tidak ditemukan.'}), 404
             if nik != nik_original and User.query.filter_by(nik=nik).first():
                 return jsonify({'success': False, 'error': f'NIK {nik} sudah ada.'}), 400
-            
-            user_to_update.nik = nik
-            user_to_update.name = req_data.get('name')
-            user_to_update.role = req_data.get('role')
-            user_to_update.position = req_data.get('position')
-            
-            if req_data.get('password'):
-                user_to_update.set_password(req_data.get('password'))
-        else:  
+        else:
             if User.query.filter_by(nik=nik).first():
                 return jsonify({'success': False, 'error': f'NIK {nik} sudah ada.'}), 400
-            
             if not req_data.get('password'):
                 return jsonify({'success': False, 'error': 'Password wajib diisi untuk pengguna baru.'}), 400
+            user_to_update = User()
+            user_to_update.set_password(req_data.get('password'))
+            db.session.add(user_to_update)
+
+        # --- PERUBAHAN LOGIKA PENYIMPANAN DIMULAI ---
+        
+        # 1. Update data utama di tabel 'users'
+        user_to_update.nik = nik
+        user_to_update.name = req_data.get('name')
+        user_to_update.role = req_data.get('role')
+        user_to_update.position = req_data.get('position')
+        
+        if nik_original and req_data.get('password'):
+            user_to_update.set_password(req_data.get('password'))
+
+        # 2. Cek apakah peran ini butuh profil area
+        if user_to_update.role in ['mechanic', 'quality']:
+            # Jika user ini belum punya profil area, buatkan yang baru
+            if not user_to_update.area:
+                from models.user import StaffArea # Import di sini untuk menghindari circular import
+                user_to_update.area = StaffArea(user_id=user_to_update.id)
             
-            new_user = User(
-                nik=nik,
-                name=req_data.get('name'),
-                role=req_data.get('role'),
-                position=req_data.get('position'),
-            )
-            new_user.set_password(req_data.get('password'))
-            db.session.add(new_user)
+            # 3. Update data di profil area (termasuk sinkronisasi nik & name)
+            user_to_update.area.nik = user_to_update.nik
+            user_to_update.area.name = user_to_update.name
+            user_to_update.area.assigned_customer = req_data.get('assigned_customer')
+            user_to_update.area.assigned_shop_area = req_data.get('assigned_shop_area')
+        else:
+            # Jika rolenya diubah menjadi BUKAN mekanik/quality, hapus profil area yang mungkin ada
+            if user_to_update.area:
+                db.session.delete(user_to_update.area)
+        
+        # --- AKHIR PERUBAHAN LOGIKA PENYIMPANAN ---
         
         db.session.commit()
         return jsonify({'success': True})
@@ -769,6 +794,7 @@ def delete_mws(part_id):
         print(f"Error deleting MWS: {e}")
         return jsonify({'success': False, 'error': 'Database error'}), 500
 
+
 @app.route('/mws/<part_id>')
 @login_required
 @limiter.limit("60 per minute")
@@ -780,19 +806,28 @@ def mws_detail(part_id):
             flash('MWS tidak ditemukan!', 'error')
             return redirect(url_for('dashboard'))
         
+        # --- PERUBAHAN KONTROL AKSES DIMULAI ---
+        if current_user.role == 'mechanic':
+            # Ambil profil area mekanik
+            profile = current_user.area
+            
+            # Jika mekanik tidak punya profil atau profilnya tidak cocok dengan MWS
+            if not profile or (mws_part.customer != profile.assigned_customer or mws_part.shopArea != profile.assigned_shop_area):
+                flash('Anda tidak memiliki izin untuk mengakses MWS ini karena tidak sesuai dengan customer atau area Anda.', 'warning')
+                return redirect(url_for('mechanic_dashboard'))
+        # --- AKHIR PERUBAHAN KONTROL AKSES ---
+
         users = get_users_from_db()
         mechanics = User.query.filter_by(role='mechanic').all()
         mechanics_data = {m.nik: m.to_dict() for m in mechanics}
 
         part_dict = mws_part.to_dict()
         
-        # --- PENAMBAHAN LOGIKA UNTUK CEK STATUS MEKANIK ---
         is_busy_based_on_tech = False
         is_busy_based_on_insp = False
         if current_user.is_authenticated and current_user.role == 'mechanic':
             is_busy_based_on_tech = is_mechanic_on_active_step(current_user.nik, condition='TECH')
             is_busy_based_on_insp = is_mechanic_on_active_step(current_user.nik, condition='INSP')
-        # --- AKHIR PENAMBAHAN ---
 
         return render_template('maintenance_forms/mws_detail.html', 
                              part=part_dict, 
@@ -1370,11 +1405,19 @@ def start_timer():
         if not mws_part:
             return jsonify({'success': False, 'error': 'Part tidak ditemukan'}), 404        
 
-        # <<< PERUBAHAN DIMULAI >>>
+        ### --- LOGIKA BARU DIMULAI --- ###
+        # Jika MWS ini belum memiliki tanggal mulai, isi dengan tanggal hari ini.
+        # Ini menandakan dimulainya pekerjaan aktual pertama kali.
+        if not mws_part.startDate:
+            mws_part.startDate = datetime.now().date()
+            # Jika ada logika deadline yang bergantung pada startDate, panggil di sini.
+            if hasattr(mws_part, 'update_stripping_deadline'):
+                mws_part.update_stripping_deadline()
+        ### --- LOGIKA BARU SELESAI --- ###
+
         is_ready, error_response, status_code = check_mws_readiness(mws_part)
         if not is_ready:
             return error_response, status_code
-        # <<< PERUBAHAN SELESAI >>>
 
         step = MwsStep.query.filter_by(
             mws_part_id=mws_part.id,
@@ -1647,71 +1690,10 @@ def is_mechanic_on_active_step(nik, condition='TECH'):
         
     return active_step is not None
 
-@app.route('/mws/<part_id>/assign_mechanics', methods=['POST'])
-@require_role('admin', 'superadmin')
-@limiter.limit("20 per minute")
-def assign_mechanics_to_mws(part_id):
-    try:
-        mws_part = MwsPart.query.filter_by(part_id=part_id).first()
-        if not mws_part:
-            return jsonify({'success': False, 'error': 'MWS tidak ditemukan.'}), 404
-        data = request.get_json()
-        niks = data.get('mechanic_niks')
-        if not isinstance(niks, list):
-            return jsonify({'success': False, 'error': 'Data NIK tidak valid.'}), 400
-        mws_part.set_assigned_mechanics(niks)
-        db.session.commit()
-        return jsonify({'success': True, 'message': 'Mekanik berhasil ditugaskan.'})
-    except Exception as e:
-        db.session.rollback()
-        app.logger.error(f"Error assigning mechanics: {e}")
-        return jsonify({'success': False, 'error': 'Terjadi kesalahan pada server.'}), 500
 
 
-# @app.route('/step/add_mechanic', methods=['POST'])
-# @require_role('mechanic')
-# @limiter.limit("50 per minute")
-# def add_mechanic_to_step():
-#     try:
-#         data = request.get_json()
-#         part_id = data.get('partId')
-#         step_no = data.get('stepNo')
-#         mechanik_nik = current_user.nik
 
-#         mws_part = MwsPart.query.filter_by(part_id=part_id).first()
-#         if not mws_part:
-#             return jsonify({'success': False, 'error': 'MWS tidak ditemukan.'}), 404
 
-#         step = MwsStep.query.filter_by(mws_part_id=mws_part.id, no=step_no).first()
-#         if not step:
-#             return jsonify({'success': False, 'error': 'Langkah kerja tidak ditemukan.'}), 404
-            
-#         if mechanik_nik not in mws_part.get_assigned_mechanics():
-#             return jsonify({'success': False, 'error': 'Anda tidak ditugaskan untuk MWS ini.'}), 403
-
-#         # --- Validasi Terpusat (Logika tidak berubah, tetap di sini) ---
-        
-#         # KONDISI 1 (AKTIF): Mekanik tidak bisa Sign On jika belum Approve (TECH) di step lain.
-#         if is_mechanic_on_active_step(mechanik_nik, condition='TECH'):
-#             return jsonify({'success': False, 'error': 'Anda sudah Sign On di step lain yang masih aktif. Selesaikan (Approve by TECH) terlebih dahulu.'}), 409
-
-#         # # KONDISI 2 (NON-AKTIF): Mekanik tidak bisa Sign On jika belum Approved by INSP di step lain.
-#         # if is_mechanic_on_active_step(mechanik_nik, condition='INSP'):
-#         #     return jsonify({'success': False, 'error': 'Anda sudah Sign On di step lain yang belum selesai (Approved by INSP). Selesaikan tugas tersebut terlebih dahulu.'}), 409
-        
-#         step.add_mechanic(mechanik_nik)
-#         if step.status == 'pending':
-#             step.status = 'in_progress'
-#             update_mws_status(mws_part) 
-
-#         db.session.commit()
-#         return jsonify({'success': True, 'message': 'Anda berhasil Sign On ke langkah ini.'})
-
-#     except Exception as e:
-#         db.session.rollback()
-#         app.logger.error(f"Error adding mechanic to step: {e}")
-#         return jsonify({'success': False, 'error': 'Terjadi kesalahan pada server.'}), 500
-    
 @app.route('/step/add_mechanic', methods=['POST'])
 @require_role('mechanic')
 @limiter.limit("50 per minute")
@@ -1730,25 +1712,16 @@ def add_mechanic_to_step():
         if not step:
             return jsonify({'success': False, 'error': 'Langkah kerja tidak ditemukan.'}), 404
             
-        if mechanik_nik not in mws_part.get_assigned_mechanics():
-            return jsonify({'success': False, 'error': 'Anda tidak ditugaskan untuk MWS ini.'}), 403
+        profile = current_user.area
+        if not profile:
+            return jsonify({'success': False, 'error': 'Profil penugasan Anda tidak ditemukan.'}), 403
 
-        # --- LOGIKA STARTDATE DIMULAI DI SINI ---
-        # Jika 'startDate' pada MWS ini belum terisi, artinya ini adalah aksi "Sign On"
-        # pertama kali untuk MWS ini oleh mekanik manapun.
-        if not mws_part.startDate:
-            # Set 'startDate' dengan tanggal hari ini.
-            mws_part.startDate = datetime.now().date()
-            # (Opsional) Jika Anda memiliki logika terkait deadline, panggil di sini.
-            if hasattr(mws_part, 'update_stripping_deadline'):
-                mws_part.update_stripping_deadline()
-        # --- LOGIKA STARTDATE SELESAI ---
+        if mws_part.customer != profile.assigned_customer or mws_part.shopArea != profile.assigned_shop_area:
+            return jsonify({'success': False, 'error': 'Anda tidak memiliki akses untuk mengerjakan MWS dari customer atau area ini.'}), 403
 
-        # Validasi untuk memastikan mekanik tidak sedang aktif di step lain.
         if is_mechanic_on_active_step(mechanik_nik, condition='TECH'):
             return jsonify({'success': False, 'error': 'Anda sudah Sign On di step lain yang masih aktif. Selesaikan (Approve by TECH) terlebih dahulu.'}), 409
         
-        # Menambahkan mekanik ke langkah kerja dan mengubah status jika perlu.
         step.add_mechanic(mechanik_nik)
         if step.status == 'pending':
             step.status = 'in_progress'

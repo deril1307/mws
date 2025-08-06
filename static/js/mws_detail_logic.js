@@ -200,12 +200,6 @@ function initializeLiveTimers() {
 
 // --- NEW FUNCTIONS for Plan Edit/Save ---
 
-/**
- * Toggles the UI between view and edit mode for a plan field.
- * @param {number} stepNo The step number.
- * @param {('man'|'hours')} field The field to toggle ('man' or 'hours').
- * @param {boolean} isEditing True to switch to edit mode, false for view mode.
- */
 function togglePlanEdit(stepNo, field, isEditing) {
   const viewMode = document.getElementById(`plan-${field}-view-${stepNo}`);
   const editMode = document.getElementById(`plan-${field}-edit-${stepNo}`);
@@ -225,12 +219,6 @@ function togglePlanEdit(stepNo, field, isEditing) {
   }
 }
 
-/**
- * Saves a single plan field (man or hours) to the server.
- * @param {string} partId The ID of the MWS part.
- * @param {number} stepNo The number of the step to update.
- * @param {('man'|'hours')} field The field to save.
- */
 async function savePlan(partId, stepNo, field) {
   const input = document.getElementById(`plan-${field}-input-${stepNo}`);
   const value = input.value;
@@ -270,33 +258,9 @@ async function savePlan(partId, stepNo, field) {
 document.addEventListener("DOMContentLoaded", function () {
   initializeLiveTimers();
   checkStrippingStatus();
-  setInterval(checkStrippingStatus, 5 * 60 * 1000); // Check every 5 minutes
+  setInterval(checkStrippingStatus, 5 * 60 * 1000);
 
-  // --- Event Listeners for Assign Mechanic Modal ---
-  if (currentUserRole === "admin" || currentUserRole === "superadmin") {
-    const searchInput = document.getElementById("mechanic-search-input");
-    const checkAllBox = document.getElementById("check-all-mechanics");
-    const individualCheckboxes = document.querySelectorAll(".individual-mechanic-checkbox");
-
-    if (searchInput) {
-      searchInput.addEventListener("input", filterMechanicList);
-    }
-
-    if (checkAllBox) {
-      checkAllBox.addEventListener("click", (e) => {
-        document.querySelectorAll('.mechanic-item:not([style*="display: none"]) .individual-mechanic-checkbox').forEach((checkbox) => {
-          checkbox.checked = e.target.checked;
-        });
-        updateCheckAllState();
-      });
-    }
-
-    if (individualCheckboxes.length > 0) {
-      individualCheckboxes.forEach((checkbox) => {
-        checkbox.addEventListener("click", updateCheckAllState);
-      });
-    }
-  }
+  // --- Event Listener untuk Modal "Assign Mechanic" sudah dihapus ---
 });
 
 // --- Role-Specific Functions ---
@@ -556,93 +520,8 @@ if (currentUserRole !== "customer") {
 }
 
 // --- Admin/Superadmin Functions ---
+// SEMUA FUNGSI UNTUK MODAL "ASSIGN MECHANIC" SUDAH DIHAPUS DARI SINI
 if (currentUserRole === "admin" || currentUserRole === "superadmin") {
-  function updateCheckAllState() {
-    const checkAllBox = document.getElementById("check-all-mechanics");
-    const visibleCheckboxes = document.querySelectorAll('.mechanic-item:not([style*="display: none"]) .individual-mechanic-checkbox');
-
-    if (visibleCheckboxes.length === 0) {
-      checkAllBox.checked = false;
-      checkAllBox.indeterminate = false;
-      return;
-    }
-
-    const totalVisible = visibleCheckboxes.length;
-    const totalChecked = Array.from(visibleCheckboxes).filter((cb) => cb.checked).length;
-
-    if (totalChecked === totalVisible) {
-      checkAllBox.checked = true;
-      checkAllBox.indeterminate = false;
-    } else if (totalChecked > 0) {
-      checkAllBox.checked = false;
-      checkAllBox.indeterminate = true;
-    } else {
-      checkAllBox.checked = false;
-      checkAllBox.indeterminate = false;
-    }
-  }
-
-  function filterMechanicList() {
-    const searchTerm = document.getElementById("mechanic-search-input").value.toLowerCase();
-    document.querySelectorAll(".mechanic-item").forEach((item) => {
-      const name = item.dataset.name;
-      const nik = item.dataset.nik;
-      if (name.includes(searchTerm) || nik.includes(searchTerm)) {
-        item.style.display = "flex";
-      } else {
-        item.style.display = "none";
-      }
-    });
-    updateCheckAllState();
-  }
-
-  function openAssignModal() {
-    const allCheckboxes = document.querySelectorAll(".individual-mechanic-checkbox");
-    allCheckboxes.forEach((checkbox) => {
-      checkbox.checked = assignedMechanics.includes(checkbox.value);
-    });
-    const modal = document.getElementById("assign-mechanic-modal");
-    modal.classList.remove("hidden");
-    modal.classList.add("flex");
-    updateCheckAllState();
-  }
-
-  function closeAssignModal() {
-    const modal = document.getElementById("assign-mechanic-modal");
-    modal.classList.add("hidden");
-    modal.classList.remove("flex");
-    document.getElementById("mechanic-search-input").value = "";
-    filterMechanicList();
-  }
-
-  function saveMechanicAssignments() {
-    const checkedBoxes = document.querySelectorAll(".individual-mechanic-checkbox:checked");
-    const selectedNiks = Array.from(checkedBoxes).map((checkbox) => checkbox.value);
-    const selectedNames = Array.from(checkedBoxes).map((checkbox) => {
-      return document.querySelector(`label[for="${checkbox.id}"]`).textContent.trim();
-    });
-
-    let confirmationMessage = selectedNames.length > 0 ? "Anda akan menugaskan mekanik berikut ke MWS ini:\n\n- " + selectedNames.join("\n- ") : "Anda akan MENGHAPUS SEMUA mekanik yang ditugaskan dari MWS ini.";
-    confirmationMessage += "\n\nApakah Anda yakin ingin melanjutkan?";
-
-    if (!confirm(confirmationMessage)) return;
-
-    fetch(`/mws/${partId}/assign_mechanics`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
-      body: JSON.stringify({ mechanic_niks: selectedNiks }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) {
-          showNotificationAndReload(data.message, "success");
-        } else {
-          showNotification("Error: " + data.error, "error");
-        }
-      })
-      .catch((err) => showNotification("Terjadi kesalahan jaringan.", "error"));
-  }
-
   function removeMechanicFromStep(partId, stepNo, nikToRemove) {
     if (!confirm(`Apakah Anda yakin ingin menghapus mekanik dengan NIK ${nikToRemove} dari langkah ini?`)) return;
     const button = event.currentTarget;

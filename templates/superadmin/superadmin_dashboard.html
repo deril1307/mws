@@ -1,38 +1,16 @@
 {% extends "shared/base.html" %} {% block title %}Super Admin Dashboard - Sistem Aircraft Maintenance{% endblock %} {% from "monitoring/tracking_list.html" import render_tracking_list %} {% block content %}
 
 <style>
-  /* [Tidak ada perubahan pada CSS custom Anda] */
+  /* CSS custom untuk superadmin yang tidak berhubungan dengan notifikasi */
   .is-urgent {
     border: 2px solid #ef4444;
     box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
   }
-  #notification-dropdown {
-    transition: opacity 0.2s ease-out, transform 0.2s ease-out;
-  }
-  .notification-item:not(:last-child) {
-    border-bottom: 1px solid #e5e7eb;
-  }
-  .notification-item.unread {
-    background-color: #fef2f2;
-  }
-  .notification-item.unread:hover {
-    background-color: #fee2e2;
-  }
-  #notification-list::-webkit-scrollbar {
-    width: 6px;
-  }
-  #notification-list::-webkit-scrollbar-track {
-    background: #f1f5f9;
-  }
-  #notification-list::-webkit-scrollbar-thumb {
-    background: #94a3b8;
-    border-radius: 3px;
-  }
-  #notification-list::-webkit-scrollbar-thumb:hover {
-    background: #64748b;
-  }
 
-  /* CSS BARU UNTUK MODAL LOGOUT */
+  /* ===== CSS NOTIFIKASI DIHAPUS DARI SINI ===== */
+  /* CSS akan diambil dari file notifikasi.html yang di-include */
+
+  /* CSS UNTUK MODAL LOGOUT */
   @keyframes fadeIn {
     from {
       opacity: 0;
@@ -84,47 +62,7 @@
         </div>
 
         <div class="flex items-center space-x-2 sm:space-x-4">
-          <div class="relative">
-            <button id="notification-button" class="relative text-gray-500 hover:text-gray-700 focus:outline-none">
-              <i class="fas fa-bell text-xl"></i>
-              {% if urgent_requests|length > 0 %}
-              <span class="absolute -top-1 -right-1 flex h-5 w-5">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-5 w-5 bg-red-500 text-white text-xs items-center justify-center">{{ urgent_requests|length }}</span>
-              </span>
-              {% endif %}
-            </button>
-            <div id="notification-dropdown" class="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-md shadow-lg z-50 hidden ring-1 ring-black ring-opacity-5" style="transform-origin: top right">
-              <div class="px-4 py-3 border-b">
-                <p class="text-sm font-semibold text-gray-900">Notifikasi Permintaan Urgensi</p>
-              </div>
-              <div id="notification-list" class="max-h-96 overflow-y-auto">
-                {% if urgent_requests %} {% for req in urgent_requests %}
-                <a href="{{ url_for('mws_detail', part_id=req.part_id) }}" class="notification-item block px-4 py-3 hover:bg-gray-100 unread">
-                  <div class="flex items-start">
-                    <div class="flex-shrink-0 h-10 w-10 rounded-full bg-red-100 flex items-center justify-center mr-3">
-                      <i class="fas fa-exclamation-triangle text-red-500"></i>
-                    </div>
-                    <div class="flex-1">
-                      <p class="text-sm text-gray-800">Permintaan urgensi untuk <strong>{{ req.partNumber }}</strong></p>
-                      <p class="text-xs text-gray-500 mt-1">Oleh: {% if req.assignedTo and req.assignedTo in users %}{{ users[req.assignedTo].name }}{% else %}N/A{% endif %}</p>
-                      <p class="text-xs text-gray-400 mt-1">{{ req.targetDate }}</p>
-                    </div>
-                  </div>
-                </a>
-                {% endfor %} {% else %}
-                <div class="text-center py-10 px-4">
-                  <i class="fas fa-check-circle text-gray-300 text-4xl mb-2"></i>
-                  <p class="text-sm text-gray-500">Tidak ada notifikasi baru.</p>
-                </div>
-                {% endif %}
-              </div>
-              <div class="border-t">
-                <a href="#" class="block text-center px-4 py-2 text-sm text-red-600 hover:bg-gray-50">Lihat Semua</a>
-              </div>
-            </div>
-          </div>
-
+          {# Memanggil komponen notifikasi yang sama dengan admin dashboard #} {% include 'notifikasi/notifikasi.html' %}
           <div class="relative">
             <button id="user-menu-button" class="flex items-center space-x-2 px-2 py-2 sm:px-3 sm:py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500">
               <div class="flex flex-col items-start">
@@ -183,14 +121,12 @@
         </div>
       </div>
     </div>
-    {% include 'monitoring/status_chart.html' with context %}
-    {{ render_tracking_list(parts, users, user) }}
+    {% include 'monitoring/status_chart.html' with context %} {{ render_tracking_list(parts, users, user) }}
   </div>
 </div>
 
 <div id="logout-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
   <div id="logout-modal-overlay" class="absolute inset-0 bg-black bg-opacity-60 modal-overlay"></div>
-
   <div id="logout-modal-panel" class="relative bg-white rounded-lg shadow-xl w-full max-w-md m-4 modal-panel">
     <div class="flex items-start justify-between p-5 border-b rounded-t">
       <h3 class="text-xl font-semibold text-gray-900">Konfirmasi Logout</h3>
@@ -214,62 +150,27 @@
   </div>
 </div>
 
+<script src="{{ url_for('static', filename='js/notifikasi_logic.js') }}"></script>
+
 <script>
   document.addEventListener("DOMContentLoaded", function () {
-    function setupDropdown(buttonId, menuId, chevronId = null) {
-      const button = document.getElementById(buttonId);
-      const menu = document.getElementById(menuId);
-      const chevron = chevronId ? document.getElementById(chevronId) : null;
-      if (!button || !menu) return;
+    // 2. FUNGSI setupDropdown dan closeAllDropdowns DIHAPUS dari sini karena sudah dimuat dari file eksternal
 
-      button.addEventListener("click", (event) => {
-        event.stopPropagation();
-        const isHidden = menu.classList.toggle("hidden");
-        if (!isHidden) {
-          closeAllDropdowns(menuId);
-        }
-        if (chevron) {
-          chevron.classList.toggle("rotate-180", !isHidden);
-        }
-        menu.style.transform = isHidden ? "scale(0.95)" : "scale(1)";
-        menu.style.opacity = isHidden ? "0" : "1";
-      });
-    }
-
-    function closeAllDropdowns(excludeMenuId = null) {
-      const allDropdowns = [
-        { menu: document.getElementById("user-menu"), chevron: document.getElementById("user-menu-chevron") },
-        { menu: document.getElementById("notification-dropdown"), chevron: null },
-      ];
-      allDropdowns.forEach((item) => {
-        if (item.menu && item.menu.id !== excludeMenuId && !item.menu.classList.contains("hidden")) {
-          item.menu.classList.add("hidden");
-          item.menu.style.transform = "scale(0.95)";
-          item.menu.style.opacity = "0";
-          if (item.chevron) {
-            item.chevron.classList.remove("rotate-180");
-          }
-        }
-      });
-    }
-
+    // 3. Inisialisasi dropdown tetap dilakukan di sini
+    // Fungsi-fungsi ini sekarang tersedia secara global dari file notifikasi_logic.js
     setupDropdown("user-menu-button", "user-menu", "user-menu-chevron");
     setupDropdown("notification-button", "notification-dropdown");
 
     document.addEventListener("click", (event) => {
       const userMenuButton = document.getElementById("user-menu-button");
       const notificationButton = document.getElementById("notification-button");
-      const userMenu = document.getElementById("user-menu");
-      const notificationDropdown = document.getElementById("notification-dropdown");
-
-      const isClickInside = (element) => element && element.contains(event.target);
-
-      if (!isClickInside(userMenuButton) && !isClickInside(userMenu) && !isClickInside(notificationButton) && !isClickInside(notificationDropdown)) {
+      // Cek klik di luar kedua tombol dropdown untuk menutupnya
+      if (userMenuButton && notificationButton && !userMenuButton.contains(event.target) && !notificationButton.contains(event.target)) {
         closeAllDropdowns();
       }
     });
 
-    // --- PERUBAHAN 4: JavaScript BARU untuk Modal Logout ---
+    // --- Logika untuk Modal Logout (Tidak ada perubahan) ---
     const logoutButton = document.getElementById("logout-button");
     const logoutModal = document.getElementById("logout-modal");
     const logoutModalOverlay = document.getElementById("logout-modal-overlay");
@@ -278,7 +179,7 @@
     const closeButton = document.getElementById("logout-modal-close-button");
 
     function showLogoutModal(e) {
-      e.preventDefault(); // Mencegah link berpindah halaman
+      e.preventDefault();
       logoutModal.classList.remove("hidden");
     }
 
@@ -310,30 +211,20 @@
       requestAnimationFrame(() => {
         fadeOutDiv.style.opacity = "1";
       });
-
       setTimeout(() => {
         window.location.href = logoutButton.href;
       }, 300);
     }
 
-    if (logoutButton) {
-      logoutButton.addEventListener("click", showLogoutModal);
-    }
-    if (cancelButton) {
-      cancelButton.addEventListener("click", hideLogoutModal);
-    }
-    if (closeButton) {
-      closeButton.addEventListener("click", hideLogoutModal);
-    }
-    if (logoutModalOverlay) {
-      logoutModalOverlay.addEventListener("click", hideLogoutModal);
-    }
-    if (confirmButton) {
+    if (logoutButton) logoutButton.addEventListener("click", showLogoutModal);
+    if (cancelButton) cancelButton.addEventListener("click", hideLogoutModal);
+    if (closeButton) closeButton.addEventListener("click", hideLogoutModal);
+    if (logoutModalOverlay) logoutModalOverlay.addEventListener("click", hideLogoutModal);
+    if (confirmButton)
       confirmButton.addEventListener("click", () => {
         hideLogoutModal();
         performLogout();
       });
-    }
   });
 </script>
 {% endblock %}
