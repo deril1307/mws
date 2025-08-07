@@ -71,7 +71,7 @@
         <input
           type="text"
           id="search-input"
-          placeholder="Cari NIK/Nama"
+          placeholder="Cari NIK/Nama/Customer..."
           class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
         />
       </div>
@@ -86,6 +86,7 @@
               <th scope="col" class="px-6 py-3 font-medium">NIK</th>
               <th scope="col" class="px-6 py-3 font-medium">Nama</th>
               <th scope="col" class="px-6 py-3 font-medium">Role</th>
+              <th scope="col" class="px-6 py-3 font-medium">Customer dan Area</th>
               <th scope="col" class="px-6 py-3 font-medium text-right">Aksi</th>
             </tr>
           </thead>
@@ -112,7 +113,25 @@
                 {% set role_colors = { 'admin': 'bg-red-100 text-red-800', 'mechanic': 'bg-green-100 text-green-800', 'quality1': 'bg-yellow-100 text-yellow-800', 'quality2': 'bg-purple-100 text-purple-800' } %}
                 <span class="px-3 py-1 text-xs font-semibold leading-tight rounded-full {{ role_colors.get(user_data.role, 'bg-gray-100 text-gray-800') }}"> {{ user_data.role | capitalize }} </span>
               </td>
-              <td class="px-6 py-4 text-right whitespace-nowrap space-x-4">
+              <td class="px-6 py-4 assignment-cell">
+                {% if user_data.role == 'mechanic' and (user_data.assigned_customers or user_data.assigned_shop_area) %}
+                <div class="text-xs">
+                  <div class="font-bold text-gray-600">Customers:</div>
+                  <div class="flex flex-wrap gap-1 mt-1">
+                    {% for customer in user_data.assigned_customers %}
+                    <span class="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full font-medium">{{ customer }}</span>
+                    {% else %}
+                    <span class="text-gray-400 italic">N/A</span>
+                    {% endfor %}
+                  </div>
+                  <div class="font-bold text-gray-600 mt-2">Area:</div>
+                  <span class="font-semibold text-gray-800">{{ user_data.assigned_shop_area or '-' }}</span>
+                </div>
+                {% else %}
+                <span class="text-gray-400">-</span>
+                {% endif %}
+              </td>
+              <td class="px-6 py-4 text-right whitespace-nowrap space-x-2">
                 <button onclick="openUserModal('{{ nik }}')" class="font-medium text-indigo-600 hover:text-indigo-900 transition-colors">Edit</button>
                 <button onclick="openDeleteModal('{{ nik }}', '{{ user_data.name }}')" class="font-medium text-red-600 hover:text-red-900 transition-colors">Hapus</button>
               </td>
@@ -185,21 +204,16 @@
                     {% endif %}
                   </select>
                 </div>
-
                 <div id="mechanic-fields" class="space-y-4 hidden pt-4 border-t border-gray-200">
-                  <p class="text-sm font-medium text-gray-800">Penugasan Area</p>
+                  <p class="text-sm font-medium text-gray-800">Penugasan Customer dan Area</p>
                   <div>
-                    <label for="assigned_customer" class="block text-sm font-medium text-gray-700">Assigned Customer (Nama Customer harus Sesuai dengan Database)</label>
-                    <input
-                      type="text"
-                      name="assigned_customer"
-                      id="assigned_customer"
-                      placeholder="Contoh: ROKAF"
-                      class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    />
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Pilih Customer</label>
+                    <div id="customer-checkbox-container" class="max-h-40 overflow-y-auto p-3 border border-gray-300 rounded-md space-y-2 bg-gray-50">
+                      <p class="text-gray-500 text-sm">Memuat daftar customer...</p>
+                    </div>
                   </div>
                   <div>
-                    <label for="assigned_shop_area" class="block text-sm font-medium text-gray-700">Assigned Shop Area (Nama Area harus Sesuai dengan Database)</label>
+                    <label for="assigned_shop_area" class="block text-sm font-medium text-gray-700">Shop Area </label>
                     <input
                       type="text"
                       name="assigned_shop_area"

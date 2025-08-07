@@ -17,7 +17,9 @@ document.addEventListener("DOMContentLoaded", function () {
   // Ambil elemen untuk field mekanik
   const roleSelect = document.getElementById("role");
   const mechanicFields = document.getElementById("mechanic-fields");
-  const assignedCustomerInput = document.getElementById("assigned_customer");
+  // <<< PERUBAHAN DIMULAI >>>
+  const customerCheckboxContainer = document.getElementById("customer-checkbox-container");
+  // <<< PERUBAHAN SELESAI >>>
   const assignedShopAreaInput = document.getElementById("assigned_shop_area");
 
   // Elemen-elemen modal untuk konfirmasi hapus
@@ -55,8 +57,52 @@ document.addEventListener("DOMContentLoaded", function () {
       mechanicFields.classList.remove("hidden");
     } else {
       mechanicFields.classList.add("hidden");
-      assignedCustomerInput.value = "";
+      // <<< PERUBAHAN DIMULAI >>>
+      // Kosongkan container checkbox
+      customerCheckboxContainer.innerHTML = '<p class="text-gray-500 text-sm">Memuat daftar customer...</p>';
+      // <<< PERUBAHAN SELESAI >>>
       assignedShopAreaInput.value = "";
+    }
+  }
+
+  // <<< FUNGSI BARU UNTUK MENGAMBIL DAN MENAMPILKAN CUSTOMER >>>
+  async function populateCustomerCheckboxes(assignedCustomers = []) {
+    try {
+      const response = await fetch("/get_all_customers");
+      if (!response.ok) throw new Error("Gagal mengambil daftar customer.");
+      const data = await response.json();
+
+      customerCheckboxContainer.innerHTML = ""; // Bersihkan container
+
+      if (data.customers && data.customers.length > 0) {
+        data.customers.forEach((customerName) => {
+          const isChecked = assignedCustomers.includes(customerName);
+          const checkboxWrapper = document.createElement("div");
+          checkboxWrapper.className = "flex items-center";
+
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.id = `customer-${customerName.replace(/\s+/g, "-")}`;
+          checkbox.name = "assigned_customers";
+          checkbox.value = customerName;
+          checkbox.checked = isChecked;
+          checkbox.className = "h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded";
+
+          const label = document.createElement("label");
+          label.htmlFor = checkbox.id;
+          label.textContent = customerName;
+          label.className = "ml-3 block text-sm font-medium text-gray-700";
+
+          checkboxWrapper.appendChild(checkbox);
+          checkboxWrapper.appendChild(label);
+          customerCheckboxContainer.appendChild(checkboxWrapper);
+        });
+      } else {
+        customerCheckboxContainer.innerHTML = '<p class="text-gray-500 text-sm">Tidak ada data customer ditemukan.</p>';
+      }
+    } catch (error) {
+      console.error("Error populating customers:", error);
+      customerCheckboxContainer.innerHTML = `<p class="text-red-500 text-sm">Error: ${error.message}</p>`;
     }
   }
 
@@ -66,18 +112,15 @@ document.addEventListener("DOMContentLoaded", function () {
    */
   window.openUserModal = async (nik = null) => {
     userForm.reset();
-    // PERUBAHAN: Mengaktifkan kembali input NIK setiap kali modal dibuka
     nikInput.readOnly = false;
     nikInput.classList.remove("bg-gray-100");
     mechanicFields.classList.add("hidden");
+    // Kosongkan container saat modal dibuka
+    customerCheckboxContainer.innerHTML = '<p class="text-gray-500 text-sm">Memuat daftar customer...</p>';
 
     if (nik) {
-      // Mode Edit
       modalTitle.textContent = "Edit Pengguna";
-      // PERUBAHAN: NIK sekarang bisa diedit, tidak lagi read-only.
-      // nikInput.readOnly = true; <-- BARIS INI DIHAPUS
-      // nikInput.classList.add("bg-gray-100"); <-- BARIS INI DIHAPUS
-      nikOriginalInput.value = nik; // Simpan NIK asli untuk referensi di backend
+      nikOriginalInput.value = nik;
       passwordInput.placeholder = "Kosongkan jika tidak diubah";
       passwordHelp.textContent = "Kosongkan jika tidak ingin mengubah password.";
       passwordInput.required = false;
@@ -98,9 +141,10 @@ document.addEventListener("DOMContentLoaded", function () {
         document.getElementById("name").value = data.name;
         roleSelect.value = data.role;
 
-        // Isi data area jika user adalah mekanik
+        // Panggil fungsi untuk mengisi checkbox dengan data customer yang sudah ditugaskan
+        await populateCustomerCheckboxes(data.assigned_customers || []);
+
         if (data.role === "mechanic") {
-          assignedCustomerInput.value = data.assigned_customer || "";
           assignedShopAreaInput.value = data.assigned_shop_area || "";
         }
       } catch (error) {
@@ -115,6 +159,8 @@ document.addEventListener("DOMContentLoaded", function () {
       passwordInput.placeholder = "Password wajib diisi";
       passwordHelp.textContent = "Password wajib diisi untuk pengguna baru.";
       passwordInput.required = true;
+      // Panggil fungsi untuk mengisi checkbox tanpa ada yang tercentang
+      await populateCustomerCheckboxes([]);
     }
 
     toggleMechanicFields();
@@ -163,16 +209,22 @@ document.addEventListener("DOMContentLoaded", function () {
     const formData = new FormData(userForm);
     const data = Object.fromEntries(formData.entries());
 
+    // <<< PERUBAHAN PENGUMPULAN DATA CHECKBOX >>>
+    // FormData.entries() tidak bisa handle multiple checkbox dengan nama sama,
+    // jadi kita ambil manual.
+    const selectedCustomers = Array.from(customerCheckboxContainer.querySelectorAll('input[name="assigned_customers"]:checked')).map((cb) => cb.value);
+    data.assigned_customers = selectedCustomers;
+    // <<< AKHIR PERUBAHAN >>>
+
     if (isEditMode && data.password === "") {
       delete data.password;
     }
 
     if (data.role !== "mechanic") {
-      delete data.assigned_customer;
+      delete data.assigned_customers;
       delete data.assigned_shop_area;
     }
 
-    // PERUBAHAN: Logika penanganan error
     try {
       const response = await fetch("/users", {
         method: "POST",
@@ -182,8 +234,6 @@ document.addEventListener("DOMContentLoaded", function () {
         },
         body: JSON.stringify(data),
       });
-
-      // Selalu coba parse JSON, baik untuk sukses maupun error
       const result = await response.json();
 
       if (response.ok && result.success) {
@@ -191,8 +241,6 @@ document.addEventListener("DOMContentLoaded", function () {
         closeUserModal();
         location.reload();
       } else {
-        // Jika ada error dari server (misal: NIK duplikat)
-        // Tampilkan pesan error dari server, atau pesan default jika tidak ada.
         alert("Error: " + (result.error || "Gagal menyimpan data. Silakan cek kembali input Anda."));
       }
     } catch (error) {

@@ -211,7 +211,7 @@
                   <ul class="text-xs space-y-1">
                     {% for nik in step_mechanics %}
                     <li class="flex items-center justify-between bg-gray-200 px-2 py-1 rounded">
-                      <span>{{ users.get(nik, {'name': 'Unknown'}).name }} ({{ nik }})</span>
+                      <span>{{ users.get(nik, {'name': 'Unknown'}).name }} - ({{ nik }})</span>
                       {% if user.role in ['admin', 'superadmin'] %}
                       <button onclick="removeMechanicFromStep('{{ part_id }}', {{ step.no }}, '{{ nik }}')" class="ml-2 text-red-500 hover:text-red-700 font-bold text-xs" title="Hapus Mekanik dari Step Ini">&times;</button>
                       {% endif %}

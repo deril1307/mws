@@ -1,9 +1,3 @@
-/*
-File: static/js/notifikasi/notifikasi_logic.js
-Deskripsi: Berisi logika JavaScript untuk menangani semua komponen dropdown di aplikasi,
-           termasuk menu user dan notifikasi.
-*/
-
 document.addEventListener("DOMContentLoaded", () => {
   /**
    * Mengatur fungsionalitas buka/tutup untuk sebuah dropdown.

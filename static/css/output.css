@@ -2015,8 +2015,8 @@ select {
   height: 100%;
 }
 
-.h-0 {
-  height: 0px;
+.max-h-40 {
+  max-height: 10rem;
 }
 
 .max-h-56 {
@@ -3242,6 +3242,11 @@ select {
 .text-indigo-600 {
   --tw-text-opacity: 1;
   color: rgb(79 70 229 / var(--tw-text-opacity, 1));
+}
+
+.text-indigo-800 {
+  --tw-text-opacity: 1;
+  color: rgb(55 48 163 / var(--tw-text-opacity, 1));
 }
 
 .text-orange-600 {

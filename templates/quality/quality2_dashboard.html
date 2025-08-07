@@ -1,7 +1,7 @@
 {% extends "shared/base.html" %} {% block title %}Quality CUDR - Sistem Aircraft Maintenance{% endblock %} {% from "monitoring/tracking_list.html" import render_tracking_list %} {% block content %}
 
 <style>
-  /* CSS BARU UNTUK MODAL LOGOUT */
+  /* CSS untuk animasi modal logout */
   @keyframes fadeIn {
     from {
       opacity: 0;
@@ -52,24 +52,27 @@
           </div>
         </div>
 
-        <div class="relative">
-          <button id="user-menu-button" class="flex items-center space-x-2 px-2 py-2 sm:px-3 sm:py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            <div class="flex flex-col items-start">
-              <span class="font-medium text-sm text-gray-800">{{ user.name }}</span>
-              <span class="text-xs text-gray-500 hidden sm:inline">{{ user.position }}</span>
+        <div class="flex items-center space-x-4">
+          {% include 'notifikasi/notifikasi.html' with context %}
+
+          <div class="relative">
+            <button id="user-menu-button" class="flex items-center space-x-2 px-2 py-2 sm:px-3 sm:py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <div class="flex flex-col items-start">
+                <span class="font-medium text-sm text-gray-800">{{ user.name }}</span>
+                <span class="text-xs text-gray-500 hidden sm:inline">{{ user.position }}</span>
+              </div>
+              <i id="user-menu-chevron" class="fas fa-chevron-down text-xs text-gray-600 transition-transform duration-200"></i>
+            </button>
+            <div id="user-menu" class="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg py-1 z-50 hidden ring-1 ring-black ring-opacity-5" style="transition: opacity 0.2s ease-out, transform 0.2s ease-out">
+              <div class="px-4 py-3 border-b">
+                <p class="text-sm font-semibold text-gray-900">{{ user.name }}</p>
+                <p class="text-sm text-gray-500 truncate">{{ user.position }}</p>
+              </div>
+              <a href="{{ url_for('view_profile') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profil</a>
+              <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Pengaturan</a>
+              <div class="border-t"></div>
+              <a href="{{ url_for('logout') }}" id="logout-button" class="block w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-50">Logout</a>
             </div>
-            <i id="user-menu-chevron" class="fas fa-chevron-down text-xs text-gray-600 transition-transform duration-200"></i>
-          </button>
-          <div id="user-menu" class="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg py-1 z-50 hidden ring-1 ring-black ring-opacity-5" style="transition: opacity 0.2s ease-out, transform 0.2s ease-out">
-            <div class="px-4 py-3 border-b">
-              <p class="text-sm font-semibold text-gray-900">{{ user.name }}</p>
-              <p class="text-sm text-gray-500 truncate">{{ user.position }}</p>
-            </div>
-            <a href="{{ url_for('view_profile') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profil</a>
-            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Pengaturan</a>
-            <div class="border-t"></div>
-            <!-- PERUBAHAN 1: Menghapus onclick dan menambahkan ID -->
-            <a href="{{ url_for('logout') }}" id="logout-button" class="block w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-50">Logout</a>
           </div>
         </div>
       </div>
@@ -100,12 +103,8 @@
   </div>
 </div>
 
-<!-- PERUBAHAN 2: Menambahkan struktur HTML untuk modal logout -->
 <div id="logout-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
-  <!-- Latar belakang gelap -->
   <div id="logout-modal-overlay" class="absolute inset-0 bg-black bg-opacity-60 modal-overlay"></div>
-
-  <!-- Panel Modal -->
   <div id="logout-modal-panel" class="relative bg-white rounded-lg shadow-xl w-full max-w-md m-4 modal-panel">
     <div class="flex items-start justify-between p-5 border-b rounded-t">
       <h3 class="text-xl font-semibold text-gray-900">Konfirmasi Logout</h3>
@@ -129,39 +128,11 @@
   </div>
 </div>
 
+<script src="{{ url_for('static', filename='js/notifikasi_logic.js') }}" defer></script>
+
 <script>
-  // PERUBAHAN 3: Menghapus fungsi confirmLogout() yang lama
-
   document.addEventListener("DOMContentLoaded", function () {
-    const userMenuButton = document.getElementById("user-menu-button");
-    const userMenu = document.getElementById("user-menu");
-    const userMenuChevron = document.getElementById("user-menu-chevron");
-
-    if (userMenuButton && userMenu) {
-      userMenuButton.addEventListener("click", function (event) {
-        event.stopPropagation();
-        const isHidden = userMenu.classList.toggle("hidden");
-
-        if (userMenuChevron) {
-          userMenuChevron.classList.toggle("rotate-180", !isHidden);
-        }
-        userMenu.style.transform = isHidden ? "scale(0.95)" : "scale(1)";
-        userMenu.style.opacity = isHidden ? "0" : "1";
-      });
-    }
-
-    window.addEventListener("click", function (event) {
-      if (userMenu && !userMenu.classList.contains("hidden") && userMenuButton && !userMenuButton.contains(event.target)) {
-        userMenu.classList.add("hidden");
-        if (userMenuChevron) {
-          userMenuChevron.classList.remove("rotate-180");
-        }
-        userMenu.style.transform = "scale(0.95)";
-        userMenu.style.opacity = "0";
-      }
-    });
-
-    // --- PERUBAHAN 4: JavaScript BARU untuk Modal Logout ---
+    // --- Logika untuk Modal Logout ---
     const logoutButton = document.getElementById("logout-button");
     const logoutModal = document.getElementById("logout-modal");
     const logoutModalOverlay = document.getElementById("logout-modal-overlay");
@@ -170,7 +141,7 @@
     const closeButton = document.getElementById("logout-modal-close-button");
 
     function showLogoutModal(e) {
-      e.preventDefault(); // Mencegah link berpindah halaman
+      e.preventDefault();
       logoutModal.classList.remove("hidden");
     }
 
@@ -202,23 +173,21 @@
       requestAnimationFrame(() => {
         fadeOutDiv.style.opacity = "1";
       });
-
       setTimeout(() => {
         window.location.href = logoutButton.href;
       }, 300);
     }
 
-    if (logoutButton) {
-      logoutButton.addEventListener("click", showLogoutModal);
-    }
-    if (cancelButton) {
-      cancelButton.addEventListener("click", hideLogoutModal);
-    }
-    if (closeButton) {
-      closeButton.addEventListener("click", hideLogoutModal);
-    }
+    if (logoutButton) logoutButton.addEventListener("click", showLogoutModal);
+    if (cancelButton) cancelButton.addEventListener("click", hideLogoutModal);
+    if (closeButton) closeButton.addEventListener("click", hideLogoutModal);
     if (logoutModalOverlay) {
-      logoutModalOverlay.addEventListener("click", hideLogoutModal);
+      logoutModalOverlay.addEventListener("click", (e) => {
+        // Hanya tutup jika klik pada overlay langsung, bukan pada panel modal
+        if (e.target === logoutModalOverlay) {
+          hideLogoutModal();
+        }
+      });
     }
     if (confirmButton) {
       confirmButton.addEventListener("click", () => {
@@ -228,4 +197,5 @@
     }
   });
 </script>
+
 {% endblock %}
