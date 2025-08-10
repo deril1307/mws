@@ -1,6 +1,7 @@
 {% extends "shared/base.html" %} {% block title %}Quality Inspector Dashboard - Sistem Aircraft Maintenance{% endblock %} {% from "monitoring/tracking_list.html" import render_tracking_list %} {% block content %}
 <style>
   /* CSS BARU UNTUK MODAL LOGOUT */
+
   @keyframes fadeIn {
     from {
       opacity: 0;
@@ -50,19 +51,19 @@
             <h1 class="text-lg sm:text-xl font-bold text-gray-800">Quality Inspector</h1>
           </div>
         </div>
-
         <div class="relative">
           <button id="user-menu-button" class="flex items-center space-x-2 px-2 py-2 sm:px-3 sm:py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-orange-500">
             <div class="flex flex-col items-start">
               <span class="font-medium text-sm text-gray-800">{{ user.name }}</span>
-              <span class="text-xs text-gray-500 hidden sm:inline">{{ user.position }}</span>
+              <span class="text-xs text-gray-500 hidden sm:inline">NIK : {{ user.nik }}</span>
+              <span class="text-xs text-gray-500 hidden sm:inline">Posisi : {{ user.position }}</span>
             </div>
             <i id="user-menu-chevron" class="fas fa-chevron-down text-xs text-gray-600 transition-transform duration-200"></i>
           </button>
           <div id="user-menu" class="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg py-1 z-50 hidden ring-1 ring-black ring-opacity-5" style="transition: opacity 0.2s ease-out, transform 0.2s ease-out">
             <div class="px-4 py-3 border-b">
-              <p class="text-sm font-semibold text-gray-900">{{ user.name }}</p>
-              <p class="text-sm text-gray-500 truncate">{{ user.position }}</p>
+              <span class="font-medium text-sm text-gray-800">{{ user.name }}</span>
+              <span class="text-xs text-gray-500 hidden sm:inline">{{ user.nik }}</span>
             </div>
             <a href="{{ url_for('view_profile') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profil</a>
             <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Pengaturan</a>
@@ -74,157 +75,134 @@
     </div>
   </div>
 
-  <div class="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-6">
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
-      <div class="bg-white p-4 sm:p-6 rounded-xl shadow-sm border flex items-center card-hover">
-        <div class="p-3 bg-orange-100 rounded-lg mr-4"><i class="fas fa-clipboard-check text-orange-600 text-xl"></i></div>
-        <div>
-          <h3 class="text-lg font-semibold text-gray-800">Inspeksi Langkah</h3>
-          <p class="text-sm text-gray-600">Periksa setiap detail</p>
+    <div class="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-6">
+      {% include 'monitoring/status_chart.html' with context %}
+      <div class="mt-6">{{ render_tracking_list(parts, users, user) }}</div>
+    </div>
+
+    <div id="logout-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+      <div id="logout-modal-overlay" class="absolute inset-0 bg-black bg-opacity-60 modal-overlay"></div>
+
+      <div id="logout-modal-panel" class="relative bg-white rounded-lg shadow-xl w-full max-w-md m-4 modal-panel">
+        <div class="flex items-start justify-between p-5 border-b rounded-t">
+          <h3 class="text-xl font-semibold text-gray-900">Konfirmasi Logout</h3>
+          <button type="button" id="logout-modal-close-button" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
+            <i class="fas fa-times w-5 h-5"></i>
+          </button>
         </div>
-      </div>
-      <div class="bg-white p-4 sm:p-6 rounded-xl shadow-sm border flex items-center card-hover">
-        <div class="p-3 bg-yellow-100 rounded-lg mr-4"><i class="fas fa-edit text-yellow-800 text-xl"></i></div>
-        <div>
-          <h3 class="text-lg font-semibold text-gray-800">Isi Kolom INSP</h3>
-          <p class="text-sm text-gray-600">Update hasil inspeksi</p>
+        <div class="p-6">
+          <p class="text-base leading-relaxed text-gray-600">Apakah Anda yakin ingin mengakhiri sesi Anda?</p>
         </div>
-      </div>
-      <div class="bg-white p-4 sm:p-6 rounded-xl shadow-sm border flex items-center card-hover">
-        <div class="p-3 bg-green-100 rounded-lg mr-4"><i class="fas fa-check-double text-green-600 text-xl"></i></div>
-        <div>
-          <h3 class="text-lg font-semibold text-gray-800">Setujui Pekerjaan</h3>
-          <p class="text-sm text-gray-600">Selesaikan MWS</p>
+        <div class="flex items-center p-6 space-x-4 border-t border-gray-200 rounded-b">
+          <button id="logout-modal-confirm-button" type="button" class="text-white bg-red-600 hover:bg-red-700 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center">Ya, Logout</button>
+          <button
+            id="logout-modal-cancel-button"
+            type="button"
+            class="text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 hover:text-gray-900 focus:z-10"
+          >
+            Batal
+          </button>
         </div>
       </div>
     </div>
 
-    {% include 'monitoring/status_chart.html' with context %}
-    <div class="mt-6">{{ render_tracking_list(parts, users, user) }}</div>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const userMenuButton = document.getElementById("user-menu-button");
+        const userMenu = document.getElementById("user-menu");
+        const userMenuChevron = document.getElementById("user-menu-chevron");
+
+        if (userMenuButton && userMenu) {
+          userMenuButton.addEventListener("click", function (event) {
+            event.stopPropagation();
+            const isHidden = userMenu.classList.toggle("hidden");
+
+            if (userMenuChevron) {
+              userMenuChevron.classList.toggle("rotate-180", !isHidden);
+            }
+            userMenu.style.transform = isHidden ? "scale(0.95)" : "scale(1)";
+            userMenu.style.opacity = isHidden ? "0" : "1";
+          });
+        }
+
+        window.addEventListener("click", function (event) {
+          if (userMenu && !userMenu.classList.contains("hidden") && userMenuButton && !userMenuButton.contains(event.target)) {
+            userMenu.classList.add("hidden");
+            if (userMenuChevron) {
+              userMenuChevron.classList.remove("rotate-180");
+            }
+            userMenu.style.transform = "scale(0.95)";
+            userMenu.style.opacity = "0";
+          }
+        });
+
+        // --- PERUBAHAN 4: JavaScript BARU untuk Modal Logout ---
+        const logoutButton = document.getElementById("logout-button");
+        const logoutModal = document.getElementById("logout-modal");
+        const logoutModalOverlay = document.getElementById("logout-modal-overlay");
+        const confirmButton = document.getElementById("logout-modal-confirm-button");
+        const cancelButton = document.getElementById("logout-modal-cancel-button");
+        const closeButton = document.getElementById("logout-modal-close-button");
+
+        function showLogoutModal(e) {
+          e.preventDefault(); // Mencegah link berpindah halaman
+          logoutModal.classList.remove("hidden");
+        }
+
+        function hideLogoutModal() {
+          logoutModalOverlay.classList.add("is-hiding");
+          logoutModalOverlay.addEventListener(
+            "animationend",
+            () => {
+              logoutModal.classList.add("hidden");
+              logoutModalOverlay.classList.remove("is-hiding");
+            },
+            { once: true }
+          );
+        }
+
+        function performLogout() {
+          const fadeOutDiv = document.createElement("div");
+          fadeOutDiv.style.position = "fixed";
+          fadeOutDiv.style.top = "0";
+          fadeOutDiv.style.left = "0";
+          fadeOutDiv.style.width = "100vw";
+          fadeOutDiv.style.height = "100vh";
+          fadeOutDiv.style.backgroundColor = "white";
+          fadeOutDiv.style.zIndex = "100";
+          fadeOutDiv.style.opacity = "0";
+          fadeOutDiv.style.transition = "opacity 0.3s ease-in";
+          document.body.appendChild(fadeOutDiv);
+
+          requestAnimationFrame(() => {
+            fadeOutDiv.style.opacity = "1";
+          });
+
+          setTimeout(() => {
+            window.location.href = logoutButton.href;
+          }, 300);
+        }
+
+        if (logoutButton) {
+          logoutButton.addEventListener("click", showLogoutModal);
+        }
+        if (cancelButton) {
+          cancelButton.addEventListener("click", hideLogoutModal);
+        }
+        if (closeButton) {
+          closeButton.addEventListener("click", hideLogoutModal);
+        }
+        if (logoutModalOverlay) {
+          logoutModalOverlay.addEventListener("click", hideLogoutModal);
+        }
+        if (confirmButton) {
+          confirmButton.addEventListener("click", () => {
+            hideLogoutModal();
+            performLogout();
+          });
+        }
+      });
+    </script>
+    {% endblock %}
   </div>
 </div>
-
-<div id="logout-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
-  <div id="logout-modal-overlay" class="absolute inset-0 bg-black bg-opacity-60 modal-overlay"></div>
-
-  <div id="logout-modal-panel" class="relative bg-white rounded-lg shadow-xl w-full max-w-md m-4 modal-panel">
-    <div class="flex items-start justify-between p-5 border-b rounded-t">
-      <h3 class="text-xl font-semibold text-gray-900">Konfirmasi Logout</h3>
-      <button type="button" id="logout-modal-close-button" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
-        <i class="fas fa-times w-5 h-5"></i>
-      </button>
-    </div>
-    <div class="p-6">
-      <p class="text-base leading-relaxed text-gray-600">Apakah Anda yakin ingin mengakhiri sesi Anda?</p>
-    </div>
-    <div class="flex items-center p-6 space-x-4 border-t border-gray-200 rounded-b">
-      <button id="logout-modal-confirm-button" type="button" class="text-white bg-red-600 hover:bg-red-700 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center">Ya, Logout</button>
-      <button
-        id="logout-modal-cancel-button"
-        type="button"
-        class="text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 hover:text-gray-900 focus:z-10"
-      >
-        Batal
-      </button>
-    </div>
-  </div>
-</div>
-
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const userMenuButton = document.getElementById("user-menu-button");
-    const userMenu = document.getElementById("user-menu");
-    const userMenuChevron = document.getElementById("user-menu-chevron");
-
-    if (userMenuButton && userMenu) {
-      userMenuButton.addEventListener("click", function (event) {
-        event.stopPropagation();
-        const isHidden = userMenu.classList.toggle("hidden");
-
-        if (userMenuChevron) {
-          userMenuChevron.classList.toggle("rotate-180", !isHidden);
-        }
-        userMenu.style.transform = isHidden ? "scale(0.95)" : "scale(1)";
-        userMenu.style.opacity = isHidden ? "0" : "1";
-      });
-    }
-
-    window.addEventListener("click", function (event) {
-      if (userMenu && !userMenu.classList.contains("hidden") && userMenuButton && !userMenuButton.contains(event.target)) {
-        userMenu.classList.add("hidden");
-        if (userMenuChevron) {
-          userMenuChevron.classList.remove("rotate-180");
-        }
-        userMenu.style.transform = "scale(0.95)";
-        userMenu.style.opacity = "0";
-      }
-    });
-
-    // --- PERUBAHAN 4: JavaScript BARU untuk Modal Logout ---
-    const logoutButton = document.getElementById("logout-button");
-    const logoutModal = document.getElementById("logout-modal");
-    const logoutModalOverlay = document.getElementById("logout-modal-overlay");
-    const confirmButton = document.getElementById("logout-modal-confirm-button");
-    const cancelButton = document.getElementById("logout-modal-cancel-button");
-    const closeButton = document.getElementById("logout-modal-close-button");
-
-    function showLogoutModal(e) {
-      e.preventDefault(); // Mencegah link berpindah halaman
-      logoutModal.classList.remove("hidden");
-    }
-
-    function hideLogoutModal() {
-      logoutModalOverlay.classList.add("is-hiding");
-      logoutModalOverlay.addEventListener(
-        "animationend",
-        () => {
-          logoutModal.classList.add("hidden");
-          logoutModalOverlay.classList.remove("is-hiding");
-        },
-        { once: true }
-      );
-    }
-
-    function performLogout() {
-      const fadeOutDiv = document.createElement("div");
-      fadeOutDiv.style.position = "fixed";
-      fadeOutDiv.style.top = "0";
-      fadeOutDiv.style.left = "0";
-      fadeOutDiv.style.width = "100vw";
-      fadeOutDiv.style.height = "100vh";
-      fadeOutDiv.style.backgroundColor = "white";
-      fadeOutDiv.style.zIndex = "100";
-      fadeOutDiv.style.opacity = "0";
-      fadeOutDiv.style.transition = "opacity 0.3s ease-in";
-      document.body.appendChild(fadeOutDiv);
-
-      requestAnimationFrame(() => {
-        fadeOutDiv.style.opacity = "1";
-      });
-
-      setTimeout(() => {
-        window.location.href = logoutButton.href;
-      }, 300);
-    }
-
-    if (logoutButton) {
-      logoutButton.addEventListener("click", showLogoutModal);
-    }
-    if (cancelButton) {
-      cancelButton.addEventListener("click", hideLogoutModal);
-    }
-    if (closeButton) {
-      closeButton.addEventListener("click", hideLogoutModal);
-    }
-    if (logoutModalOverlay) {
-      logoutModalOverlay.addEventListener("click", hideLogoutModal);
-    }
-    if (confirmButton) {
-      confirmButton.addEventListener("click", () => {
-        hideLogoutModal();
-        performLogout();
-      });
-    }
-  });
-</script>
-{% endblock %}

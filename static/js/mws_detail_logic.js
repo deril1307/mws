@@ -259,8 +259,6 @@ document.addEventListener("DOMContentLoaded", function () {
   initializeLiveTimers();
   checkStrippingStatus();
   setInterval(checkStrippingStatus, 5 * 60 * 1000);
-
-  // --- Event Listener untuk Modal "Assign Mechanic" sudah dihapus ---
 });
 
 // --- Role-Specific Functions ---
@@ -520,7 +518,6 @@ if (currentUserRole !== "customer") {
 }
 
 // --- Admin/Superadmin Functions ---
-// SEMUA FUNGSI UNTUK MODAL "ASSIGN MECHANIC" SUDAH DIHAPUS DARI SINI
 if (currentUserRole === "admin" || currentUserRole === "superadmin") {
   function removeMechanicFromStep(partId, stepNo, nikToRemove) {
     if (!confirm(`Apakah Anda yakin ingin menghapus mekanik dengan NIK ${nikToRemove} dari langkah ini?`)) return;
@@ -615,6 +612,72 @@ if (currentUserRole === "mechanic") {
       })
       .catch((error) => {
         showNotification("Terjadi kesalahan jaringan saat menyimpan approval.", "error");
+      });
+  }
+
+  // --- FUNGSI BARU UNTUK LAMPIRAN ---
+  function uploadStepAttachment(partId, stepNo) {
+    const input = document.getElementById(`step-attachment-input-${stepNo}`);
+    const files = input.files;
+    const button = event.currentTarget;
+
+    if (files.length === 0) {
+      showNotification("Silakan pilih file untuk diunggah.", "error");
+      return;
+    }
+
+    const formData = new FormData();
+    for (let i = 0; i < files.length; i++) {
+      formData.append("attachments", files[i]);
+    }
+
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+    fetch(`/upload_step_attachment/${partId}/${stepNo}`, {
+      method: "POST",
+      headers: { "X-CSRFToken": csrfToken }, // FormData sets Content-Type automatically
+      body: formData,
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          showNotificationAndReload(data.message, "success");
+        } else {
+          showNotification(data.error || "Gagal mengunggah file.", "error");
+          button.disabled = false;
+          button.innerHTML = '<i class="fas fa-upload mr-1"></i> Unggah';
+        }
+      })
+      .catch((error) => {
+        showNotification("Terjadi kesalahan jaringan.", "error");
+        button.disabled = false;
+        button.innerHTML = '<i class="fas fa-upload mr-1"></i> Unggah';
+      });
+  }
+
+  function deleteStepAttachment(partId, stepNo, storedFilename) {
+    if (!confirm("Apakah Anda yakin ingin menghapus lampiran ini?")) {
+      return;
+    }
+
+    fetch(`/delete_step_attachment/${partId}/${stepNo}/${storedFilename}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": csrfToken,
+      },
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          showNotificationAndReload(data.message, "success");
+        } else {
+          showNotification(data.error || "Gagal menghapus lampiran.", "error");
+        }
+      })
+      .catch((error) => {
+        showNotification("Terjadi kesalahan jaringan.", "error");
       });
   }
 }

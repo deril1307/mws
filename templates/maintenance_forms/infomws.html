@@ -42,6 +42,51 @@
   </div>
 </div>
 
+<div id="all-strep-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 z-[120] flex justify-center items-center">
+  <div class="bg-white rounded-lg shadow-xl p-4 sm:p-6 w-full max-w-7xl mx-4 h-[90vh] flex flex-col">
+    <div class="flex justify-between items-center border-b pb-3 mb-4">
+      <h3 class="text-xl font-semibold text-gray-800">All Strep</h3>
+      <button onclick="closeAllStrepModal()" class="text-gray-400 hover:text-gray-600">
+        <span class="sr-only">Close</span>
+        <i class="fas fa-times h-6 w-6"></i>
+      </button>
+    </div>
+    <div class="flex-grow overflow-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-100 sticky top-0">
+          <tr>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ref Logistic PPC</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MDR Doc Defect</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remark MWS</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Test Result</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Schedule Delivery on Time</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ECD Finish Workdays</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Selisih Work Days</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prosentase Schedule</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Form Out No</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanda Terima FO No</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanda Terima FO Date</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stripping Report Date</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stripping Order by SAP Date</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prosentase BDP</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">QTY BDP</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Selisih Order Work Days</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time Stripping Work Days</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Max Stripping Date</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TASE Stripping</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status S/US</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ship Transfer TT Date</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ship Transfer TT No</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Selisih Shipping Work Days</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TASE</th>
+          </tr>
+        </thead>
+        <tbody id="all-strep-table-body" class="bg-white divide-y divide-gray-200"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 <style>
   #toast-notification.show {
     transform: translateX(0);
@@ -57,11 +102,11 @@
         <i class="fas fa-edit sm:mr-1"></i>
         <span class="hidden sm:inline">Edit</span>
       </button>
-      <button id="duplicate-mws-btn" onclick="confirmDuplicateMws('{{ part_id }}')" class="ml-3 text-sm font-medium text-purple-600 hover:text-purple-800 transition-colors">
+      <button id="duplicate-mws-btn" onclick="confirmDuplicateMws('{{ part.part_id }}')" class="ml-3 text-sm font-medium text-purple-600 hover:text-purple-800 transition-colors">
         <i class="fas fa-copy sm:mr-1"></i>
         <span class="hidden sm:inline">Pemanggilan Berulang</span>
       </button>
-      <button id="finish-mws-btn" onclick="saveMwsInfo('{{ part_id }}')" class="hidden ml-3 text-sm font-medium text-green-600 hover:text-green-800 transition-colors">
+      <button id="finish-mws-btn" onclick="saveMwsInfo('{{ part.part_id }}')" class="hidden ml-3 text-sm font-medium text-green-600 hover:text-green-800 transition-colors">
         <i class="fas fa-check sm:mr-1"></i>
         <span class="hidden sm:inline">Selesai</span>
       </button>
@@ -69,66 +114,178 @@
     {% endif %}
   </div>
 
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-6 text-sm">
-    <div>
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+    <div class="border border-gray-200 rounded-lg p-3">
       <label class="block font-bold text-gray-700 mb-1">Tittle / Part Name</label>
-      <p class="text-gray-900 mws-info-view">{{ part.tittle }}</p>
+      <p class="text-gray-900 mws-info-view break-words">{{ part.tittle }}</p>
       <input type="text" data-field="tittle" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.tittle }}" />
     </div>
-    <div>
+    <div class="border border-gray-200 rounded-lg p-3">
       <label class="block font-bold text-gray-700 mb-1">Part Number</label>
-      <p class="text-gray-900 mws-info-view">{{ part.partNumber }}</p>
+      <p class="text-gray-900 mws-info-view break-words">{{ part.partNumber }}</p>
       <input type="text" data-field="partNumber" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.partNumber }}" />
     </div>
-    <div>
+    <div class="border border-gray-200 rounded-lg p-3">
       <label class="block font-bold text-gray-700 mb-1">Ref</label>
-      <p class="text-gray-900 mws-info-view">{{ part.ref }}</p>
+      <p class="text-gray-900 mws-info-view break-words">{{ part.ref }}</p>
       <input type="text" data-field="ref" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.ref }}" />
     </div>
-    <div>
+    <div class="border border-gray-200 rounded-lg p-3">
       <label class="block font-bold text-gray-700 mb-1">Component Order</label>
-      <p class="text-gray-900 mws-info-view">{{ part.jobType or 'N/A' }}</p>
+      <p class="text-gray-900 mws-info-view break-words">{{ part.jobType or 'N/A' }}</p>
       <input type="text" data-field="jobType" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.jobType or '' }}" />
     </div>
-    <div>
+    <div class="border border-gray-200 rounded-lg p-3">
       <label class="block font-bold text-gray-700 mb-1">Customer</label>
-      <p class="text-gray-900 mws-info-view">{{ part.customer }}</p>
+      <p class="text-gray-900 mws-info-view break-words">{{ part.customer }}</p>
       <input type="text" data-field="customer" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.customer }}" />
     </div>
-    <div>
+    <div class="border border-gray-200 rounded-lg p-3">
       <label class="block font-bold text-gray-700 mb-1">A/C Type</label>
-      <p class="text-gray-900 mws-info-view">{{ part.acType }}</p>
+      <p class="text-gray-900 mws-info-view break-words">{{ part.acType }}</p>
       <input type="text" data-field="acType" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.acType }}" />
     </div>
-    <div>
+    <div class="border border-gray-200 rounded-lg p-3">
       <label class="block font-bold text-gray-700 mb-1">Serial Number</label>
-      <p class="text-gray-900 mws-info-view">{{ part.serialNumber }}</p>
+      <p class="text-gray-900 mws-info-view break-words">{{ part.serialNumber }}</p>
       <input type="text" data-field="serialNumber" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.serialNumber }}" />
     </div>
-    <div>
+    <div class="border border-gray-200 rounded-lg p-3">
       <label class="block font-bold text-gray-700 mb-1">WBS No.</label>
-      <p class="text-gray-900 mws-info-view">{{ part.wbsNo }}</p>
+      <p class="text-gray-900 mws-info-view break-words">{{ part.wbsNo }}</p>
       <input type="text" data-field="wbsNo" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.wbsNo }}" />
     </div>
-    <div>
+    <div class="border border-gray-200 rounded-lg p-3">
       <label class="block font-bold text-gray-700 mb-1">Worksheet No.</label>
-      <p class="text-gray-900 mws-info-view">{{ part.worksheetNo }}</p>
+      <p class="text-gray-900 mws-info-view break-words">{{ part.worksheetNo }}</p>
       <input type="text" data-field="worksheetNo" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.worksheetNo }}" />
     </div>
-    <div>
+    <div class="border border-gray-200 rounded-lg p-3">
       <label class="block font-bold text-gray-700 mb-1">IWO No.</label>
-      <p class="text-gray-900 mws-info-view">{{ part.iwoNo }}</p>
+      <p class="text-gray-900 mws-info-view break-words">{{ part.iwoNo }}</p>
       <input type="text" data-field="iwoNo" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.iwoNo }}" />
     </div>
-    <div>
+    <div class="border border-gray-200 rounded-lg p-3">
       <label class="block font-bold text-gray-700 mb-1">Shop Area</label>
-      <p class="text-gray-900 mws-info-view">{{ part.shopArea }}</p>
+      <p class="text-gray-900 mws-info-view break-words">{{ part.shopArea }}</p>
       <input type="text" data-field="shopArea" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.shopArea }}" />
     </div>
-    <div>
+    <div class="border border-gray-200 rounded-lg p-3">
       <label class="block font-bold text-gray-700 mb-1">Revision</label>
-      <p class="text-gray-900 mws-info-view">{{ part.revision }}</p>
+      <p class="text-gray-900 mws-info-view break-words">{{ part.revision }}</p>
       <input type="text" data-field="revision" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.revision }}" />
+    </div>
+  </div>
+</div>
+
+<div class="flex justify-start items-start space-x-4 mb-6">
+  <button
+    id="get-stripping-report-btn"
+    onclick="getStrippingReportData('{{ part.part_id }}')"
+    class="bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-75 transition-all duration-200"
+  >
+    <i class="fas fa-cogs mr-2"></i>
+    Informasi Stripping
+  </button>
+  {% if user.role in ['mechanic', 'admin', 'superadmin', 'quality1'] %}
+  <button
+    id="toggle-attachment-btn"
+    onclick="toggleAttachmentSection()"
+    class="bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-75 transition-all duration-200"
+  >
+    <i class="fas fa-paperclip mr-2"></i>
+    Lampiran
+  </button>
+  <button
+    id="get-all-strep-btn"
+    onclick="openAllStrepModal()"
+    class="bg-yellow-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-opacity-75 transition-all duration-200"
+  >
+    <i class="fas fa-stream mr-2"></i>
+    All Strep
+  </button>
+  {% endif %}
+</div>
+
+{% if user.role in ['mechanic', 'admin', 'superadmin', 'quality1', 'quality2'] %}
+<div id="attachment-section" class="hidden bg-white rounded-xl shadow-lg border border-gray-200 mb-6 transition-all duration-300 ease-in-out">
+  <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-xl"><h3 class="text-lg font-semibold text-gray-800">Detail Lampiran</h3></div>
+  <div class="p-4">
+    {% if user.role == 'admin' or user.role == 'superadmin' %}
+    <div class="flex flex-col space-y-4">
+      <input
+        type="file"
+        id="attachment-file-input"
+        class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+        accept=".jpg,.jpeg,.png,.xlsx,.xls,.pdf,.doc,.docx"
+        multiple
+      />
+      <button
+        id="upload-attachment-btn"
+        onclick="uploadAttachment('{{ part.part_id }}')"
+        class="self-start bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition-all duration-200 flex items-center justify-center whitespace-nowrap disabled:bg-gray-400 disabled:cursor-not-allowed"
+        disabled
+      >
+        <i class="fas fa-upload mr-2"></i> Unggah
+      </button>
+    </div>
+    {% endif %}
+
+    <div id="attachment-link-container" class="mt-4 text-sm">
+      <h4 class="font-semibold text-gray-700 mb-2">Lampiran Saat Ini:</h4>
+      <ul id="attachment-list" class="space-y-2">
+        {% if part.attachments %} {% for att in part.attachments %}
+        <li id="attachment-item-{{ att.stored_filename | replace('.', '-') }}" class="flex items-center justify-between bg-gray-50 p-2 rounded-md hover:bg-gray-100">
+          <a href="{{ att.file_url }}" target="_blank" class="text-blue-600 hover:underline truncate pr-4" title="{{ att.original_filename }}">
+            <i class="fas fa-file-alt mr-2 text-gray-500"></i>
+            {{ att.original_filename }}
+          </a>
+          {% if user.role in ['admin', 'superadmin'] %}
+          <button onclick="deleteAttachment('{{ part.part_id }}', '{{ att.stored_filename }}')" class="text-red-500 hover:text-red-700 text-xs font-semibold" title="Hapus Lampiran">
+            <i class="fas fa-trash"></i>
+          </button>
+          {% endif %}
+        </li>
+        {% endfor %} {% else %}
+        <p id="no-attachment-text" class="text-gray-500">Belum ada lampiran.</p>
+        {% endif %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div id="stripping-report-dropdown" class="hidden bg-white rounded-xl shadow-lg border border-gray-200 mb-6 transition-all duration-300 ease-in-out">
+  <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-xl flex justify-between items-center">
+    <h3 class="text-lg font-semibold text-gray-800">Detail Stripping Report</h3>
+    {% if user.role in ['admin', 'superadmin'] %}
+    <button id="add-stripping-btn" class="bg-green-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-75 transition-all duration-200">
+      <i class="fas fa-plus mr-2"></i> Tambah Stripping
+    </button>
+    {% endif %}
+  </div>
+  <div class="p-4 max-h-96 overflow-y-auto">
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">BDP NAME</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">BDP NUMBER</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">BDP NUMBER Eqv</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">QTY</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">UNIT</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">OP NUMBER</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">OP DATE</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">DEFECT</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">MT NUMBER</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">MT QTY</th>
+            {% if user.role in ['admin', 'superadmin'] %}
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Aksi</th>
+            {% endif %}
+          </tr>
+        </thead>
+        <tbody id="stripping-report-table-body" class="bg-white divide-y divide-gray-200"></tbody>
+      </table>
     </div>
   </div>
 </div>

@@ -8,9 +8,9 @@ def seed_customers():
     with app.app_context():
         customers_to_add = [
             {
-                "username": "tes",
+                "username": "tudm",
                 "password": "123",
-                "company_name": "tes"
+                "company_name": "TUDM"
             }
          
         ]

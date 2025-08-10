@@ -88,9 +88,6 @@
       <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
         <h2 class="text-xl font-semibold text-gray-800">Maintenance Work Sheet</h2>
         <div class="flex items-center space-x-2">
-            {% if user.role != 'customer' %}
-            <button class="px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded hover:bg-gray-700"><i class="fas fa-paperclip mr-2"></i>Add Attachment</button>
-            {% endif %}
             {% if user.role in ['admin', 'superadmin'] %}
             <a href="{{ url_for('print_mws', part_id=part_id) }}" target="_blank" class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700">
                 <i class="fas fa-print mr-2"></i>Print MWS
@@ -99,7 +96,7 @@
         </div>
       </div>
       <div class="overflow-x-auto">
-        {% set is_mws_locked = not (part.preparedBy and part.approvedBy and part.verifiedBy) %}
+        {% set is_mws_locked = not (part.preparedBy and part.approvedBy) %}
 
         {% if is_mws_locked and user.role == 'mechanic' %}
         <div class="m-4 p-4 bg-yellow-100 text-yellow-800 border-l-4 border-yellow-500 rounded-md shadow-sm">
@@ -108,9 +105,8 @@
               <div class="ml-3">
                 <p class="text-sm">
                   Lembar kerja ini belum dapat diisi. Harap tunggu hingga Admin Approved bagian 
-                  <strong>"Prepared By"</strong>, Superadmin Approved bagian 
-                  <strong>"Approved By"</strong>, dan Quality CUDR bagian 
-                  <strong>"Verified By"</strong>.
+                  <strong>"Prepared By"</strong> dan Superadmin Approved bagian 
+                  <strong>"Approved By"</strong>.
                 </p>
               </div>
 
@@ -127,8 +123,9 @@
               <th colspan="2" class="text-center p-3 text-sm font-semibold text-gray-700 bg-green-100">ACTUAL</th>
               <th rowspan="2" class="tech-column text-center p-3 text-sm font-semibold text-gray-700 align-middle">TECH</th>
               <th rowspan="2" class="insp-column text-center p-3 text-sm font-semibold text-gray-700 align-middle">INSP</th>
-              <th rowspan="2" class="status-column text-center p-3 text-sm font-semibold text-gray-700 align-middle">STATUS</th>
               <th rowspan="2" class="action-column text-center p-3 text-sm font-semibold text-gray-700 align-middle">{% if user.role in ['admin','superadmin'] %}AKSI{% else %}KETERANGAN{% endif %}</th>
+              <th rowspan="2" class="status-column text-center p-3 text-sm font-semibold text-gray-700 align-middle">LAMPIRAN</th>
+              <th rowspan="2" class="status-column text-center p-3 text-sm font-semibold text-gray-700 align-middle">STATUS</th>
             </tr>
             <tr>
               <th class="plan-man-column text-center p-3 text-sm font-semibold text-gray-600 bg-blue-50">MAN</th>
@@ -271,7 +268,7 @@
               </td>
 
               <td class="insp-column align-top">
-                {% if user.role == 'quality1' and step.status == 'in_progress' %}
+                {% if user.role == 'quality1' and step.status == 'in_progress' and step.tech == 'Approved' %}
                 <div class="min-h-[40px] flex items-center justify-center">
                   <button onclick="finishStep('{{ part_id }}', {{ step.no }})" class="px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded text-sm font-medium" {% if is_mws_locked %}disabled title="MWS terkunci" {% endif %}>Approve</button>
                 </div>
@@ -284,13 +281,7 @@
                 </div>
                 {% endif %}
               </td>
-
-              <td class="status-column text-center align-middle">
-                {% if step.status == 'completed' %}<i class="fas fa-check-circle text-blue-500 text-xl" title="Completed on {{ step.completedDate }}"></i>
-                {% elif step.status == 'in_progress' %}<i class="fas fa-clock text-green-500 text-xl" title="In Progress"></i>
-                {% else %}<i class="fas fa-exclamation-circle text-red-500 text-xl" title="Pending"></i>{% endif %}
-              </td>
-
+              
               <td class="action-column text-center align-top">
                 {% if user.role != 'customer' %}
                 <div class="flex flex-col items-center justify-center space-y-2">
@@ -318,6 +309,56 @@
                 </div>
                 {% endif %}
               </td>
+              
+              <td class="align-top">
+                  <div class="space-y-2">
+                      {% if step.attachments %}
+                          <ul class="text-xs space-y-1">
+                              {% for attachment in step.attachments %}
+                                  <li class="flex flex-col bg-gray-100 p-1 rounded">
+                                      {% if attachment.original_filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')) %}
+                                          <a href="{{ attachment.file_url }}" target="_blank" class="block w-24 h-16 overflow-hidden rounded mb-1 self-center">
+                                              <img src="{{ attachment.file_url }}" alt="{{ attachment.original_filename }}" class="object-cover w-full h-full">
+                                          </a>
+                                      {% endif %}
+                                      <div class="flex items-center justify-between">
+                                          <a href="{{ attachment.file_url }}" target="_blank" class="text-blue-600 hover:underline truncate" title="{{ attachment.original_filename }}">
+                                              <i class="fas fa-paperclip mr-1"></i>
+                                              {{ attachment.original_filename[:15] }}{% if attachment.original_filename|length > 15 %}...{% endif %}
+                                          </a>
+                                          {% if user.role == 'mechanic' %}
+                                              <button onclick="deleteStepAttachment('{{ part_id }}', {{ step.no }}, '{{ attachment.stored_filename }}')" class="ml-2 text-red-500 hover:text-red-700 font-bold" title="Hapus Lampiran">&times;</button>
+                                          {% endif %}
+                                      </div>
+                                  </li>
+                              {% endfor %}
+                          </ul>
+                      {% else %}
+                          <p class="text-xs text-gray-500 italic">Belum ada lampiran.</p>
+                      {% endif %}
+                      
+                      {% if user.role == 'mechanic' %}
+                          <div class="mt-2 pt-2 border-t border-gray-200">
+                              <div class="flex items-center space-x-2">
+                                  <label for="step-attachment-input-{{ step.no }}" class="cursor-pointer px-2 py-1 bg-white border border-gray-300 rounded text-xs text-gray-700 hover:bg-gray-50">
+                                      <i class="fas fa-paperclip text-gray-500"></i>
+                                  </label>
+                                  <input type="file" id="step-attachment-input-{{ step.no }}" class="hidden" multiple onchange="updateFileName(this, {{ step.no }})">
+                                  <button onclick="uploadStepAttachment('{{ part_id }}', {{ step.no }})" class="px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs font-bold {% if is_mws_locked %}opacity-50 cursor-not-allowed{% endif %}" {% if is_mws_locked %}disabled{% endif %}>
+                                      <i class="fas fa-upload mr-1"></i> Unggah
+                                  </button>
+                              </div>
+                               <span id="file-name-display-{{ step.no }}" class="text-xs text-gray-500 italic mt-1 block truncate">Pilih file...</span>
+                          </div>
+                      {% endif %}
+                  </div>
+              </td>
+              
+              <td class="status-column text-center align-middle">
+                {% if step.status == 'completed' %}<i class="fas fa-check-circle text-blue-500 text-xl" title="Completed on {{ step.completedDate }}"></i>
+                {% elif step.status == 'in_progress' %}<i class="fas fa-clock text-green-500 text-xl" title="In Progress"></i>
+                {% else %}<i class="fas fa-exclamation-circle text-red-500 text-xl" title="Pending"></i>{% endif %}
+              </td>
             </tr>
             {% endfor %}
           </tbody>
@@ -333,7 +374,6 @@
   const currentUserNik = "{{ user.nik }}";
   const partId = "{{ part_id }}";
   const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute("content");
-  // Variabel 'assignedMechanics' sudah dihapus
 </script>
 <script src="{{ url_for('static', filename='js/mws_detail_logic.js') }}" defer></script>
 {% endblock %}

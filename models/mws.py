@@ -1,13 +1,15 @@
+import json
 from . import db
 from sqlalchemy.orm import relationship # type: ignore
 from datetime import datetime, timedelta, date
-import json
+from .stripping import Stripping
 
 class MwsPart(db.Model):
     __tablename__ = 'mws_parts'
 
     id = db.Column(db.Integer, primary_key=True)
     part_id = db.Column(db.String(50), unique=True, nullable=False)
+    # ... (all your other columns remain the same)
     partNumber = db.Column(db.String(100), nullable=False)
     serialNumber = db.Column(db.String(100), nullable=False)
     tittle = db.Column(db.String(255), nullable=False)
@@ -38,8 +40,11 @@ class MwsPart(db.Model):
     total_duration = db.Column(db.String(50), default='00:00')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    attachment = db.Column(db.Text, nullable=True)
 
-    # --- FIELD BARU YANG DITAMBAHKAN ---
+
+
+     # --- Fields for Strep---
     ref_logistic_ppc = db.Column(db.String(100), nullable=True)
     mdr_doc_defect = db.Column(db.String(100), nullable=True)
     remark_mws = db.Column(db.String(100), nullable=True)
@@ -58,19 +63,21 @@ class MwsPart(db.Model):
     selisih_order_work_days = db.Column(db.String(100), nullable=True)
     time_stripping_work_days = db.Column(db.String(100), nullable=True)
     max_stripping_date = db.Column(db.String(100), nullable=True)
-    tase_stripping = db.Column(db.String(100), nullable=True) # %TASE STRIPPING
-    status_s_us = db.Column(db.String(100), nullable=True) # STATUS [S / (U/S)]
+    tase_stripping = db.Column(db.String(100), nullable=True)
+    status_s_us = db.Column(db.String(100), nullable=True)
     ship_transfer_tt_date = db.Column(db.String(100), nullable=True)
     ship_transfer_tt_no = db.Column(db.String(100), nullable=True)
     selisih_shipping_work_days = db.Column(db.String(100), nullable=True)
-    tase = db.Column(db.String(100), nullable=True) # %TASE
+    tase = db.Column(db.String(100), nullable=True)
 
+   
+    # --- Relationship ---
     steps = relationship('MwsStep', back_populates='mws_part', cascade="all, delete-orphan", order_by="MwsStep.no")
-
+    stripping = relationship('Stripping', back_populates='mws_part', cascade="all, delete-orphan")
     customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'), nullable=True)
     customer_rel = relationship('Customer', back_populates='mws_parts')
 
-
+    # ... (all your other methods like calculate_stripping_deadline remain the same)
     def calculate_stripping_deadline(self):
         """Calculate stripping deadline (20 working days from start date)"""
         if not self.startDate:
@@ -138,9 +145,6 @@ class MwsPart(db.Model):
         return working_days
 
     def update_total_duration(self):
-        """
-        Menghitung total durasi dari semua step yang terkait dan menyimpannya.
-        """
         total_minutes = 0
         for step in self.steps:
             if step.hours and ':' in step.hours:
@@ -156,10 +160,14 @@ class MwsPart(db.Model):
         self.total_duration = f"{final_hours:02d}:{final_minutes:02d}"
 
     def to_dict(self):
-        """Convert MwsPart to dictionary format compatible with existing templates"""
-        stripping_status = self.get_stripping_status()
+        """Convert MwsPart to dictionary, ensuring attachments are a list."""
+        try:
+            attachments_list = json.loads(self.attachment) if self.attachment else []
+        except json.JSONDecodeError:
+            attachments_list = []
 
         return {
+             # --- Fields for MWS info ---
             'part_id': self.part_id,
             'partNumber': self.partNumber,
             'serialNumber': self.serialNumber,
@@ -188,11 +196,12 @@ class MwsPart(db.Model):
             'urgent_request_by' : self.urgent_request_by or '',
             'created_at': self.created_at,
             'stripping_deadline': self.stripping_deadline.isoformat() if self.stripping_deadline else '',
-            'stripping_status': stripping_status,
+            'stripping_status': self.get_stripping_status(),
             'total_duration': self.total_duration,
             'steps': [step.to_dict() for step in self.steps],
+            'stripping': [s.to_dict() for s in self.stripping],
 
-            # --- Penambahan field baru di to_dict ---
+            # --- Fields for Strepp ---
             'ref_logistic_ppc': self.ref_logistic_ppc or '',
             'mdr_doc_defect': self.mdr_doc_defect or '',
             'remark_mws': self.remark_mws or '',
@@ -216,7 +225,10 @@ class MwsPart(db.Model):
             'ship_transfer_tt_date': self.ship_transfer_tt_date or '',
             'ship_transfer_tt_no': self.ship_transfer_tt_no or '',
             'selisih_shipping_work_days': self.selisih_shipping_work_days or '',
-            'tase': self.tase or ''
+            'tase': self.tase or '',
+            
+            # CORRECTED: Use the parsed list
+            'attachments': attachments_list
         }
 
     def __repr__(self):

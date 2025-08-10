@@ -11,15 +11,12 @@ class MwsStep(db.Model):
     no = db.Column(db.Integer, nullable=False)
     description = db.Column(db.String(255), nullable=False)
     details = db.Column(db.Text) 
+    attachments = db.Column(db.Text, default='[]') 
     status = db.Column(db.String(50), default='pending')
     completedBy = db.Column(db.String(100))
     completedDate = db.Column(db.String(100))
-    
-    # --- KOLOM BARU UNTUK PERENCANAAN PER STEP ---
     planMan = db.Column(db.String(100), nullable=True)
     planHours = db.Column(db.String(100), nullable=True)
-    # --- AKHIR KOLOM BARU ---
-    # Changed 'man' to Text to store a JSON list of NIKs
     man = db.Column(db.Text, default='[]')
     hours = db.Column(db.String(50))
     tech = db.Column(db.String(100))
@@ -27,8 +24,6 @@ class MwsStep(db.Model):
     timer_start_time = db.Column(db.String(50))  
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    # Relasi Ke MwsPar
     mws_part = relationship('MwsPart', back_populates='steps')
 
     def get_mechanics(self):
@@ -36,18 +31,12 @@ class MwsStep(db.Model):
             if not self.man:
                 return []
             try:
-                # Coba muat data dari JSON
                 data = json.loads(self.man)
-                # PASTIKAN hasilnya adalah sebuah list sebelum dikembalikan
                 if isinstance(data, list):
                     return data
                 else:
-                    # Jika datanya bukan list (misal: integer 0 atau 1),
-                    # kembalikan list kosong untuk mencegah error.
                     return []
             except (json.JSONDecodeError, TypeError):
-                # Jika data sama sekali bukan format JSON yang valid,
-                # kembalikan list kosong.
                 return []
 
     def add_mechanic(self, nik):
@@ -72,13 +61,12 @@ class MwsStep(db.Model):
             'no': self.no,
             'description': self.description,
             'details': details_list,
+            'attachments': self.get_attachments(), # <-- NEW: Include attachments
             'status': self.status,
             'completedBy': self.completedBy or '',
             'completedDate': self.completedDate or '',
-             # --- TAMBAHAN planMan ---
             'planMan': self.planMan or '',
             'planHours': self.planHours or '',
-            # --- AKHIR planHours ---
             'man': self.get_mechanics(),
             'hours': self.hours or '',
             'tech': self.tech or '',
@@ -105,6 +93,34 @@ class MwsStep(db.Model):
             except (json.JSONDecodeError, TypeError):
                 return []
         return []
+
+    # --- NEW: Attachment Management Functions ---
+    def get_attachments(self):
+        """Get list of attachments from JSON string."""
+        if not self.attachments:
+            return []
+        try:
+            data = json.loads(self.attachments)
+            return data if isinstance(data, list) else []
+        except (json.JSONDecodeError, TypeError):
+            return []
+
+    def add_attachment(self, attachment_data):
+        """Add attachment metadata to the list."""
+        attachments = self.get_attachments()
+        attachments.append(attachment_data)
+        self.attachments = json.dumps(attachments)
+
+    def remove_attachment(self, stored_filename):
+        """Remove an attachment by its stored filename."""
+        attachments = self.get_attachments()
+        initial_count = len(attachments)
+        attachments = [att for att in attachments if att.get('stored_filename') != stored_filename]
+        if len(attachments) < initial_count:
+            self.attachments = json.dumps(attachments)
+            return True
+        return False
+    # --- END: New Functions ---
 
     def __repr__(self):
         return f'<MwsStep {self.no} for MWS ID {self.mws_part_id}>'

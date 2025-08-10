@@ -1,14 +1,11 @@
 {% extends "shared/base.html" %} {% block title %}Super Admin Dashboard - Sistem Aircraft Maintenance{% endblock %} {% from "monitoring/tracking_list.html" import render_tracking_list %} {% block content %}
 
 <style>
-  /* CSS custom untuk superadmin yang tidak berhubungan dengan notifikasi */
+  /* CSS custom untuk superadmin */
   .is-urgent {
     border: 2px solid #ef4444;
     box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
   }
-
-  /* ===== CSS NOTIFIKASI DIHAPUS DARI SINI ===== */
-  /* CSS akan diambil dari file notifikasi.html yang di-include */
 
   /* CSS UNTUK MODAL LOGOUT */
   @keyframes fadeIn {
@@ -46,6 +43,38 @@
   .modal-overlay.is-hiding {
     animation: fadeOut 0.2s ease-in forwards;
   }
+
+  /* MODIFIKASI: CSS BARU UNTUK POP-UP NOTIFIKASI */
+  @keyframes slideDown {
+    from {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideUp {
+    from {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+  }
+
+  .modal-panel-popup {
+    animation: slideDown 0.4s ease-out forwards;
+  }
+
+  /* Terapkan animasi slideUp saat pop-up ditutup */
+  .modal-overlay.is-hiding .modal-panel-popup {
+    animation: slideUp 0.4s ease-in forwards;
+  }
 </style>
 
 <div class="min-h-screen bg-gray-50">
@@ -62,19 +91,19 @@
         </div>
 
         <div class="flex items-center space-x-2 sm:space-x-4">
-          {# Memanggil komponen notifikasi yang sama dengan admin dashboard #} {% include 'notifikasi/notifikasi.html' %}
+          {% include 'notifikasi/notifikasi.html' %}
           <div class="relative">
             <button id="user-menu-button" class="flex items-center space-x-2 px-2 py-2 sm:px-3 sm:py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500">
               <div class="flex flex-col items-start">
                 <span class="font-medium text-sm text-gray-800">{{ user.name }}</span>
-                <span class="text-xs text-gray-500 hidden sm:inline">{{ user.position }}</span>
+                <span class="text-xs text-gray-500 hidden sm:inline">NIK : {{ user.nik }}</span>
               </div>
               <i id="user-menu-chevron" class="fas fa-chevron-down text-xs text-gray-600 transition-transform duration-200"></i>
             </button>
             <div id="user-menu" class="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg py-1 z-50 hidden ring-1 ring-black ring-opacity-5" style="transition: opacity 0.2s ease-out, transform 0.2s ease-out">
               <div class="px-4 py-3">
-                <p class="text-sm font-semibold text-gray-900">{{ user.name }}</p>
-                <p class="text-sm text-gray-500 truncate">{{ user.position }}</p>
+                <span class="font-medium text-sm text-gray-800">{{ user.name }}</span>
+                <span class="text-xs text-gray-500 hidden sm:inline">NIK : {{ user.nik }}</span>
               </div>
               <div class="border-t border-gray-100"></div>
               <a href="{{ url_for('view_profile') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profil</a>
@@ -150,21 +179,103 @@
   </div>
 </div>
 
+<div id="new-task-popup" class="fixed inset-0 z-50 flex items-start justify-center pt-12 px-4 hidden modal-overlay">
+  <div class="relative bg-white rounded-lg shadow-xl w-full max-w-lg mx-auto modal-panel-popup text-left overflow-hidden">
+    <div class="flex items-center justify-between p-4 border-b">
+      <h3 class="text-lg font-semibold text-gray-800 flex items-center">
+        <i class="fas fa-bell text-red-500 mr-3"></i>
+        Notifikasi Baru Untuk Anda
+      </h3>
+      <button id="popup-close-x-button" type="button" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 inline-flex items-center">
+        <i class="fas fa-times w-5 h-5"></i>
+        <span class="sr-only">Close modal</span>
+      </button>
+    </div>
+
+    <div id="popup-notification-list" class="max-h-96 overflow-y-auto p-2">
+      {% if urgent_requests or prepared_by_tasks or unapproved_tasks or unverified_tasks %} {# --- Permintaan Urgensi --- #} {% if urgent_requests %} {% for req in urgent_requests %}
+      <a href="{{ url_for('mws_detail', part_id=req.part_id) }}" class="block p-3 hover:bg-gray-100 rounded-lg mb-1 transition-colors duration-150">
+        <div class="flex items-start">
+          <div class="flex-shrink-0 h-10 w-10 rounded-full bg-red-100 flex items-center justify-center mr-3">
+            <i class="fas fa-exclamation-triangle text-red-500"></i>
+          </div>
+          <div class="flex-1">
+            <p class="text-sm font-semibold text-red-700">Permintaan Urgensi</p>
+            <p class="text-sm text-gray-800">Part Number <strong>{{ req.partNumber }}</strong> dari <strong>{{ req.customer }}</strong></p>
+            <p class="text-xs text-gray-500 mt-1">Oleh: {{ users.get(req.urgent_request_by).name if req.urgent_request_by and req.urgent_request_by in users else 'N/A' }}</p>
+          </div>
+        </div>
+      </a>
+      {% endfor %} {% endif %} {# --- Menunggu Verifikasi --- #} {% if unverified_tasks %} {% for task in unverified_tasks %}
+      <a href="{{ url_for('mws_detail', part_id=task.part_id) }}" class="block p-3 hover:bg-gray-100 rounded-lg mb-1 transition-colors duration-150">
+        <div class="flex items-start">
+          <div class="flex-shrink-0 h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center mr-3">
+            <i class="fas fa-signature text-indigo-600"></i>
+          </div>
+          <div class="flex-1">
+            <p class="text-sm font-semibold text-indigo-800">Menunggu Verifikasi</p>
+            <p class="text-sm text-gray-800">MWS untuk Part Number <strong>{{ task.partNumber }}</strong> perlu diverifikasi.</p>
+            <p class="text-xs text-gray-500 mt-1">Customer: {{ task.customer }}</p>
+          </div>
+        </div>
+      </a>
+      {% endfor %} {% endif %} {# --- Menunggu Persetujuan (superadmin) --- #} {% if unapproved_tasks %} {% for task in unapproved_tasks %}
+      <a href="{{ url_for('mws_detail', part_id=task.part_id) }}" class="block p-3 hover:bg-gray-100 rounded-lg mb-1 transition-colors duration-150">
+        <div class="flex items-start">
+          <div class="flex-shrink-0 h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center mr-3">
+            <i class="fas fa-signature text-purple-600"></i>
+          </div>
+          <div class="flex-1">
+            <p class="text-sm font-semibold text-purple-800">Menunggu Persetujuan</p>
+            <p class="text-sm text-gray-800">MWS untuk Part Number <strong>{{ task.partNumber }}</strong> perlu disetujui.</p>
+            <p class="text-xs text-gray-500 mt-1">Customer: {{ task.customer }}</p>
+          </div>
+        </div>
+      </a>
+      {% endfor %} {% endif %} {# --- Menunggu "Prepared By" --- #} {% if prepared_by_tasks %} {% for task in prepared_by_tasks %}
+      <a href="{{ url_for('mws_detail', part_id=task.part_id) }}" class="block p-3 hover:bg-gray-100 rounded-lg mb-1 transition-colors duration-150">
+        <div class="flex items-start">
+          <div class="flex-shrink-0 h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center mr-3">
+            <i class="fas fa-user-edit text-yellow-600"></i>
+          </div>
+          <div class="flex-1">
+            <p class="text-sm font-semibold text-yellow-800">Menunggu "Prepared By"</p>
+            <p class="text-sm text-gray-800">MWS untuk Part Number <strong>{{ task.partNumber }}</strong></p>
+            <p class="text-xs text-gray-500 mt-1">Customer: {{ task.customer }}</p>
+          </div>
+        </div>
+      </a>
+      {% endfor %} {% endif %} {% else %}
+      <div class="text-center py-10 px-4">
+        <i class="fas fa-check-circle text-gray-300 text-4xl mb-2"></i>
+        <p class="text-sm text-gray-500">Tidak ada notifikasi baru.</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="border-t p-4 flex justify-end gap-3 bg-gray-50">
+      <button
+        id="popup-close-button"
+        type="button"
+        class="px-5 py-2 bg-red-600 text-white text-sm font-semibold rounded-lg shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-200"
+      >
+        Oke
+      </button>
+    </div>
+  </div>
+</div>
+
 <script src="{{ url_for('static', filename='js/notifikasi_logic.js') }}"></script>
 
 <script>
   document.addEventListener("DOMContentLoaded", function () {
-    // 2. FUNGSI setupDropdown dan closeAllDropdowns DIHAPUS dari sini karena sudah dimuat dari file eksternal
-
-    // 3. Inisialisasi dropdown tetap dilakukan di sini
-    // Fungsi-fungsi ini sekarang tersedia secara global dari file notifikasi_logic.js
+    // Inisialisasi dropdown dari file eksternal
     setupDropdown("user-menu-button", "user-menu", "user-menu-chevron");
     setupDropdown("notification-button", "notification-dropdown");
 
     document.addEventListener("click", (event) => {
       const userMenuButton = document.getElementById("user-menu-button");
       const notificationButton = document.getElementById("notification-button");
-      // Cek klik di luar kedua tombol dropdown untuk menutupnya
       if (userMenuButton && notificationButton && !userMenuButton.contains(event.target) && !notificationButton.contains(event.target)) {
         closeAllDropdowns();
       }
@@ -227,4 +338,50 @@
       });
   });
 </script>
-{% endblock %}
+
+{% if show_popup %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const modal = document.getElementById("new-task-popup");
+    const closeButton = document.getElementById("popup-close-button");
+    const closeXButton = document.getElementById("popup-close-x-button");
+    const overlay = document.querySelector("#new-task-popup");
+
+    const showModal = () => {
+      if (modal) modal.classList.remove("hidden");
+    };
+
+    const hideModal = () => {
+      if (modal) {
+        modal.classList.add("is-hiding");
+        modal.addEventListener(
+          "animationend",
+          () => {
+            modal.classList.add("hidden");
+            modal.classList.remove("is-hiding");
+          },
+          { once: true }
+        );
+      }
+    };
+
+    // Tampilkan modal saat halaman dimuat jika `show_popup` bernilai true dari backend
+    showModal();
+
+    // Tambahkan event listener untuk tombol tutup dan klik di luar area modal
+    if (closeButton) {
+      closeButton.addEventListener("click", hideModal);
+    }
+    if (closeXButton) {
+      closeXButton.addEventListener("click", hideModal);
+    }
+    if (overlay) {
+      overlay.addEventListener("click", function (event) {
+        if (event.target === overlay) {
+          hideModal();
+        }
+      });
+    }
+  });
+</script>
+{% endif %} {% endblock %}

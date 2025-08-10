@@ -1,5 +1,5 @@
 # type: ignore
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash 
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash
 from flask_wtf.csrf import CSRFProtect, validate_csrf
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_limiter import Limiter
@@ -7,6 +7,10 @@ from flask_limiter.util import get_remote_address
 from flask_migrate import Migrate
 from flask_compress import Compress
 from wtforms import ValidationError
+
+import os
+from werkzeug.utils import secure_filename
+import uuid
 
 from datetime import datetime, timezone, timedelta
 
@@ -20,6 +24,7 @@ from models.user import User
 from models.mws import MwsPart
 from models.step import MwsStep
 from models.customer import Customer
+from models.stripping import Stripping
 
 app = Flask(__name__)
 app.jinja_env.loader.searchpath = [
@@ -72,6 +77,8 @@ def before_request_callback():
     if current_user.is_authenticated:
         current_user.last_seen = datetime.now(timezone.utc)
         db.session.commit()
+
+
 
 JOB_STEPS_TEMPLATES = {
     "F.Test": [
@@ -757,7 +764,9 @@ def mws_detail(part_id):
             return redirect(url_for('dashboard'))
         if current_user.role == 'mechanic':
             profile = current_user.area
-            if not profile or (mws_part.customer != profile.assigned_customer or mws_part.shopArea != profile.assigned_shop_area):
+            # Cek apakah profil ada, dan apakah customer MWS tidak ada di dalam list customer yang di-assign ke mekanik,
+            # atau apakah shopArea MWS tidak cocok.
+            if not profile or (mws_part.customer not in profile.assigned_customers or mws_part.shopArea != profile.assigned_shop_area):
                 flash('Anda tidak memiliki izin untuk mengakses MWS ini karena tidak sesuai dengan customer atau area Anda.', 'warning')
                 return redirect(url_for('mechanic_dashboard'))
 
@@ -787,6 +796,49 @@ def mws_detail(part_id):
 
 
 
+# @app.route('/update_mws_info', methods=['POST'])
+# @login_required
+# @limiter.limit("40 per minute") 
+# def update_mws_info():
+#     try:
+#         data = request.get_json()
+#         if not data:
+#             return jsonify({'success': False, 'error': 'Request JSON tidak valid.'}), 400
+        
+#         part_id = data.pop('partId', None)
+#         if not part_id:
+#             return jsonify({'success': False, 'error': 'Part ID tidak ditemukan dalam request.'}), 400
+        
+#         mws_part = MwsPart.query.filter_by(part_id=part_id).first()
+#         if not mws_part:
+#             return jsonify({'success': False, 'error': f'Part dengan ID {part_id} tidak ditemukan.'}), 404
+
+#         old_start_date = mws_part.startDate
+#         for key, value in data.items():
+#             if hasattr(mws_part, key): 
+#                 if key in ['startDate', 'finishDate'] and value:
+#                     try:
+#                         if isinstance(value, str):
+#                             date_value = datetime.strptime(value, '%Y-%m-%d').date()
+#                             setattr(mws_part, key, date_value)
+#                         else:
+#                             setattr(mws_part, key, value)
+#                     except ValueError:
+#                         continue
+#                 else:
+#                     setattr(mws_part, key, value) 
+        
+#         if mws_part.startDate != old_start_date:
+#             mws_part.update_stripping_deadline()
+#         db.session.commit()
+#         return jsonify({'success': True})
+        
+#     except Exception as e:
+#         db.session.rollback()
+#         print(f"Error updating MWS info: {e}")
+#         return jsonify({'success': False, 'error': 'Database error'}), 500
+
+
 @app.route('/update_mws_info', methods=['POST'])
 @login_required
 @limiter.limit("40 per minute") 
@@ -806,6 +858,17 @@ def update_mws_info():
 
         old_start_date = mws_part.startDate
         for key, value in data.items():
+            # --- LOGIKA BARU DIMULAI ---
+            # Jika field yang diupdate adalah 'customer', cari Customer yang cocok
+            # dan perbarui juga customer_id-nya.
+            if key == 'customer':
+                customer_name = value
+                # Cari customer di tabel Customer berdasarkan company_name
+                customer_obj = Customer.query.filter_by(company_name=customer_name).first()
+                # Update customer_id. Jika tidak ada, atur ke None.
+                mws_part.customer_id = customer_obj.id if customer_obj else None
+            # --- LOGIKA BARU SELESAI ---
+
             if hasattr(mws_part, key): 
                 if key in ['startDate', 'finishDate'] and value:
                     try:
@@ -828,7 +891,9 @@ def update_mws_info():
         db.session.rollback()
         print(f"Error updating MWS info: {e}")
         return jsonify({'success': False, 'error': 'Database error'}), 500
+    
 
+    
 # =====================================================================
 # ROUTE AKSI SPESIFIK PADA MWS (CRUD STEP & UPDATE STATUS) - DENGAN RATE LIMITING
 # =====================================================================
@@ -1549,9 +1614,6 @@ def is_mechanic_on_active_step(nik, condition='TECH'):
     return active_step is not None
 
 
-
-
-
 @app.route('/step/add_mechanic', methods=['POST'])
 @require_role('mechanic')
 @limiter.limit("50 per minute")
@@ -1573,8 +1635,8 @@ def add_mechanic_to_step():
         profile = current_user.area
         if not profile:
             return jsonify({'success': False, 'error': 'Profil penugasan Anda tidak ditemukan.'}), 403
-
-        if mws_part.customer != profile.assigned_customer or mws_part.shopArea != profile.assigned_shop_area:
+        
+        if mws_part.customer not in profile.assigned_customers or mws_part.shopArea != profile.assigned_shop_area:
             return jsonify({'success': False, 'error': 'Anda tidak memiliki akses untuk mengerjakan MWS dari customer atau area ini.'}), 403
 
         if is_mechanic_on_active_step(mechanik_nik, condition='TECH'):
@@ -1584,7 +1646,6 @@ def add_mechanic_to_step():
         if step.status == 'pending':
             step.status = 'in_progress'
             update_mws_status(mws_part) 
-
         db.session.commit()
         return jsonify({'success': True, 'message': 'Anda berhasil Sign On ke langkah ini.'})
 
@@ -1592,8 +1653,8 @@ def add_mechanic_to_step():
         db.session.rollback()
         app.logger.error(f"Error adding mechanic to step: {e}")
         return jsonify({'success': False, 'error': 'Terjadi kesalahan pada server.'}), 500
-    
 
+    
 @app.route('/step/remove_mechanic', methods=['POST'])
 @require_role('admin', 'superadmin')
 @limiter.limit("50 per minute")
@@ -1642,17 +1703,28 @@ def duplicate_mws(original_part_id):
         original_mws = MwsPart.query.filter_by(part_id=original_part_id).first()
         if not original_mws:
             return jsonify({'success': False, 'error': 'MWS asli untuk duplikasi tidak ditemukan.'}), 404
+            
         job_type = original_mws.jobType
         steps_template = JOB_STEPS_TEMPLATES.get(job_type, [])
+        
         if not steps_template:
             return jsonify({'success': False, 'error': f'Template langkah untuk jenis pekerjaan "{job_type}" tidak ditemukan.'}), 400
 
-        part_count = MwsPart.query.count() + 1
-        new_part_id = f"MWS-{part_count:03d}"
+        # Cari part_id yang belum digunakan untuk duplikasi
+        part_count = 1
+        while True:
+            new_part_id = f"MWS-{part_count:03d}"
+            existing_part = MwsPart.query.filter_by(part_id=new_part_id).first()
+            if not existing_part:
+                break
+            part_count += 1
+            # Tambahkan safety limit untuk mencegah infinite loop
+            if part_count > 9999:
+                return jsonify({'success': False, 'error': 'Tidak dapat membuat part_id baru untuk duplikasi. Hubungi administrator.'}), 500
 
         new_mws = MwsPart(
             part_id=new_part_id,
-            serialNumber='', # 
+            serialNumber='',  # Serial Number dikosongkan untuk duplikasi
             status='pending',
             currentStep=1,
             partNumber=original_mws.partNumber,
@@ -1671,6 +1743,8 @@ def duplicate_mws(original_part_id):
 
         db.session.add(new_mws)
         db.session.flush()
+        
+        # Buat steps baru berdasarkan template
         for step_data in steps_template:
             step = MwsStep(
                 mws_part_id=new_mws.id,
@@ -1684,7 +1758,9 @@ def duplicate_mws(original_part_id):
             )
             step.set_details(step_data.get('details', []))
             db.session.add(step)
+            
         db.session.commit()
+        
         redirect_url = url_for('mws_detail', part_id=new_part_id)
         return jsonify({'success': True, 'newPartId': new_part_id, 'redirect_url': redirect_url}), 201
 
@@ -1692,6 +1768,339 @@ def duplicate_mws(original_part_id):
         db.session.rollback()
         app.logger.error(f"Error saat menduplikasi MWS: {e}", exc_info=True)
         return jsonify({'success': False, 'error': 'Terjadi kesalahan internal pada server saat duplikasi.'}), 500
+    
+
+# =====================================================================
+# ROUTE BARU UNTUK MENGAMBIL DATA STRIPING
+# =====================================================================
+@app.route('/get_stripping/<part_id>')
+@login_required
+@limiter.limit("60 per minute")
+def get_strep_data(part_id):
+    try:
+        # 1. Temukan MwsPart berdasarkan part_id yang diberikan.
+        mws_part = MwsPart.query.filter_by(part_id=part_id).first()
+        if not mws_part:
+            return jsonify({'success': False, 'error': 'MWS Part tidak ditemukan.'}), 404
+
+        strep_records = mws_part.stripping
+
+        # 3. Ubah hasil query menjadi daftar dictionary agar bisa dikirim sebagai JSON.
+        strep_data = [record.to_dict() for record in strep_records]
+        
+        # 4. Kirim data sebagai response JSON.
+        return jsonify({'success': True, 'data': strep_data})
+
+    except Exception as e:
+        app.logger.error(f"Error saat mengambil data Strep untuk part_id {part_id}: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': 'Terjadi kesalahan internal pada server.'}), 500
+    
+
+# =====================================================================
+# ROUTE CRUD (CREATE, UPDATE, DELETE) UNTUK STRIPPING
+# =====================================================================
+
+@app.route('/add_stripping/<part_id>', methods=['POST'])
+@require_role('admin', 'superadmin')
+@limiter.limit("30 per minute")
+def add_stripping(part_id):
+    """Menambahkan data stripping baru ke MWS part tertentu."""
+    try:
+        mws_part = MwsPart.query.filter_by(part_id=part_id).first()
+        if not mws_part:
+            return jsonify({'success': False, 'error': 'MWS Part tidak ditemukan.'}), 404
+
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'error': 'Request data tidak valid.'}), 400
+
+        new_strep = Stripping(
+            mws_part_id=mws_part.id,
+            bdp_name=data.get('bdp_name'),
+            bdp_number=data.get('bdp_number'),
+            bdp_number_eqv=data.get('bdp_number_eqv'),
+            qty=data.get('qty'),
+            unit=data.get('unit'),
+            op_number=data.get('op_number'),
+            op_date=data.get('op_date'),
+            defect=data.get('defect'),
+            mt_number=data.get('mt_number'),
+            mt_qty=data.get('mt_qty')
+        )
+        db.session.add(new_strep)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Data stripping berhasil ditambahkan.', 'data': new_strep.to_dict()}), 201
+
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error saat menambahkan data stripping: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': 'Terjadi kesalahan pada server.'}), 500
+
+
+@app.route('/edit_stripping/<int:strep_id>', methods=['POST'])
+@require_role('admin', 'superadmin')
+@limiter.limit("30 per minute")
+def edit_stripping(strep_id):
+    """Mengedit data stripping yang sudah ada."""
+    try:
+        strep_record = Stripping.query.get(strep_id)
+        if not strep_record:
+            return jsonify({'success': False, 'error': 'Data stripping tidak ditemukan.'}), 404
+
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'error': 'Request data tidak valid.'}), 400
+
+        strep_record.bdp_name = data.get('bdp_name', strep_record.bdp_name)
+        strep_record.bdp_number = data.get('bdp_number', strep_record.bdp_number)
+        strep_record.bdp_number_eqv = data.get('bdp_number_eqv', strep_record.bdp_number_eqv)
+        strep_record.qty = data.get('qty', strep_record.qty)
+        strep_record.unit = data.get('unit', strep_record.unit)
+        strep_record.op_number = data.get('op_number', strep_record.op_number)
+        strep_record.op_date = data.get('op_date', strep_record.op_date)
+        strep_record.defect = data.get('defect', strep_record.defect)
+        strep_record.mt_number = data.get('mt_number', strep_record.mt_number)
+        strep_record.mt_qty = data.get('mt_qty', strep_record.mt_qty)
+        
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Data stripping berhasil diperbarui.', 'data': strep_record.to_dict()})
+
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error saat mengedit data stripping: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': 'Terjadi kesalahan pada server.'}), 500
+
+
+@app.route('/delete_stripping/<int:strep_id>', methods=['DELETE'])
+@require_role('admin', 'superadmin')
+@limiter.limit("30 per minute")
+def delete_stripping(strep_id):
+    """Menghapus data stripping."""
+    try:
+        strep_record = Stripping.query.get(strep_id)
+        if not strep_record:
+            return jsonify({'success': False, 'error': 'Data stripping tidak ditemukan.'}), 404
+
+        db.session.delete(strep_record)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Data stripping berhasil dihapus.'})
+
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error saat menghapus data stripping: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': 'Terjadi kesalahan pada server.'}), 500
+    
+@app.route('/get_all_strep')
+@login_required
+@limiter.limit("60 per minute")
+def get_all_strep():
+    try:
+        all_mws = MwsPart.query.all()
+        all_strep_data = []
+        for mws in all_mws:
+            strep_data = {
+                'ref_logistic_ppc': mws.ref_logistic_ppc,
+                'mdr_doc_defect': mws.mdr_doc_defect,
+                'remark_mws': mws.remark_mws,
+                'test_result': mws.test_result,
+                'schedule_delivery_on_time': mws.schedule_delivery_on_time,
+                'ecd_finish_workdays': mws.ecd_finish_workdays,
+                'selisih_work_days': mws.selisih_work_days,
+                'prosentase_schedule': mws.prosentase_schedule,
+                'form_out_no': mws.form_out_no,
+                'tanda_terima_fo_no': mws.tanda_terima_fo_no,
+                'tanda_terima_fo_date': mws.tanda_terima_fo_date,
+                'stripping_report_date': mws.stripping_report_date,
+                'stripping_order_by_sap_date': mws.stripping_order_by_sap_date,
+                'prosentase_bdp': mws.prosentase_bdp,
+                'qty_bdp': mws.qty_bdp,
+                'selisih_order_work_days': mws.selisih_order_work_days,
+                'time_stripping_work_days': mws.time_stripping_work_days,
+                'max_stripping_date': mws.max_stripping_date,
+                'tase_stripping': mws.tase_stripping,
+                'status_s_us': mws.status_s_us,
+                'ship_transfer_tt_date': mws.ship_transfer_tt_date,
+                'ship_transfer_tt_no': mws.ship_transfer_tt_no,
+                'selisih_shipping_work_days': mws.selisih_shipping_work_days,
+                'tase': mws.tase
+            }
+            all_strep_data.append(strep_data)
+        
+        return jsonify({'success': True, 'data': all_strep_data})
+
+    except Exception as e:
+        app.logger.error(f"Error saat mengambil semua data Strep: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': 'Terjadi kesalahan internal pada server.'}), 500
+    
+
+# =====================================================================
+# ROUTES UNTUK ATTACHMENT LAMPIRAN
+# =====================================================================
+UPLOAD_FOLDER = os.path.join(app.root_path, 'static', 'uploads')
+ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'xlsx', 'xls', 'pdf', 'doc', 'docx'}
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+@app.route('/upload_attachment/<part_id>', methods=['POST'])
+@require_role('admin', 'superadmin')
+@limiter.limit("15 per minute")
+def upload_attachment(part_id):
+    mws_part = MwsPart.query.filter_by(part_id=part_id).first_or_404()
+
+    uploaded_files = request.files.getlist('attachment')
+    if not uploaded_files or all(f.filename == '' for f in uploaded_files):
+        return jsonify({'success': False, 'error': 'No file selected.'}), 400
+
+    try:
+        current_attachments = json.loads(mws_part.attachment) if mws_part.attachment else []
+    except json.JSONDecodeError:
+        current_attachments = []
+
+    files_processed = 0
+    try:
+        for file in uploaded_files:
+            if file and allowed_file(file.filename):
+                original_filename = secure_filename(file.filename)
+                extension = original_filename.rsplit('.', 1)[1].lower()
+                stored_filename = f"{uuid.uuid4()}.{extension}"
+                
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], stored_filename)
+                file.save(file_path)
+
+                new_attachment_data = {
+                    "original_filename": original_filename,
+                    "stored_filename": stored_filename,
+                    "file_url": url_for('static', filename=f'uploads/{stored_filename}')
+                }
+                current_attachments.append(new_attachment_data)
+                files_processed += 1
+
+        if files_processed == 0:
+            return jsonify({'success': False, 'error': 'File type not allowed.'}), 400
+
+        mws_part.attachment = json.dumps(current_attachments)
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': f'{files_processed} file(s) uploaded successfully.',
+            'attachments': current_attachments
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error uploading attachment for part_id {part_id}: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': 'An internal server error occurred.'}), 500
+
+@app.route('/delete_attachment/<part_id>/<stored_filename>', methods=['DELETE'])
+@require_role('admin', 'superadmin')
+@limiter.limit("30 per minute")
+def delete_attachment(part_id, stored_filename):
+    mws_part = MwsPart.query.filter_by(part_id=part_id).first_or_404()
+    if not mws_part.attachment:
+        return jsonify({'success': False, 'error': 'Attachment not found.'}), 404
+    try:
+        attachments = json.loads(mws_part.attachment)
+        attachment_to_delete = next((att for att in attachments if att.get('stored_filename') == stored_filename), None)
+
+        if not attachment_to_delete:
+            return jsonify({'success': False, 'error': 'Attachment not found in record.'}), 404
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], stored_filename)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        attachments.remove(attachment_to_delete)
+        mws_part.attachment = json.dumps(attachments)
+        db.session.commit()
+
+        return jsonify({'success': True, 'message': 'Attachment deleted successfully.'})
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error deleting attachment {stored_filename}: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': 'An internal error occurred.'}), 500
+
+
+
+# =====================================================================
+# ROUTES UNTUK ATTACHMENT (PER STEP)
+# =====================================================================
+
+@app.route('/upload_step_attachment/<part_id>/<int:step_no>', methods=['POST'])
+@require_role('admin', 'superadmin', 'mechanic')
+@limiter.limit("15 per minute")
+def upload_step_attachment(part_id, step_no):
+    """Handles file uploads for a specific MWS step."""
+    mws_part = MwsPart.query.filter_by(part_id=part_id).first_or_404()
+    step = MwsStep.query.filter_by(mws_part_id=mws_part.id, no=step_no).first_or_404()
+
+    uploaded_files = request.files.getlist('attachments')
+    if not uploaded_files or all(f.filename == '' for f in uploaded_files):
+        return jsonify({'success': False, 'error': 'No file selected for upload.'}), 400
+
+    files_processed = 0
+    try:
+        for file in uploaded_files:
+            if file and allowed_file(file.filename):
+                original_filename = secure_filename(file.filename)
+                extension = original_filename.rsplit('.', 1)[1].lower()
+                stored_filename = f"{uuid.uuid4()}.{extension}"
+                
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], stored_filename)
+                file.save(file_path)
+
+                new_attachment_data = {
+                    "original_filename": original_filename,
+                    "stored_filename": stored_filename,
+                    "file_url": url_for('static', filename=f'uploads/{stored_filename}', _external=True)
+                }
+                step.add_attachment(new_attachment_data)
+                files_processed += 1
+
+        if files_processed == 0:
+            return jsonify({'success': False, 'error': 'The selected file type is not allowed.'}), 400
+
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': f'{files_processed} file(s) successfully uploaded to step {step_no}.',
+            'attachments': step.get_attachments()
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error uploading step attachment for part_id {part_id}, step {step_no}: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': 'An internal server error occurred during file upload.'}), 500
+
+
+@app.route('/delete_step_attachment/<part_id>/<int:step_no>/<stored_filename>', methods=['DELETE'])
+@require_role('admin', 'superadmin', 'mechanic')
+@limiter.limit("30 per minute")
+def delete_step_attachment(part_id, step_no, stored_filename):
+    """Handles deletion of a specific attachment from an MWS step."""
+    mws_part = MwsPart.query.filter_by(part_id=part_id).first_or_404()
+    step = MwsStep.query.filter_by(mws_part_id=mws_part.id, no=step_no).first_or_404()
+    
+    try:
+        if not step.remove_attachment(stored_filename):
+            return jsonify({'success': False, 'error': 'Attachment not found in record.'}), 404
+
+        # Physically delete the file
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], stored_filename)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Attachment deleted successfully.'})
+
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error deleting step attachment {stored_filename}: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': 'An internal error occurred while deleting the attachment.'}), 500
 # =====================================================================
 # MENJALANKAN APLIKASI
 # =====================================================================
