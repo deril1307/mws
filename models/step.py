@@ -111,16 +111,19 @@ class MwsStep(db.Model):
         attachments.append(attachment_data)
         self.attachments = json.dumps(attachments)
 
-    def remove_attachment(self, stored_filename):
-        """Remove an attachment by its stored filename."""
+    def remove_attachment(self, public_id_to_remove):
+        """Remove an attachment by its Cloudinary public_id."""
         attachments = self.get_attachments()
         initial_count = len(attachments)
-        attachments = [att for att in attachments if att.get('stored_filename') != stored_filename]
+        attachments = [
+            att for att in attachments 
+            if att.get('public_id', '').strip() != public_id_to_remove.strip()
+        ]
+        
         if len(attachments) < initial_count:
             self.attachments = json.dumps(attachments)
             return True
         return False
-    # --- END: New Functions ---
 
     def __repr__(self):
         return f'<MwsStep {self.no} for MWS ID {self.mws_part_id}>'

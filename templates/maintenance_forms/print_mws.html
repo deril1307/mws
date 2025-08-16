@@ -5,12 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Maintenance Work Sheet - Print</title>
     <style>
+      .steps-table th,
+      .steps-table td {
+        border: 0.5pt solid #000;
+        padding: 4px;
+        text-align: left;
+        vertical-align: top;
+        height: 80px; /* Anda bisa sesuaikan tinggi ini jika perlu */
+      }
       @page {
         size: A4;
         margin: 0.5in;
       }
 
-      /* Tambahkan ini untuk perhitungan box model yang lebih baik */
       *,
       *::before,
       *::after {
@@ -26,20 +33,26 @@
           display: none !important;
         }
       }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
       body {
         font-family: Arial, sans-serif;
         font-size: 10px;
         line-height: 1.3;
-        margin: 0;
         background: white;
       }
       .worksheet-container {
         width: 100%;
-        max-width: 184mm;
+        max-width: 184mm; /* Lebar A4 (210mm) - margin (2*12.7mm) */
+        min-height: 271mm; /* Tinggi A4 (297mm) - margin (2*12.7mm) */
         margin: 0 auto;
-        /* PERUBAHAN: Mengubah border menjadi garis ganda */
         border: 4px double #000;
         background: white;
+        display: flex;
+        flex-direction: column;
       }
       .field-label {
         font-weight: bold;
@@ -53,7 +66,15 @@
         min-height: 12px;
       }
 
-      /* Final Header Structure */
+      /* --- STRUKTUR UTAMA --- */
+      .main-content {
+        flex-grow: 1; /* Membuat area ini tumbuh mengisi ruang kosong */
+      }
+      .footer-section {
+        flex-shrink: 0; /* Mencegah footer menyusut */
+      }
+
+      /* Header */
       .header-main {
         display: flex;
         border-bottom: 1px solid #000;
@@ -93,6 +114,18 @@
       .center-stack-col .header-field:last-child {
         border-bottom: none;
       }
+      /* Style untuk baris yang berisi Tittle dan Job Type */
+      .field-row {
+        display: flex;
+        flex-direction: row;
+        padding: 0 !important; /* Menghapus padding dari parent */
+      }
+      .field-row > .header-field {
+        border-bottom: none !important; /* Menghapus border bawah pada anak elemen */
+      }
+      .field-row > .header-field:first-child {
+        border-right: 1px solid #000; /* Menambah border kanan pada Tittle */
+      }
 
       .right-stack-col {
         flex: 1.5;
@@ -111,7 +144,7 @@
         border-bottom: none;
       }
 
-      /* Bottom Grid for Part/Customer Info (3-COLUMN LAYOUT) */
+      /* Grid Info Part/Customer */
       .info-grid {
         display: grid;
         grid-template-columns: 1fr 1fr 1fr;
@@ -132,14 +165,13 @@
         border-bottom: 1px solid #000;
       }
 
-      /* Table Styles */
+      /* Tabel Steps */
       .steps-table {
         width: 100%;
         border-collapse: collapse;
       }
       .steps-table th,
       .steps-table td {
-        /* PERUBAHAN: Mengubah border menjadi lebih tipis */
         border: 0.5pt solid #000;
         padding: 4px;
         text-align: left;
@@ -147,7 +179,6 @@
       }
       .steps-table th {
         background-color: #f0f0f0;
-        /* PERUBAHAN: Menghilangkan cetak tebal */
         font-weight: normal;
         text-align: center;
       }
@@ -187,8 +218,8 @@
         min-height: 40px;
       }
       .footer-info {
-        text-align: center;
-        font-size: 8px;
+        text-align: left;
+        font-size: 6px;
         margin-top: 10px;
         padding: 5px;
         border-top: 1px solid #000;
@@ -225,143 +256,161 @@
       <button class="print-button" onclick="window.print()">Print</button>
     </div>
     <div class="worksheet-container">
-      <div class="header-main">
-        <div class="logo-col">
-          <img src="{{ url_for('static', filename='img/Logo PT DI.jpeg') }}" alt="Logo PT DI" style="width: 100%; height: auto; max-width: 70px" />
+      <div class="main-content">
+        <div class="header-main">
+          <div class="logo-col">
+            <img src="{{ url_for('static', filename='img/Logo PT DI.webp') }}" alt="Logo PT DI" style="width: 100%; height: auto; max-width: 70px" />
+          </div>
+          <div class="center-stack-col">
+            <div class="main-title-div">MAINTENANCE WORK SHEET</div>
+            <div class="header-field field-row">
+              <div class="header-field" style="flex: 2">
+                <span class="field-label">Tittle</span>
+                <div class="field-value">{{ part.title }}</div>
+              </div>
+              <div class="header-field" style="flex: 1">
+                <span class="field-label">Job Type</span>
+                <div class="field-value">{{ part.jobType }}</div>
+              </div>
+            </div>
+
+            <div class="header-field">
+              <span class="field-label">Ref</span>
+              <div class="field-value">{{ part.reference }}<br />{{ part.manual_reference }}</div>
+            </div>
+          </div>
+
+          <div class="right-stack-col">
+            <div class="header-field">
+              <span class="field-label">WBS No</span>
+              <div class="field-value">{{ part.wbs_no }}</div>
+            </div>
+            <div class="header-field">
+              <span class="field-label">WORKSHEET NO</span>
+              <div class="field-value">{{ part.worksheet_no }}</div>
+            </div>
+            <div class="header-field">
+              <span class="field-label">IWO NO</span>
+              <div class="field-value">{{ part.iwo_no }}</div>
+            </div>
+          </div>
         </div>
 
-        <div class="center-stack-col">
-          <div class="main-title-div">MAINTENANCE WORK SHEET</div>
-          <div class="header-field">
-            <span class="field-label">Tittle</span>
-            <div class="field-value">{{ part.title }}</div>
+        <div class="info-grid">
+          <div class="grid-item">
+            <span class="field-label">PART NUMBER</span>
+            <div class="field-value">{{ part.part_number }}</div>
           </div>
-          <div class="header-field">
-            <span class="field-label">Ref</span>
-            <div class="field-value">{{ part.reference }}<br />{{ part.manual_reference }}</div>
+          <div class="grid-item">
+            <span class="field-label">A/C TYPE</span>
+            <div class="field-value">{{ part.ac_type }}</div>
+          </div>
+          <div class="grid-item">
+            <span class="field-label">SHOP AREA</span>
+            <div class="field-value">{{ part.shop_area }}</div>
+          </div>
+          <div class="grid-item">
+            <span class="field-label">CUSTOMER</span>
+            <div class="field-value">{{ part.customer }}</div>
+          </div>
+          <div class="grid-item">
+            <span class="field-label">SERIAL NUMBER</span>
+            <div class="field-value">{{ part.serial_number }}</div>
+          </div>
+          <div class="grid-item">
+            <span class="field-label">REVISION</span>
+            <div class="field-value">{{ part.revision }}</div>
           </div>
         </div>
 
-        <div class="right-stack-col">
-          <div class="header-field">
-            <span class="field-label">WBS No</span>
-            <div class="field-value">{{ part.wbs_no }}</div>
-          </div>
-          <div class="header-field">
-            <span class="field-label">WORKSHEET NO</span>
-            <div class="field-value">{{ part.worksheet_no }}</div>
-          </div>
-          <div class="header-field">
-            <span class="field-label">IWO NO</span>
-            <div class="field-value">{{ part.iwo_no }}</div>
-          </div>
-        </div>
+        <table class="steps-table">
+          <thead>
+            <tr>
+              <th class="step-no">NO<br /><span class="th-description"></span></th>
+              <th class="step-description">DESCRIPTION<br /><span class="th-description"></span></th>
+              <th class="step-man">MAN<br /><span class="th-description"></span></th>
+              <th class="step-hours">HOURS</th>
+              <th class="step-tech">TECH<br /><span class="th-description"></span></th>
+              <th class="step-insp">INSP<br /><span class="th-description"></span></th>
+            </tr>
+          </thead>
+          <tbody>
+            {# 1. Tampilkan semua langkah yang ada dari data #} {% for step in part.steps %}
+            <tr>
+              <td class="step-no">{{ step.no }}</td>
+              <td class="step-description">
+                {{ step.description }} {% if step.details %}
+                <ul class="details-list">
+                  {% for detail in step.details %}
+                  <li>- {{ detail }}</li>
+                  {% endfor %}
+                </ul>
+                {% endif %}
+              </td>
+              <td class="step-man">
+                {% if step.man_power and step.man_power.total > 0 %}<strong>Total: {{ step.man_power.total }}</strong>
+                <ul class="mechanic-list">
+                  {% for name in step.man_power.names %}
+                  <li>{{ name }}</li>
+                  {% endfor %}
+                </ul>
+                {% else %} N/A {% endif %}
+              </td>
+              <td class="step-hours">{% if step.hours and step.hours not in ['0', '0.00', '00:00'] %}{{ step.hours }}{% else %}N/A{% endif %}</td>
+              <td class="step-tech">{{ step.technician or 'N/A' }}</td>
+              <td class="step-insp">{{ step.inspector or 'N/A' }}</td>
+            </tr>
+            {% endfor %} {# 2. Tambahkan baris kosong jika jumlah langkah kurang dari 10 #} {% if part.steps|length < 10 %} {% for i in range(10 - (part.steps|length)) %}
+            <tr>
+              <td class="step-no">&nbsp;</td>
+              <td class="step-description">&nbsp;</td>
+              <td class="step-man">&nbsp;</td>
+              <td class="step-hours">&nbsp;</td>
+              <td class="step-tech">&nbsp;</td>
+              <td class="step-insp">&nbsp;</td>
+            </tr>
+            {% endfor %} {% endif %}
+          </tbody>
+        </table>
       </div>
-
-      <div class="info-grid">
-        <div class="grid-item">
-          <span class="field-label">PART NUMBER</span>
-          <div class="field-value">{{ part.part_number }}</div>
+      <div class="footer-section">
+        <div class="signature-section">
+          <div class="signature-box">
+            <div class="signature-title">PREPARED BY:</div>
+            <div class="signature-content">
+              <div class="approval-status">{{ part.prepared_by_text or '' }}</div>
+              <div class="signature-space"></div>
+              <div>DATE: {{ part.prepared_date or '' }}</div>
+            </div>
+          </div>
+          <div class="signature-box">
+            <div class="signature-title">APPROVED BY:</div>
+            <div class="signature-content">
+              <div class="approval-status">{{ part.approved_by_text or '' }}</div>
+              <div class="signature-space"></div>
+              <div>DATE: {{ part.approved_date or '' }}</div>
+            </div>
+          </div>
+          <div class="signature-box">
+            <div class="signature-title">VERIFIED BY:</div>
+            <div class="signature-content">
+              <div class="approval-status">{{ part.verified_by_text or '' }}</div>
+              <div class="signature-space"></div>
+              <div>DATE: {{ part.verified_date or '' }}</div>
+            </div>
+          </div>
+          <div class="signature-box">
+            <div class="signature-title">START DATE:</div>
+            <div class="signature-content">
+              <div>{{ part.start_date or '' }}</div>
+              <hr style="border-top: 1px solid #000; margin: 5px 0" />
+              <strong>FINISHED DATE:</strong><br />
+              <div>{{ part.finish_date or '' }}</div>
+            </div>
+          </div>
         </div>
-        <div class="grid-item">
-          <span class="field-label">A/C TYPE</span>
-          <div class="field-value">{{ part.ac_type }}</div>
-        </div>
-        <div class="grid-item">
-          <span class="field-label">SHOP AREA</span>
-          <div class="field-value">{{ part.shop_area }}</div>
-        </div>
-        <div class="grid-item">
-          <span class="field-label">CUSTOMER</span>
-          <div class="field-value">{{ part.customer }}</div>
-        </div>
-        <div class="grid-item">
-          <span class="field-label">SERIAL NUMBER</span>
-          <div class="field-value">{{ part.serial_number }}</div>
-        </div>
-        <div class="grid-item">
-          <span class="field-label">REVISION</span>
-          <div class="field-value">{{ part.revision }}</div>
-        </div>
+        <div class="footer-info">AS-2200-012RO, Maintenance Work Sheet for MRO C, Rev. 9, Issue Date Aug. 13, 2024</div>
       </div>
-
-      <table class="steps-table">
-        <thead>
-          <tr>
-            <th class="step-no">NO<br /><span class="th-description"></span></th>
-            <th class="step-description">DESCRIPTION<br /><span class="th-description"></span></th>
-            <th class="step-man">MAN<br /><span class="th-description"></span></th>
-            <th class="step-hours">HOURS</th>
-            <th class="step-tech">TECH<br /><span class="th-description"></span></th>
-            <th class="step-insp">INSP<br /><span class="th-description"></span></th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for step in part.steps %}
-          <tr>
-            <td class="step-no">{{ step.no }}</td>
-            <td class="step-description">
-              {{ step.description }} {% if step.details %}
-              <ul class="details-list">
-                {% for detail in step.details %}
-                <li>- {{ detail }}</li>
-                {% endfor %}
-              </ul>
-              {% endif %}
-            </td>
-            <td class="step-man">
-              {% if step.man_power and step.man_power.total > 0 %}<strong>Total: {{ step.man_power.total }}</strong>
-              <ul class="mechanic-list">
-                {% for name in step.man_power.names %}
-                <li>{{ name }}</li>
-                {% endfor %}
-              </ul>
-              {% else %} N/A {% endif %}
-            </td>
-            <td class="step-hours">{% if step.hours and step.hours not in ['0', '0.00', '00:00'] %}{{ step.hours }}{% else %}N/A{% endif %}</td>
-            <td class="step-tech">{{ step.technician or 'N/A' }}</td>
-            <td class="step-insp">{{ step.inspector or 'N/A' }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-
-      <div class="signature-section">
-        <div class="signature-box">
-          <div class="signature-title">PREPARED BY:</div>
-          <div class="signature-content">
-            <div class="approval-status">{{ part.prepared_by_text or '' }}</div>
-            <div class="signature-space"></div>
-            <div>DATE: {{ part.prepared_date or '' }}</div>
-          </div>
-        </div>
-        <div class="signature-box">
-          <div class="signature-title">APPROVED BY:</div>
-          <div class="signature-content">
-            <div class="approval-status">{{ part.approved_by_text or '' }}</div>
-            <div class="signature-space"></div>
-            <div>DATE: {{ part.approved_date or '' }}</div>
-          </div>
-        </div>
-        <div class="signature-box">
-          <div class="signature-title">VERIFIED BY:</div>
-          <div class="signature-content">
-            <div class="approval-status">{{ part.verified_by_text or '' }}</div>
-            <div class="signature-space"></div>
-            <div>DATE: {{ part.verified_date or '' }}</div>
-          </div>
-        </div>
-        <div class="signature-box">
-          <div class="signature-title">START DATE:</div>
-          <div class="signature-content">
-            <div>{{ part.start_date or '' }}</div>
-            <hr style="border-top: 1px solid #000; margin: 5px 0" />
-            <strong>FINISHED DATE:</strong><br />
-            <div>{{ part.finish_date or '' }}</div>
-          </div>
-        </div>
-      </div>
-      <div class="footer-info">AS-2200-012RO, Maintenance Work Sheet for MRO C, Rev. 9, Issue Date Aug. 13, 2024</div>
     </div>
   </body>
 </html>

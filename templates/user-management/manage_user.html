@@ -1,148 +1,171 @@
 {% extends "shared/base.html" %} {% block title %} {% if user.role == 'superadmin' %} Manajemen Admin & Pengguna {% else %} Manajemen Pengguna {% endif %} - Sistem Aircraft Maintenance {% endblock %} {% block content %}
-<div class="min-h-screen bg-gray-100">
-  <header class="bg-white shadow-sm sticky top-0 z-40">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex justify-between items-center py-4">
-        <div class="flex items-center space-x-4">
-          <div class="bg-indigo-600 p-3 rounded-full text-white">
-            <i class="fas fa-users-cog text-xl"></i>
-          </div>
-          <div>
-            <h1 class="text-xl md:text-2xl font-bold text-gray-900">{% if user.role == 'superadmin' %} Manajemen Admin & Pengguna {% else %} Manajemen Pengguna {% endif %}</h1>
-          </div>
-        </div>
-        <div class="flex items-center space-x-2">
-          <a
-            href="{{ url_for('dashboard') }}"
-            class="hidden sm:inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
-          >
-            <i class="fas fa-arrow-left mr-2"></i>
-            Dashboard
-          </a>
-          <button
-            onclick="openUserModal()"
-            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
-          >
-            <i class="fas fa-plus mr-2"></i>
-            Tambah
+<div class="flex h-screen bg-gray-100 font-sans">
+  {% include 'components/sidebar.html' %}
+
+  <div class="flex-1 flex flex-col overflow-hidden">
+    <header class="bg-white shadow-sm border-b border-gray-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+          <button id="sidebar-toggle-button" class="md:hidden text-gray-500 hover:text-gray-700 focus:outline-none">
+            <i class="fas fa-bars text-xl"></i>
           </button>
-        </div>
-      </div>
-    </div>
-  </header>
 
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-      <div class="bg-white p-5 rounded-xl shadow-sm border flex items-center">
-        <div class="p-3 bg-green-100 rounded-lg mr-4">
-          <i class="fas fa-wifi text-green-600 text-xl"></i>
-        </div>
-        <div>
-          <p class="text-sm font-medium text-gray-600">Pengguna Aktif</p>
-          <p class="text-2xl font-bold text-gray-900">{{ active_users_niks|length }}</p>
-        </div>
-      </div>
-      <div class="bg-white p-5 rounded-xl shadow-sm border flex items-center">
-        <div class="p-3 bg-gray-200 rounded-lg mr-4">
-          <i class="fas fa-moon text-gray-600 text-xl"></i>
-        </div>
-        <div>
-          <p class="text-sm font-medium text-gray-600">Pengguna Offline</p>
-          <p class="text-2xl font-bold text-gray-900">{{ users|length - active_users_niks|length }}</p>
-        </div>
-      </div>
-      <div class="bg-white p-5 rounded-xl shadow-sm border flex items-center">
-        <div class="p-3 bg-indigo-100 rounded-lg mr-4">
-          <i class="fas fa-users text-indigo-600 text-xl"></i>
-        </div>
-        <div>
-          <p class="text-sm font-medium text-gray-600">Total Pengguna</p>
-          <p class="text-2xl font-bold text-gray-900">{{ users|length }}</p>
-        </div>
-      </div>
-    </div>
+          <div class="flex items-center space-x-4">
+            <div class="bg-indigo-600 p-3 rounded-full text-white">
+              <i class="fas fa-users-cog text-xl"></i>
+            </div>
+            <div>
+              <h1 class="text-xl md:text-2xl font-bold text-gray-900">{% if user.role == 'superadmin' %} Manajemen Admin & Pengguna {% else %} Manajemen Pengguna {% endif %}</h1>
+            </div>
+          </div>
 
-    <div class="mb-4 flex justify-end">
-      <div class="relative max-w-md">
-        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <i class="fas fa-search text-gray-400"></i>
-        </div>
-        <input
-          type="text"
-          id="search-input"
-          placeholder="Cari NIK/Nama/Customer..."
-          class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-        />
-      </div>
-    </div>
+          <div class="flex-1"></div>
 
-    <div class="bg-white rounded-lg shadow-md overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm text-left text-gray-600">
-          <thead class="text-xs text-gray-700 uppercase bg-gray-50 border-b border-gray-200">
-            <tr>
-              <th scope="col" class="px-6 py-3 font-medium">No.</th>
-              <th scope="col" class="px-6 py-3 font-medium">Status</th>
-              <th scope="col" class="px-6 py-3 font-medium">NIK</th>
-              <th scope="col" class="px-6 py-3 font-medium">Nama</th>
-              <th scope="col" class="px-6 py-3 font-medium">Role</th>
-              <th scope="col" class="px-6 py-3 font-medium">Customer dan Area</th>
-              <th scope="col" class="px-6 py-3 font-medium text-right">Aksi</th>
-            </tr>
-          </thead>
-          <tbody id="user-table-body">
-            {% for nik, user_data in users.items() %} {% set is_superadmin = user.role == 'superadmin' %} {% set is_admin = user.role == 'admin' %} {% set viewable_by_superadmin = user_data.role in ['admin', 'mechanic', 'quality1',
-            'quality2'] %} {% set viewable_by_admin = user_data.role in ['mechanic', 'quality1', 'quality2'] %} {% if (is_superadmin and viewable_by_superadmin) or (is_admin and viewable_by_admin) %}
-            <tr class="bg-white border-b border-gray-200 hover:bg-gray-50 transition-colors">
-              <td class="px-6 py-4">{{ loop.index }}</td>
-              <td class="px-6 py-4">
-                {% if nik in active_users_niks %}
-                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  <span class="h-2 w-2 bg-green-500 rounded-full mr-1.5"></span>
-                  Online
-                </span>
-                {% else %}
-                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                  <span class="h-2 w-2 bg-gray-400 rounded-full mr-1.5"></span>
-                  Offline
-                </span>
-                {% endif %}
-              </td>
-              <td class="px-6 py-4 font-mono text-gray-900 whitespace-nowrap">{{ nik }}</td>
-              <td class="px-6 py-4 text-gray-800 whitespace-nowrap">{{ user_data.name }}</td>
-              <td class="px-6 py-4">
-                {% set role_colors = { 'admin': 'bg-red-100 text-red-800', 'mechanic': 'bg-green-100 text-green-800', 'quality1': 'bg-yellow-100 text-yellow-800', 'quality2': 'bg-purple-100 text-purple-800' } %}
-                <span class="px-3 py-1 text-xs font-semibold leading-tight rounded-full {{ role_colors.get(user_data.role, 'bg-gray-100 text-gray-800') }}"> {{ user_data.role | capitalize }} </span>
-              </td>
-              <td class="px-6 py-4 assignment-cell">
-                {% if user_data.role == 'mechanic' and (user_data.assigned_customers or user_data.assigned_shop_area) %}
-                <div class="text-xs">
-                  <div class="font-bold text-gray-600">Area:</div>
-                  <span class="font-semibold text-gray-800">{{ user_data.assigned_shop_area or '-' }}</span>
-                  <div class="font-bold text-gray-600 mt-2">Customer:</div>
-                  <div class="flex flex-wrap gap-1 mt-1">
-                    {% for customer in user_data.assigned_customers %}
-                    <span class="px-2 py-0.5 font-medium">{{ customer }}</span>
+          <div class="flex items-center space-x-2 ml-4">
+            <a
+              href="{{ url_for('dashboard') }}"
+              class="hidden sm:inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+            >
+              <i class="fas fa-arrow-left mr-2"></i>
+              Dashboard
+            </a>
+            <button
+              onclick="openUserModal()"
+              class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+            >
+              <i class="fas fa-plus mr-2"></i>
+              Tambah
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6">
+      <div class="max-w-7xl mx-auto">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div class="bg-white p-5 rounded-xl shadow-sm border flex items-center">
+            <div class="p-3 bg-green-100 rounded-lg mr-4">
+              <i class="fas fa-wifi text-green-600 text-xl"></i>
+            </div>
+            <div>
+              <p class="text-sm font-medium text-gray-600">Pengguna Aktif</p>
+              <p class="text-2xl font-bold text-gray-900">{{ active_users_niks|length }}</p>
+            </div>
+          </div>
+          <div class="bg-white p-5 rounded-xl shadow-sm border flex items-center">
+            <div class="p-3 bg-gray-200 rounded-lg mr-4">
+              <i class="fas fa-moon text-gray-600 text-xl"></i>
+            </div>
+            <div>
+              <p class="text-sm font-medium text-gray-600">Pengguna Offline</p>
+              <p class="text-2xl font-bold text-gray-900">{{ users|length - active_users_niks|length }}</p>
+            </div>
+          </div>
+          <div class="bg-white p-5 rounded-xl shadow-sm border flex items-center">
+            <div class="p-3 bg-indigo-100 rounded-lg mr-4">
+              <i class="fas fa-users text-indigo-600 text-xl"></i>
+            </div>
+            <div>
+              <p class="text-sm font-medium text-gray-600">Total Pengguna</p>
+              <p class="text-2xl font-bold text-gray-900">{{ users|length }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="mb-4 flex justify-end">
+          <div class="relative max-w-md">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <i class="fas fa-search text-gray-400"></i>
+            </div>
+            <input
+              type="text"
+              id="search-input"
+              placeholder="Cari NIK/Nama/Customer..."
+              class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            />
+          </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left text-gray-600">
+              <thead class="text-xs text-gray-700 uppercase bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th scope="col" class="px-6 py-3 font-medium">No.</th>
+                  <th scope="col" class="px-6 py-3 font-medium">Status</th>
+                  <th scope="col" class="px-6 py-3 font-medium">NIK</th>
+                  <th scope="col" class="px-6 py-3 font-medium">Nama</th>
+                  <th scope="col" class="px-6 py-3 font-medium">Role</th>
+                  <th scope="col" class="px-6 py-3 font-medium">Customer dan Area</th>
+                  <th scope="col" class="px-6 py-3 font-medium text-right">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="user-table-body">
+                {% for nik, user_data in users.items() %} {% set is_superadmin = user.role == 'superadmin' %} {% set is_admin = user.role == 'admin' %} {% set viewable_by_superadmin = user_data.role in ['admin', 'mechanic', 'quality1',
+                'quality2'] %} {% set viewable_by_admin = user_data.role in ['mechanic', 'quality1', 'quality2'] %} {% if (is_superadmin and viewable_by_superadmin) or (is_admin and viewable_by_admin) %}
+                <tr class="bg-white border-b border-gray-200 hover:bg-gray-50 transition-colors">
+                  <td class="px-6 py-4">{{ loop.index }}</td>
+                  <td class="px-6 py-4">
+                    {% if nik in active_users_niks %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      <span class="h-2 w-2 bg-green-500 rounded-full mr-1.5"></span>
+                      Online
+                    </span>
                     {% else %}
-                    <span class="text-gray-400 italic">N/A</span>
-                    {% endfor %}
-                  </div>
-                </div>
-                {% else %}
-                <span class="text-gray-400">-</span>
-                {% endif %}
-              </td>
-              <td class="px-6 py-4 text-right whitespace-nowrap space-x-2">
-                <button onclick="openUserModal('{{ nik }}')" class="font-medium text-indigo-600 hover:text-indigo-900 transition-colors">Edit</button>
-                <button onclick="openDeleteModal('{{ nik }}', '{{ user_data.name }}')" class="font-medium text-red-600 hover:text-red-900 transition-colors">Hapus</button>
-              </td>
-            </tr>
-            {% endif %} {% endfor %}
-          </tbody>
-        </table>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                      <span class="h-2 w-2 bg-gray-400 rounded-full mr-1.5"></span>
+                      Offline
+                    </span>
+                    {% endif %}
+                  </td>
+                  <td class="px-6 py-4 font-mono text-gray-900 whitespace-nowrap">{{ nik }}</td>
+                  <td class="px-6 py-4 text-gray-800 whitespace-nowrap">{{ user_data.name }}</td>
+                  <td class="px-6 py-4">
+                    {% set role_colors = { 'admin': 'bg-red-100 text-red-800', 'mechanic': 'bg-green-100 text-green-800', 'quality1': 'bg-yellow-100 text-yellow-800', 'quality2': 'bg-purple-100 text-purple-800' } %}
+                    <span class="px-3 py-1 text-xs font-semibold leading-tight rounded-full {{ role_colors.get(user_data.role, 'bg-gray-100 text-gray-800') }}"> {{ user_data.role | capitalize }} </span>
+                  </td>
+                  <td class="px-6 py-4 assignment-cell">
+                    {% if user_data.role == 'mechanic' %}
+                    <div class="text-xs">
+                      <div class="font-bold text-gray-600">Area:</div>
+                      <div class="flex flex-wrap gap-1 mt-1">
+                        {% if user_data.assigned_shop_area and '*' in user_data.assigned_shop_area %}
+                        <span class="px-2 py-0.5 bg-blue-100 text-blue-800 rounded font-medium">Semua Area</span>
+                        {% elif user_data.assigned_shop_area %} {% for area in user_data.assigned_shop_area %}
+                        <span class="px-2 py-0.5 bg-blue-100 text-blue-800 rounded font-medium">{{ area }}</span>
+                        {% endfor %} {% else %}
+                        <span class="text-gray-400 italic">N/A</span>
+                        {% endif %}
+                      </div>
+                      <div class="font-bold text-gray-600 mt-2">Customer:</div>
+                      <div class="flex flex-wrap gap-1 mt-1">
+                        {% if user_data.assigned_customers and '*' in user_data.assigned_customers %}
+                        <span class="px-2 py-0.5 bg-green-100 text-green-800 rounded font-medium">Semua Customer</span>
+                        {% elif user_data.assigned_customers %} {% for customer in user_data.assigned_customers %}
+                        <span class="px-2 py-0.5 bg-green-100 text-green-800 rounded font-medium">{{ customer }}</span>
+                        {% endfor %} {% else %}
+                        <span class="text-gray-400 italic">N/A</span>
+                        {% endif %}
+                      </div>
+                    </div>
+                    {% else %}
+                    <span class="text-gray-400">-</span>
+                    {% endif %}
+                  </td>
+                  <td class="px-6 py-4 text-right whitespace-nowrap space-x-2">
+                    <button onclick="openUserModal('{{ nik }}')" class="font-medium text-indigo-600 hover:text-indigo-900 transition-colors">Edit</button>
+                    <button onclick="openDeleteModal('{{ nik }}', '{{ user_data.name }}')" class="font-medium text-red-600 hover:text-red-900 transition-colors">Hapus</button>
+                  </td>
+                </tr>
+                {% endif %} {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
-    </div>
-  </main>
+    </main>
+  </div>
 </div>
 
 <div id="user-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 overflow-y-auto h-full w-full z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
@@ -182,12 +205,17 @@
                 </div>
                 <div>
                   <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
-                  <input
-                    type="password"
-                    name="password"
-                    id="password"
-                    class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  />
+                  <div class="relative mt-1">
+                    <input
+                      type="password"
+                      name="password"
+                      id="password"
+                      class="block w-full px-3 py-2 pr-10 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    />
+                    <button type="button" id="toggle-password-visibility" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none">
+                      <i class="fas fa-eye"></i>
+                    </button>
+                  </div>
                   <p id="password-help" class="mt-2 text-xs text-gray-500">Wajib diisi untuk pengguna baru. Kosongkan jika tidak ingin mengubah.</p>
                 </div>
                 <div>
@@ -196,12 +224,12 @@
                     {% if user.role == 'superadmin' %}
                     <option value="admin">Admin</option>
                     <option value="mechanic">Mechanic</option>
-                    <option value="quality1">Quality 1</option>
-                    <option value="quality2">Quality 2</option>
+                    <option value="quality1">Quality Inspector</option>
+                    <option value="quality2">Quality CVDR</option>
                     {% elif user.role == 'admin' %}
                     <option value="mechanic" selected>Mechanic</option>
-                    <option value="quality1">Quality 1</option>
-                    <option value="quality2">Quality 2</option>
+                    <option value="quality1">Quality Inscpector</option>
+                    <option value="quality2">Quality CVDR</option>
                     {% endif %}
                   </select>
                 </div>
@@ -209,19 +237,42 @@
                   <p class="text-sm font-medium text-gray-800">Penugasan Customer dan Area</p>
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Pilih Customer</label>
-                    <div id="customer-checkbox-container" class="max-h-40 overflow-y-auto p-3 border border-gray-300 rounded-md space-y-2 bg-gray-50">
-                      <p class="text-gray-500 text-sm">Memuat daftar customer...</p>
+                    <div class="mb-2 space-y-2 sm:space-y-0 sm:flex sm:items-center sm:justify-between">
+                      <div class="relative flex-grow">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fas fa-search text-gray-400"></i></div>
+                        <input
+                          type="text"
+                          id="customer-search-input"
+                          placeholder="Cari customer..."
+                          class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        />
+                      </div>
+                      <div class="flex items-center pl-0 sm:pl-4 flex-shrink-0">
+                        <input id="select-all-customers" type="checkbox" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" />
+                        <label for="select-all-customers" class="ml-2 block text-sm text-gray-900"> Pilih Semua </label>
+                      </div>
                     </div>
+                    <div id="customer-checkbox-container" class="max-h-40 overflow-y-auto p-3 border border-gray-300 rounded-md space-y-2 bg-gray-50"></div>
                   </div>
+
                   <div>
-                    <label for="assigned_shop_area" class="block text-sm font-medium text-gray-700">Shop Area </label>
-                    <input
-                      type="text"
-                      name="assigned_shop_area"
-                      id="assigned_shop_area"
-                      placeholder="Contoh: HY"
-                      class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    />
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Pilih Shop Area</label>
+                    <div class="mb-2 space-y-2 sm:space-y-0 sm:flex sm:items-center sm:justify-between">
+                      <div class="relative flex-grow">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fas fa-search text-gray-400"></i></div>
+                        <input
+                          type="text"
+                          id="shop-area-search-input"
+                          placeholder="Cari area..."
+                          class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        />
+                      </div>
+                      <div class="flex items-center pl-0 sm:pl-4 flex-shrink-0">
+                        <input id="select-all-shop-areas" type="checkbox" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" />
+                        <label for="select-all-shop-areas" class="ml-2 block text-sm text-gray-900"> Pilih Semua </label>
+                      </div>
+                    </div>
+                    <div id="shop-area-checkbox-container" class="max-h-40 overflow-y-auto p-3 border border-gray-300 rounded-md space-y-2 bg-gray-50"></div>
                   </div>
                 </div>
               </div>
@@ -286,5 +337,6 @@
   </div>
 </div>
 
+<script src="{{ url_for('static', filename='js/sidebar.js') }}"></script>
 <script src="{{ url_for('static', filename='js/manage_user_logic.js') }}"></script>
 {% endblock %}

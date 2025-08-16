@@ -1,111 +1,35 @@
-{% extends "shared/base.html" %} {% block title %}Quality CUDR - Sistem Aircraft Maintenance{% endblock %} {% from "monitoring/tracking_list.html" import render_tracking_list %} {% block content %}
+{% extends "shared/base.html" %} {% block title %}Quality CUDR Dashboard - Sistem Aircraft Maintenance{% endblock %} {% from "monitoring/tracking_list.html" import render_tracking_list %} {% block content %}
+<div class="flex h-screen bg-gray-100 font-sans">
+  <!-- Memanggil Sidebar dinamis -->
+  {% include 'components/sidebar.html' %}
 
-<style>
-  /* CSS untuk animasi modal logout */
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  }
-  @keyframes fadeOut {
-    from {
-      opacity: 1;
-    }
-    to {
-      opacity: 0;
-    }
-  }
-  @keyframes scaleIn {
-    from {
-      transform: scale(0.95);
-      opacity: 0;
-    }
-    to {
-      transform: scale(1);
-      opacity: 1;
-    }
-  }
-  .modal-overlay {
-    animation: fadeIn 0.2s ease-out forwards;
-  }
-  .modal-panel {
-    animation: scaleIn 0.2s ease-out forwards;
-  }
-  .modal-overlay.is-hiding {
-    animation: fadeOut 0.2s ease-in forwards;
-  }
-</style>
-
-<div class="min-h-screen bg-gray-50">
-  <div class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
-    <div class="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
-      <div class="flex justify-between items-center py-3 sm:py-4">
-        <div class="flex items-center">
-          <div class="mr-3 sm:mr-4">
-            <img src="{{ url_for('static', filename='img/logo PT DI.webp') }}" alt="Logo PT DI" class="h-8 w-auto rounded-md shadow-sm" />
-          </div>
-          <div>
-            <h1 class="text-lg sm:text-xl font-bold text-gray-800">Quality CUDR</h1>
-          </div>
+  <!-- Kontainer Utama -->
+  <div class="flex-1 flex flex-col overflow-hidden">
+    <header class="bg-white shadow-sm border-b border-gray-200">
+      <div class="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
+        <button id="sidebar-toggle-button" class="md:hidden text-gray-500 hover:text-gray-700 focus:outline-none">
+          <i class="fas fa-bars text-xl"></i>
+        </button>
+        <div class="flex-1 flex justify-center md:justify-start">
+          <h1 class="text-lg sm:text-xl font-bold text-gray-800">Daftar Pekerjaan (Tracking List)</h1>
         </div>
-
-        <div class="flex items-center space-x-4">
-          {% include 'notifikasi/notifikasi.html' with context %}
-
-          <div class="relative">
-            <button id="user-menu-button" class="flex items-center space-x-2 px-2 py-2 sm:px-3 sm:py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-              <div class="flex flex-col items-start">
-                <span class="font-medium text-sm text-gray-800">{{ user.name }}</span>
-                <span class="text-xs text-gray-500 hidden sm:inline">{{ user.position }}</span>
-              </div>
-              <i id="user-menu-chevron" class="fas fa-chevron-down text-xs text-gray-600 transition-transform duration-200"></i>
-            </button>
-            <div id="user-menu" class="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg py-1 z-50 hidden ring-1 ring-black ring-opacity-5" style="transition: opacity 0.2s ease-out, transform 0.2s ease-out">
-              <div class="px-4 py-3 border-b">
-                <p class="text-sm font-semibold text-gray-900">{{ user.name }}</p>
-                <p class="text-sm text-gray-500 truncate">{{ user.position }}</p>
-              </div>
-              <a href="{{ url_for('view_profile') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profil</a>
-              <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Pengaturan</a>
-              <div class="border-t"></div>
-              <a href="{{ url_for('logout') }}" id="logout-button" class="block w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-50">Logout</a>
-            </div>
-          </div>
-        </div>
+        <div class="flex items-center space-x-4">{% include 'notifikasi/notifikasi.html' %}</div>
       </div>
-    </div>
-  </div>
+    </header>
 
-  <div class="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-6">
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
-      <div class="bg-white p-4 sm:p-6 rounded-xl shadow-sm border flex flex-col justify-between card-hover md:col-span-1">
-        <div>
-          <div class="flex items-center mb-4">
-            <div class="p-3 bg-indigo-100 rounded-lg mr-4"><i class="fas fa-signature text-indigo-600 text-xl"></i></div>
-            <div>
-              <h3 class="text-lg font-semibold text-gray-800">Verified By</h3>
-              <p class="text-sm text-gray-600">Berikan persetujuan akhir</p>
-            </div>
-          </div>
-        </div>
-        {% set unverified_parts = parts.values()|selectattr('verifiedBy', 'equalto', '')|list|length %}
-        <div class="bg-gray-50 text-center py-2 rounded-lg">
-          <span class="text-lg font-bold {% if unverified_parts > 0 %}text-red-600{% else %}text-green-600{% endif %}">{{ unverified_parts }}</span>
-          <span class="text-sm text-gray-700"> Menunggu Verifikasi</span>
-        </div>
+    <main class="flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6">
+      <div class="max-w-7xl mx-auto">
+        <!-- HANYA MENAMPILKAN TRACKING LIST -->
+        {{ render_tracking_list(parts, users, user) }}
       </div>
-    </div>
-
-    {{ render_tracking_list(parts, users, user) }} {% include 'monitoring/status_chart.html' with context %}
+    </main>
   </div>
 </div>
 
+<!-- Modal Logout -->
 <div id="logout-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
-  <div id="logout-modal-overlay" class="absolute inset-0 bg-black bg-opacity-60 modal-overlay"></div>
-  <div id="logout-modal-panel" class="relative bg-white rounded-lg shadow-xl w-full max-w-md m-4 modal-panel">
+  <div class="absolute inset-0 bg-black bg-opacity-60 modal-overlay"></div>
+  <div class="relative bg-white rounded-lg shadow-xl w-full max-w-md m-4">
     <div class="flex items-start justify-between p-5 border-b rounded-t">
       <h3 class="text-xl font-semibold text-gray-900">Konfirmasi Logout</h3>
       <button type="button" id="logout-modal-close-button" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
@@ -128,74 +52,48 @@
   </div>
 </div>
 
-<script src="{{ url_for('static', filename='js/notifikasi_logic.js') }}" defer></script>
-
+<script src="{{ url_for('static', filename='js/notifikasi_logic.js') }}"></script>
+<script src="{{ url_for('static', filename='js/sidebar.js') }}"></script>
 <script>
   document.addEventListener("DOMContentLoaded", function () {
-    // --- Logika untuk Modal Logout ---
-    const logoutButton = document.getElementById("logout-button");
+    // Inisialisasi dropdown notifikasi
+    setupDropdown("notification-button", "notification-dropdown");
+
+    // Logika untuk modal logout
+    const logoutButton = document.getElementById("logout-button-sidebar");
     const logoutModal = document.getElementById("logout-modal");
-    const logoutModalOverlay = document.getElementById("logout-modal-overlay");
-    const confirmButton = document.getElementById("logout-modal-confirm-button");
-    const cancelButton = document.getElementById("logout-modal-cancel-button");
-    const closeButton = document.getElementById("logout-modal-close-button");
 
-    function showLogoutModal(e) {
-      e.preventDefault();
-      logoutModal.classList.remove("hidden");
-    }
+    if (logoutButton && logoutModal) {
+      const confirmButton = document.getElementById("logout-modal-confirm-button");
+      const cancelButton = document.getElementById("logout-modal-cancel-button");
+      const closeButton = document.getElementById("logout-modal-close-button");
+      const overlay = logoutModal.querySelector(".modal-overlay");
 
-    function hideLogoutModal() {
-      logoutModalOverlay.classList.add("is-hiding");
-      logoutModalOverlay.addEventListener(
-        "animationend",
-        () => {
-          logoutModal.classList.add("hidden");
-          logoutModalOverlay.classList.remove("is-hiding");
-        },
-        { once: true }
-      );
-    }
+      const showModal = (e) => {
+        e.preventDefault();
+        logoutModal.classList.remove("hidden");
+      };
 
-    function performLogout() {
-      const fadeOutDiv = document.createElement("div");
-      fadeOutDiv.style.position = "fixed";
-      fadeOutDiv.style.top = "0";
-      fadeOutDiv.style.left = "0";
-      fadeOutDiv.style.width = "100vw";
-      fadeOutDiv.style.height = "100vh";
-      fadeOutDiv.style.backgroundColor = "white";
-      fadeOutDiv.style.zIndex = "100";
-      fadeOutDiv.style.opacity = "0";
-      fadeOutDiv.style.transition = "opacity 0.3s ease-in";
-      document.body.appendChild(fadeOutDiv);
+      const hideModal = () => {
+        logoutModal.classList.add("hidden");
+      };
 
-      requestAnimationFrame(() => {
-        fadeOutDiv.style.opacity = "1";
-      });
-      setTimeout(() => {
-        window.location.href = logoutButton.href;
-      }, 300);
-    }
+      logoutButton.addEventListener("click", showModal);
+      cancelButton.addEventListener("click", hideModal);
+      closeButton.addEventListener("click", hideModal);
 
-    if (logoutButton) logoutButton.addEventListener("click", showLogoutModal);
-    if (cancelButton) cancelButton.addEventListener("click", hideLogoutModal);
-    if (closeButton) closeButton.addEventListener("click", hideLogoutModal);
-    if (logoutModalOverlay) {
-      logoutModalOverlay.addEventListener("click", (e) => {
-        // Hanya tutup jika klik pada overlay langsung, bukan pada panel modal
-        if (e.target === logoutModalOverlay) {
-          hideLogoutModal();
-        }
-      });
-    }
-    if (confirmButton) {
+      if (overlay) {
+        overlay.addEventListener("click", (e) => {
+          if (e.target === overlay) {
+            hideModal();
+          }
+        });
+      }
+
       confirmButton.addEventListener("click", () => {
-        hideLogoutModal();
-        performLogout();
+        window.location.href = "{{ url_for('logout') }}";
       });
     }
   });
 </script>
-
 {% endblock %}

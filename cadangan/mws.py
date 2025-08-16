@@ -1,15 +1,15 @@
 # models/mws.py
-
+# type: ignore
 import json
 from . import db
-from sqlalchemy.orm import relationship # type: ignore
+from sqlalchemy.orm import relationship 
 from datetime import datetime, timedelta, date
 from .stripping import Stripping
-import holidays # type: ignore #
+import holidays # <-- Tambahkan import ini
 
 # Inisialisasi daftar hari libur nasional Indonesia
 # Ini akan digunakan oleh semua fungsi di bawah
-id_holidays = holidays.ID() # type: ignore
+id_holidays = holidays.ID()
 
 JOB_TYPE_WORKDAYS = {
     "Repair": 60,
@@ -64,18 +64,18 @@ class MwsPart(db.Model):
     ref_logistic_ppc = db.Column(db.String(100), nullable=True, name="REF LOGISTIC PPC")
     mdr_doc_defect = db.Column(db.String(100), nullable=True, name="MDR DOC DEFECT")
     capability = db.Column(db.String(100), nullable=True, name="CAPABILITY")
-    iwoDate = db.Column(db.Date, nullable=True, name="IWO DATE")
+    iwoDate = db.Column(db.Date, nullable=True, name="IWO DATE") 
     remark_mws = db.Column(db.String(350), nullable=True, name="REMARK MWS")
     test_result = db.Column(db.String(100), nullable=True, name="TEST RESULT")
     schedule_delivery_on_time = db.Column(db.Date, nullable=True, name="SCHEDULE DELIVERY ON TIME")
-    ecd_finish_workdays = db.Column(db.Integer, nullable=True, name="ECD FINISH WORKDAYS")
+    ecd_finish_workdays = db.Column(db.Integer, nullable=True, name="ECD FINISH WORKDAYS") 
     selisih_work_days = db.Column(db.Integer, nullable=True, name="SELISIH WORK DAYS")
     prosentase_schedule = db.Column(db.String(100), nullable=True, name="PROSENTASE SCHEDULE")
-    workSheetDate = db.Column(db.Date, nullable=True, name="WORKSHEET DATE")
+    workSheetDate = db.Column(db.Date, nullable=True, name="WORKSHEET DATE") 
     form_out_no = db.Column(db.String(100), nullable=True, name="FORM OUT NO")
     tanda_terima_fo_no = db.Column(db.String(100), nullable=True, name="TANDA TERIMA FO NO")
     tanda_terima_fo_date = db.Column(db.Date, nullable=True, name="TANDA TERIMA FO DATE")
-    stripping_report_date = db.Column(db.Date, nullable=True, name="STRIPPING REPORT DATE")
+    stripping_report_date = db.Column(db.Date, nullable=True, name="STRIPPING REPORT DATE") 
     stripping_order_by_sap_date = db.Column(db.Date, nullable=True, name="STRIPPING ORDER BY SAP DATE")
     prosentase_bdp = db.Column(db.String(100), nullable=True, name="PROSENTASE BDP")
     qty_bdp = db.Column(db.Integer, nullable=True, name="QTY BDP")
@@ -83,11 +83,11 @@ class MwsPart(db.Model):
     time_stripping_work_days = db.Column(db.Integer, nullable=True, name="TIME STRIPPING WORK DAYS")
     tase_stripping = db.Column(db.String(100), nullable=True, name="TASE STRIPPING")
     status_s_us = db.Column(db.String(100), nullable=True, name="STATUS S US")
-    finish_date2 = db.Column(db.Date, nullable=True, name="FINISH DATE 2")
+    finish_date2 = db.Column(db.Date, nullable=True, name="FINISH DATE 2") 
     men_powers = db.Column(db.String(100), nullable=True, name="MEN POWERS")
     total_duration = db.Column(db.String(50), default='00:00', name="MAN HOURS")
     document_penyerta = db.Column(db.String(100), nullable=True, name="DOCUMENT PENYERTA")
-    ship_transfer_tt_date = db.Column(db.Date, nullable=True, name="SHIP TRANSFER TT DATE")
+    ship_transfer_tt_date = db.Column(db.Date, nullable=True, name="SHIP TRANSFER TT DATE") 
     ship_transfer_tt_no = db.Column(db.String(100), nullable=True, name="SHIP TRANSFER TT NO")
     isrNo = db.Column(db.String(100), nullable=True, name="ISR NO")
     selisih_shipping_work_days = db.Column(db.Integer, nullable=True, name="SELISIH SHIPPING WORK DAYS")
@@ -100,7 +100,6 @@ class MwsPart(db.Model):
     stripping = relationship('Stripping', back_populates='mws_part', cascade="all, delete-orphan")
     customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'), nullable=True)
     customer_rel = relationship('Customer', back_populates='mws_parts')
-
 
     def _safe_parse_date(self, date_input):
         if isinstance(date_input, date):
@@ -118,13 +117,14 @@ class MwsPart(db.Model):
         """
         workdays = JOB_TYPE_WORKDAYS.get(self.jobType)
         self.ecd_finish_workdays = workdays
-
+       
         start_date = self._safe_parse_date(self.startDate)
         if start_date and workdays is not None:
             deadline = start_date
             days_added = 0
             while days_added < workdays:
                 deadline += timedelta(days=1)
+                # Cek apakah hari kerja (Senin-Jumat) DAN bukan hari libur
                 if deadline.weekday() < 5 and deadline not in id_holidays:
                     days_added += 1
             self.schedule_delivery_on_time = deadline
@@ -139,7 +139,7 @@ class MwsPart(db.Model):
         """
         start = self._safe_parse_date(start_date)
         end = self._safe_parse_date(end_date)
-
+        
         if not start or not end or end <= start:
             return 0
 
@@ -184,19 +184,17 @@ class MwsPart(db.Model):
         return deadline
 
     def update_stripping_deadline(self):
-        """Memperbarui tanggal jatuh tempo DAN TASE stripping jika tanggal mulai berubah."""
+        """Memperbarui tanggal jatuh tempo stripping jika tanggal mulai berubah."""
         if self.startDate:
             self.max_stripping_date = self.calculate_stripping_deadline()
         else:
             self.max_stripping_date = None
-
-        # TAMBAHAN: Panggil kalkulasi TASE di sini agar selalu ter-update
-        # setiap kali startDate berubah.
-        self.update_tase_stripping_from_deadline()
-
-
+            
+    # --- Fungsi-fungsi lain yang sudah ada tidak perlu diubah ---
+    # (update_schedule_performance, update_men_powers, dll.)
+    # ... sisa fungsi Anda ...
+    
     def update_schedule_performance(self):
-        """Mengukur selisih hari kerja antara schedule_delivery_on_time dengan finishDate.Menghitung persentase ketepatan jadwal (prosentase_schedule)."""
         schedule_date = self._safe_parse_date(self.schedule_delivery_on_time)
         actual_finish_date = self._safe_parse_date(self.finishDate)
         ecd = self.ecd_finish_workdays
@@ -217,10 +215,9 @@ class MwsPart(db.Model):
                     percentage = (float(ecd) / denominator) * 100
                 self.prosentase_schedule = f'{max(0, round(percentage))}%'
             except (TypeError, ZeroDivisionError):
-                self.prosentase_schedule = None
+                self.prosentase_schedule = None 
 
     def update_men_powers(self):
-        """ Menghitung jumlah unik mekanik yang terlibat dari semua langkah pekerjaan (steps)."""
         unique_niks = set()
         for step in self.steps:
             mechanics_list = step.get_mechanics()
@@ -229,7 +226,6 @@ class MwsPart(db.Model):
         self.men_powers = str(len(unique_niks))
 
     def update_tase_stripping_from_deadline(self):
-        """ Mengukur TASE stripping (persentase pencapaian) berdasarkan jumlah hari kerja yang sudah lewat dibanding target (20 hari kerja)"""
         if self.jobType in ['Recharging', 'F.Test']:
             self.tase_stripping = '100%'
             return
@@ -248,7 +244,6 @@ class MwsPart(db.Model):
         self.tase_stripping = f'{max(0, round(percentage, 1))}%'
 
     def get_stripping_status(self):
-        """ Mengembalikan status stripping: Status (warning atau critical) Hari tersisa (days_remaining) Persentase Info tanggal deadline & jumlah hari kerja yang sudah lewat"""
         if self.jobType in ['Recharging', 'F.Test']:
             return {'status': 'no_start_date', 'days_remaining': None, 'percentage': 100}
         start_date = self._safe_parse_date(self.startDate)
@@ -278,10 +273,8 @@ class MwsPart(db.Model):
             'working_days_passed': working_days_passed,
             'working_days_remaining': working_days_remaining
         }
-
+    
     def update_shipping_performance(self):
-        """Menghitung kinerja pengiriman (tase) berdasarkan selisih hari kerja dari
-        finishDate ke ship_transfer_tt_date, dengan toleransi 5 hari kerja"""
         finish_date = self._safe_parse_date(self.finishDate)
         shipping_date = self._safe_parse_date(self.ship_transfer_tt_date)
         if not finish_date or not shipping_date:
@@ -295,12 +288,11 @@ class MwsPart(db.Model):
             tase_percentage = 100
         else:
             overdue_days = working_days_diff - grace_period_days
-            penalty = overdue_days * 3
+            penalty = overdue_days * 3 
             tase_percentage = 100 - penalty
         self.tase = f'{max(0, tase_percentage)}%'
 
     def update_total_duration(self):
-        """ Menjumlahkan semua durasi pekerjaan (hours) dari tiap langkah. Menyimpan total dalam format HH:MM. """
         total_minutes = 0
         for step in self.steps:
             if step.hours and ':' in step.hours:
@@ -314,62 +306,30 @@ class MwsPart(db.Model):
         self.total_duration = f"{final_hours:02d}:{final_minutes:02d}"
 
     def update_bdp_metrics(self):
-        """
-        Memperbarui metrik BDP dengan logika yang disempurnakan:
-        1. `stripping_report_date` diisi dengan tanggal OP_DATE paling BARU (terbesar).
-        2. `% Prosentase BDP` dan `qty_bdp` DIKALKULASI jika BDP_NAME sudah diisi.
-        """
         stripping_records = self.stripping
-
-        # Logika 1: `stripping_report_date` diisi dengan tanggal OP_DATE paling BARU.
-        valid_op_dates = [s.op_date for s in stripping_records if s.op_date]
-        if valid_op_dates:
-            # ### PERUBAHAN ### Menggunakan max() untuk mengambil tanggal terbaru
-            self.stripping_report_date = max(valid_op_dates)
-        else:
-            self.stripping_report_date = None
-
-        # Logika 2: Kalkulasi BDP hanya untuk baris yang sudah punya BDP_NAME.
-        records_for_calc = [s for s in stripping_records if s.bdp_name and s.bdp_name.strip()]
-        
-        total_valid_records = len(records_for_calc)
-        self.qty_bdp = total_valid_records
-
-        if total_valid_records == 0:
+        total_records = len(stripping_records)
+        self.qty_bdp = total_records
+        if total_records == 0:
             self.prosentase_bdp = '0%'
-        else:
-            # Kelengkapan (numerator) dihitung dari isian mt_number pada baris yang valid.
-            complete_records = sum(1 for s in records_for_calc if s.mt_number)
-            try:
-                percentage = (complete_records / total_valid_records) * 100
-                self.prosentase_bdp = f'{round(percentage)}%'
-            except ZeroDivisionError:
-                self.prosentase_bdp = '0%'
-
-        self.update_stripping_selisih()
-
+            return
+        complete_records = sum(
+            1 for s in stripping_records if s.mt_number and s.mt_qty and s.mt_date
+        )
+        try:
+            percentage = (complete_records / total_records) * 100
+            self.prosentase_bdp = f'{round(percentage)}%'
+        except ZeroDivisionError:
+            self.prosentase_bdp = '0%'
 
     def update_stripping_selisih(self):
-        """
-        Menghitung selisih hari kerja antara tanggal laporan stripping (report_date)
-        dan tanggal jatuh tempo (deadline).
-        - Hasil negatif (misal: -8) berarti pekerjaan selesai 8 hari kerja SEBELUM jatuh tempo.
-        - Hasil positif (misal: 5) berarti pekerjaan selesai 5 hari kerja SETELAH jatuh tempo.
-        """
         deadline = self._safe_parse_date(self.max_stripping_date)
         report_date = self._safe_parse_date(self.stripping_report_date)
-
         if not deadline or not report_date:
             self.selisih_stripping = None
             return
-
-        self.selisih_stripping = self.calculate_signed_working_days_between(
-            start_date=deadline,
-            end_date=report_date
-        )
+        self.selisih_stripping = self.calculate_signed_working_days_between(deadline, report_date)
 
     def to_dict(self):
-            """ fungsi mengubah kolom menjadi dict"""
             try:
                 attachments_list = json.loads(self.attachment) if self.attachment else []
             except json.JSONDecodeError:

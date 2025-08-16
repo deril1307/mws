@@ -1,0 +1,477 @@
+<div id="toast-notification" class="fixed top-5 right-5 z-[100] transition-transform duration-300 translate-x-[150%]">
+  <div id="toast-content" class="flex items-center w-full max-w-xs p-4 text-gray-500 bg-white rounded-lg shadow-lg" role="alert"></div>
+</div>
+
+<div id="confirmation-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-[110] flex justify-center items-center">
+  <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm mx-4">
+    <div class="text-center">
+      <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100">
+        <svg class="h-6 w-6 text-yellow-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z" />
+        </svg>
+      </div>
+      <h3 class="text-lg leading-6 font-medium text-gray-900 mt-4" id="modal-title">Konfirmasi Perubahan</h3>
+      <div class="mt-2">
+        <p class="text-sm text-gray-500">Apakah Anda yakin ingin menyimpan perubahan pada Informasi MWS?</p>
+      </div>
+    </div>
+    <div class="mt-5 sm:mt-6 grid grid-cols-2 gap-3">
+      <button id="modal-btn-cancel" type="button" class="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50">Batal</button>
+      <button id="modal-btn-save" type="button" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700">Yakin, Simpan</button>
+    </div>
+  </div>
+</div>
+
+<div id="duplicate-confirmation-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-[110] flex justify-center items-center">
+  <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm mx-4">
+    <div class="text-center">
+      <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-purple-100">
+        <i class="fas fa-copy text-purple-600"></i>
+      </div>
+      <h3 class="text-lg leading-6 font-medium text-gray-900 mt-4">Konfirmasi Duplikasi</h3>
+      <div class="mt-2">
+        <p class="text-sm text-gray-500">Anda akan membuat MWS baru dari template ini. Informasi dasar akan disalin, Serial Number dikosongkan, dan semua progres di-reset. Lanjutkan?</p>
+      </div>
+    </div>
+    <div class="mt-5 sm:mt-6 grid grid-cols-2 gap-3">
+      <button id="modal-btn-cancel-duplicate" type="button" class="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50">Batal</button>
+      <button id="modal-btn-confirm-duplicate" type="button" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-purple-600 text-base font-medium text-white hover:bg-purple-700">
+        Ya, Duplikat
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="all-strep-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 z-[120] flex justify-center items-center">
+  <div class="bg-white rounded-lg shadow-xl p-4 sm:p-6 w-full max-w-full lg:max-w-7xl xl:max-w-screen-2xl mx-4 h-[95vh] flex flex-col">
+    <div class="flex justify-between items-center border-b pb-3 mb-4">
+      <h3 class="text-xl font-semibold text-gray-800">Detail Semua Strep</h3>
+      <button onclick="closeAllStrepModal()" class="text-gray-400 hover:text-gray-600">
+        <span class="sr-only">Close</span>
+        <i class="fas fa-times h-6 w-6"></i>
+      </button>
+    </div>
+    <div class="flex-grow overflow-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-100 sticky top-0 z-10">
+          <tr>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">INCOMING DATE</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">REF. LOGISTIC / PPC</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CUSTOMER A/C TYPE / REG</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">WBS</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PART NAME</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PART NUMBER</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SERIAL NUMBER</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">COMPONENT ORDER</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MDR / DOC / DEFECT</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CAPABILITY</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IWO NO.</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Shop Area.</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IWO Date</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">WORKSHEET NO.</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">REMARK MWS</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TEST RESULT (ADA/TIDAK)</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SCHEDULE (DELIVERY ON TIME)</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ECD FINISH (WORKDAYS)</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SELISIH (WORK DAYS)s</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PROSENTASE SCHEDULE</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">WORKSHEET DATE</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">WORKSHEET APPROVAL DATE</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">FORM OUT NO.o</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TANDA TERIMA FO NO.</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TANDA TERIMA FO DATE</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STRIPPING REPORT DATE</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STRIPPING ORDER BY SAP DATE</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PROSENTASE BDP</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">QTY BDP</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SELISIH ORDER (WORK DAYS)</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MAX STRIPPING DATE</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SELISIH STRIPPING (WORK DAYS)</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">%TASE STRIPPING</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STATUS [S / (U/S)]</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">FINISH DATE2</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MEN POWERS</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MEN HOURS</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DOCUMENT PENYERTA</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SHIP./TRANSFER (TT) DATE</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SHIP./TRANSFER (TT) NO.</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SELISIH SHIPPING (WORK DAYS)</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">%TASE</th>
+            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">REMARK</th>
+            {% if user.role in ['admin', 'superadmin'] %}
+            <th class="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+            {% endif %}
+          </tr>
+        </thead>
+        <tbody id="all-strep-table-body" class="bg-white divide-y divide-gray-200"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div id="edit-all-strep-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 z-[130] flex justify-center items-center">
+  <div class="bg-white rounded-lg shadow-xl p-4 sm:p-6 w-full max-w-5xl mx-4 h-[95vh] flex flex-col">
+    <div class="flex justify-between items-center border-b pb-3 mb-4">
+      <h3 class="text-xl font-semibold text-gray-800">Edit Detail Strep: <span id="edit-strep-part-id" class="font-bold text-blue-600"></span></h3>
+      <button onclick="closeEditAllStrepModal()" class="text-gray-400 hover:text-gray-600">
+        <span class="sr-only">Close</span>
+        <i class="fas fa-times h-6 w-6"></i>
+      </button>
+    </div>
+    <div class="flex-grow overflow-auto p-2">
+      <form id="edit-all-strep-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+        <div>
+          <label class="block font-medium text-gray-700">Incoming Date</label><input type="date" id="edit-strep-startDate" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+        </div>
+        <div>
+          <label class="block font-medium text-gray-700">Ref. Logistic / PPC</label
+          ><input type="text" id="edit-strep-ref_logistic_ppc" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+        </div>
+        <div><label class="block font-medium text-gray-700">Customer</label><input type="text" id="edit-strep-customer" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" /></div>
+        <div><label class="block font-medium text-gray-700">WBS</label><input type="text" id="edit-strep-wbsNo" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" /></div>
+        <div><label class="block font-medium text-gray-700">Part Name</label><input type="text" id="edit-strep-tittle" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" /></div>
+        <div>
+          <label class="block font-medium text-gray-700">Part Number</label><input type="text" id="edit-strep-partNumber" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+        </div>
+        <div>
+          <label class="block font-medium text-gray-700">Serial Number</label><input type="text" id="edit-strep-serialNumber" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+        </div>
+        <div>
+          <label class="block font-medium text-gray-700">Component Order</label><input type="text" id="edit-strep-jobType" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+        </div>
+        <div>
+          <label class="block font-medium text-gray-700">MDR / Doc / Defect</label
+          ><input type="text" id="edit-strep-mdr_doc_defect" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+        </div>
+        <div>
+          <label class="block font-medium text-gray-700">Capability</label><input type="text" id="edit-strep-capability" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+        </div>
+        <div><label class="block font-medium text-gray-700">IWO No.</label><input type="text" id="edit-strep-iwoNo" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" /></div>
+        <div><label class="block font-medium text-gray-700">Shop Area.</label><input type="text" id="edit-strep-shopArea" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" /></div>
+        <div><label class="block font-medium text-gray-700">IWO Date</label><input type="date" id="edit-strep-iwoDate" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" /></div>
+        <div>
+          <label class="block font-medium text-gray-700">Worksheet No.</label><input type="text" id="edit-strep-worksheetNo" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+        </div>
+        <div>
+          <label class="block font-medium text-gray-700">Remark MWS</label><input type="text" id="edit-strep-remark_mws" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+        </div>
+        <div>
+          <label class="block font-medium text-gray-700">Test Result</label><input type="text" id="edit-strep-test_result" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+        </div>
+        <div>
+          <label class="block font-medium text-gray-700">Schedule Delivery</label
+          ><input type="text" id="edit-strep-schedule_delivery_on_time" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+        </div>
+        <div>
+          <label class="block font-medium text-gray-700">ECD Finish (Workdays)</label
+          ><input type="text" id="edit-strep-ecd_finish_workdays" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+        </div>
+        <div>
+          <label class="block font-medium text-gray-700">Selisih (Workdays)</label
+          ><input type="text" id="edit-strep-selisih_work_days" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+        </div>
+        <div>
+          <label class="block font-medium text-gray-700">Prosentase Schedule</label
+          ><input type="text" id="edit-strep-prosentase_schedule" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+        </div>
+        <div>
+          <label class="block font-medium text-gray-700">Worksheet Date</label><input type="date" id="edit-strep-workSheetDate" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+        </div>
+        <div>
+          <label class="block font-medium text-gray-700">Approval Date</label><input type="date" id="edit-strep-approvedDate" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+        </div>
+        <div>
+          <label class="block font-medium text-gray-700">Form Out No.</label><input type="text" id="edit-strep-form_out_no" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+        </div>
+        <div>
+          <label class="block font-medium text-gray-700">Tanda Terima FO No.</label
+          ><input type="text" id="edit-strep-tanda_terima_fo_no" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+        </div>
+        <div>
+          <label class="block font-medium text-gray-700">Tanda Terima FO Date</label
+          ><input type="date" id="edit-strep-tanda_terima_fo_date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+        </div>
+        <div>
+          <label class="block font-medium text-gray-700">Stripping Report Date</label
+          ><input type="date" id="edit-strep-stripping_report_date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+        </div>
+        <div>
+          <label class="block font-medium text-gray-700">Stripping Order Date</label
+          ><input type="date" id="edit-strep-stripping_order_by_sap_date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+        </div>
+        <div>
+          <label class="block font-medium text-gray-700">Prosentase BDP</label><input type="text" id="edit-strep-prosentase_bdp" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+        </div>
+        <div><label class="block font-medium text-gray-700">QTY BDP</label><input type="text" id="edit-strep-qty_bdp" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" /></div>
+        <div>
+          <label class="block font-medium text-gray-700">Selisih Order</label
+          ><input type="text" id="edit-strep-selisih_order_work_days" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+        </div>
+        <div>
+          <label class="block font-medium text-gray-700">Max Stripping Date</label
+          ><input type="date" id="edit-strep-max_stripping_date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+        </div>
+        <div>
+          <label class="block font-medium text-gray-700">Selisih Stripping</label
+          ><input type="number" id="edit-strep-selisih_stripping" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+        </div>
+        <div>
+          <label class="block font-medium text-gray-700">%TASE Stripping</label
+          ><input type="text" id="edit-strep-tase_stripping" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+        </div>
+        <div>
+          <label class="block font-medium text-gray-700">Status [S/(U/S)]</label><input type="text" id="edit-strep-status_s_us" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+        </div>
+        <div>
+          <label class="block font-medium text-gray-700">Finish Date</label><input type="date" id="edit-strep-finishDate" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+        </div>
+        <div>
+          <label class="block font-medium text-gray-700">Men Powers</label><input type="text" id="edit-strep-men_powers" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+        </div>
+        <div><label class="block font-medium text-gray-700">Men Hours</label><input type="text" id="edit-strep-men_hours" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" /></div>
+        <div>
+          <label class="block font-medium text-gray-700">Document Penyerta</label
+          ><input type="text" id="edit-strep-document_penyerta" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+        </div>
+        <div>
+          <label class="block font-medium text-gray-700">Ship/Transfer (TT) Date</label
+          ><input type="date" id="edit-strep-ship_transfer_tt_date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+        </div>
+        <div>
+          <label class="block font-medium text-gray-700">Ship/Transfer (TT) No.</label
+          ><input type="text" id="edit-strep-ship_transfer_tt_no" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+        </div>
+        <div>
+          <label class="block font-medium text-gray-700">Selisih Shipping</label
+          ><input type="text" id="edit-strep-selisih_shipping_work_days" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+        </div>
+        <div><label class="block font-medium text-gray-700">%TASE</label><input type="text" id="edit-strep-tase" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" /></div>
+        <div><label class="block font-medium text-gray-700">REMARK</label><input type="text" id="edit-strep-remark" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" /></div>
+      </form>
+    </div>
+    <div class="flex justify-end items-center border-t pt-4 mt-4">
+      <button
+        onclick="closeEditAllStrepModal()"
+        type="button"
+        class="bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-75 transition-all duration-200 mr-3"
+      >
+        Batal
+      </button>
+      <button
+        onclick="saveAllStrepChanges()"
+        id="save-all-strep-changes-btn"
+        type="button"
+        class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition-all duration-200"
+      >
+        <i class="fas fa-save mr-2"></i>Simpan Perubahan
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+  #toast-notification.show {
+    transform: translateX(0);
+  }
+</style>
+
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-6">
+  <div class="flex justify-between items-center mb-4 pb-4 border-b border-gray-200">
+    <h2 class="text-lg font-semibold text-gray-800">Informasi MWS</h2>
+    {% if user.role in ['admin', 'superadmin'] %}
+    <div class="flex items-center">
+      <button id="edit-mws-btn" onclick="toggleEditMode(true)" class="text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors">
+        <i class="fas fa-edit sm:mr-1"></i>
+        <span class="hidden sm:inline">Edit</span>
+      </button>
+      <button id="duplicate-mws-btn" onclick="confirmDuplicateMws('{{ part.part_id }}')" class="ml-3 text-sm font-medium text-purple-600 hover:text-purple-800 transition-colors">
+        <i class="fas fa-copy sm:mr-1"></i>
+        <span class="hidden sm:inline">Pemanggilan Berulang</span>
+      </button>
+      <button id="finish-mws-btn" onclick="saveMwsInfo('{{ part.part_id }}')" class="hidden ml-3 text-sm font-medium text-green-600 hover:text-green-800 transition-colors">
+        <i class="fas fa-check sm:mr-1"></i>
+        <span class="hidden sm:inline">Selesai</span>
+      </button>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+    <div class="border border-gray-200 rounded-lg p-3">
+      <label class="block font-bold text-gray-700 mb-1">Tittle / Part Name</label>
+      <p class="text-gray-900 mws-info-view break-words">{{ part.tittle }}</p>
+      <input type="text" data-field="tittle" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.tittle }}" />
+    </div>
+    <div class="border border-gray-200 rounded-lg p-3">
+      <label class="block font-bold text-gray-700 mb-1">Part Number</label>
+      <p class="text-gray-900 mws-info-view break-words">{{ part.partNumber }}</p>
+      <input type="text" data-field="partNumber" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.partNumber }}" />
+    </div>
+    <div class="border border-gray-200 rounded-lg p-3">
+      <label class="block font-bold text-gray-700 mb-1">Ref</label>
+      <p class="text-gray-900 mws-info-view break-words">{{ part.ref }}</p>
+      <input type="text" data-field="ref" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.ref }}" />
+    </div>
+    <div class="border border-gray-200 rounded-lg p-3">
+      <label class="block font-bold text-gray-700 mb-1">Component Order</label>
+      <p class="text-gray-900 mws-info-view break-words">{{ part.jobType or 'N/A' }}</p>
+      <input type="text" data-field="jobType" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.jobType or '' }}" />
+    </div>
+    <div class="border border-gray-200 rounded-lg p-3">
+      <label class="block font-bold text-gray-700 mb-1">Customer</label>
+      <p class="text-gray-900 mws-info-view break-words">{{ part.customer }}</p>
+      <input type="text" data-field="customer" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.customer }}" />
+    </div>
+    <div class="border border-gray-200 rounded-lg p-3">
+      <label class="block font-bold text-gray-700 mb-1">A/C Type</label>
+      <p class="text-gray-900 mws-info-view break-words">{{ part.acType }}</p>
+      <input type="text" data-field="acType" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.acType }}" />
+    </div>
+    <div class="border border-gray-200 rounded-lg p-3">
+      <label class="block font-bold text-gray-700 mb-1">Serial Number</label>
+      <p class="text-gray-900 mws-info-view break-words">{{ part.serialNumber }}</p>
+      <input type="text" data-field="serialNumber" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.serialNumber }}" />
+    </div>
+    <div class="border border-gray-200 rounded-lg p-3">
+      <label class="block font-bold text-gray-700 mb-1">WBS No.</label>
+      <p class="text-gray-900 mws-info-view break-words">{{ part.wbsNo }}</p>
+      <input type="text" data-field="wbsNo" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.wbsNo }}" />
+    </div>
+    <div class="border border-gray-200 rounded-lg p-3">
+      <label class="block font-bold text-gray-700 mb-1">Worksheet No.</label>
+      <p class="text-gray-900 mws-info-view break-words">{{ part.worksheetNo }}</p>
+      <input type="text" data-field="worksheetNo" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.worksheetNo }}" />
+    </div>
+    <div class="border border-gray-200 rounded-lg p-3">
+      <label class="block font-bold text-gray-700 mb-1">IWO No.</label>
+      <p class="text-gray-900 mws-info-view break-words">{{ part.iwoNo }}</p>
+      <input type="text" data-field="iwoNo" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.iwoNo }}" />
+    </div>
+    <div class="border border-gray-200 rounded-lg p-3">
+      <label class="block font-bold text-gray-700 mb-1">Shop Area</label>
+      <p class="text-gray-900 mws-info-view break-words">{{ part.shopArea }}</p>
+      <input type="text" data-field="shopArea" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.shopArea }}" />
+    </div>
+    <div class="border border-gray-200 rounded-lg p-3">
+      <label class="block font-bold text-gray-700 mb-1">Revision</label>
+      <p class="text-gray-900 mws-info-view break-words">{{ part.revision }}</p>
+      <input type="text" data-field="revision" class="mws-info-edit hidden w-full border rounded px-2 py-1" value="{{ part.revision }}" />
+    </div>
+  </div>
+</div>
+
+<div class="flex justify-start items-start space-x-4 mb-6">
+  <button
+    id="get-stripping-report-btn"
+    onclick="getStrippingReportData('{{ part.part_id }}')"
+    class="bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-75 transition-all duration-200"
+  >
+    <i class="fas fa-cogs mr-2"></i>
+    Informasi Stripping
+  </button>
+  {% if user.role in ['mechanic', 'admin', 'superadmin', 'quality1'] %}
+  <button
+    id="toggle-attachment-btn"
+    onclick="toggleAttachmentSection()"
+    class="bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-75 transition-all duration-200"
+  >
+    <i class="fas fa-paperclip mr-2"></i>
+    Lampiran
+  </button>
+  <button
+    id="get-all-strep-btn"
+    onclick="openAllStrepModal()"
+    class="bg-yellow-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-opacity-75 transition-all duration-200"
+  >
+    <i class="fas fa-stream mr-2"></i>
+    Detail Strep
+  </button>
+  {% endif %}
+</div>
+
+{% if user.role in ['mechanic', 'admin', 'superadmin', 'quality1', 'quality2'] %}
+<div id="attachment-section" class="hidden bg-white rounded-xl shadow-lg border border-gray-200 mb-6 transition-all duration-300 ease-in-out">
+  <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-xl"><h3 class="text-lg font-semibold text-gray-800">Detail Lampiran</h3></div>
+  <div class="p-4">
+    {% if user.role == 'admin' or user.role == 'superadmin' %}
+    <div class="flex flex-col space-y-4">
+      <input
+        type="file"
+        id="attachment-file-input"
+        class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+        accept=".jpg,.jpeg,.png,.xlsx,.xls,.pdf,.doc,.docx"
+        multiple
+      />
+      <button
+        id="upload-attachment-btn"
+        onclick="uploadAttachment('{{ part.part_id }}')"
+        class="self-start bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition-all duration-200 flex items-center justify-center whitespace-nowrap disabled:bg-gray-400 disabled:cursor-not-allowed"
+        disabled
+      >
+        <i class="fas fa-upload mr-2"></i> Unggah
+      </button>
+    </div>
+    {% endif %}
+
+    <div id="attachment-link-container" class="mt-4 text-sm">
+      <h4 class="font-semibold text-gray-700 mb-2">Lampiran Saat Ini:</h4>
+      <ul id="attachment-list" class="space-y-2">
+        {% if part.attachments %} {% for att in part.attachments %}
+        <li id="attachment-item-{{ att.public_id | replace('/', '-') | replace('.', '-') }}" class="flex items-center justify-between bg-gray-50 p-2 rounded-md hover:bg-gray-100">
+          <a href="{{ att.file_url }}" target="_blank" class="text-blue-600 hover:underline truncate pr-4" title="{{ att.original_filename }}">
+            <i class="fas fa-file-alt mr-2 text-gray-500"></i>
+            {{ att.original_filename }}
+          </a>
+
+          {% if user.role in ['admin', 'superadmin'] %}
+          <button onclick="deleteAttachment('{{ part.part_id }}', '{{ att.public_id }}')" class="text-red-500 hover:text-red-700 text-xs font-semibold" title="Hapus Lampiran">
+            <i class="fas fa-trash"></i>
+          </button>
+          {% endif %}
+        </li>
+        {% endfor %} {% else %}
+        <p id="no-attachment-text" class="text-gray-500">Belum ada lampiran.</p>
+        {% endif %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div id="stripping-report-dropdown" class="hidden bg-white rounded-xl shadow-lg border border-gray-200 mb-6 transition-all duration-300 ease-in-out">
+  <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-xl flex justify-between items-center">
+    <h3 class="text-lg font-semibold text-gray-800">Detail Stripping Report</h3>
+    {% if user.role in ['admin', 'superadmin'] %}
+    <button id="add-stripping-btn" class="bg-green-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-75 transition-all duration-200">
+      <i class="fas fa-plus mr-2"></i> Tambah Stripping
+    </button>
+    {% endif %}
+  </div>
+  <div class="p-4 max-h-96 overflow-y-auto">
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">BDP NAME</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">BDP NUMBER</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">BDP NUMBER Eqv</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">QTY</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">UNIT</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">OP NUMBER</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">OP DATE</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">DEFECT</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">MT NUMBER</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">MT QTY</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">MT DATE</th>
+            {% if user.role in ['admin', 'superadmin'] %}
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Aksi</th>
+            {% endif %}
+          </tr>
+        </thead>
+        <tbody id="stripping-report-table-body" class="bg-white divide-y divide-gray-200"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/info_mws_logic.js') }}" defer></script>

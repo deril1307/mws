@@ -1,4 +1,3 @@
-// Global variables for timers and notifications
 let strippingNotificationTimer;
 let strippingStatus = null;
 window.activeTimers = {};
@@ -45,6 +44,7 @@ function showNotification(message, type) {
 }
 
 /**
+ * Displays a notification and then reloads the page.
  * @param {string} message The message to show.
  * @param {('success'|'error')} type The notification type.
  * @param {number} delay The delay in ms before reloading.
@@ -53,8 +53,6 @@ function showNotificationAndReload(message, type, delay = 1500) {
   showNotification(message, type);
   setTimeout(() => location.reload(), delay);
 }
-
-// --- Stripping Notification Functions ---
 
 function checkStrippingStatus() {
   fetch(`/get_stripping_status/${partId}`)
@@ -198,7 +196,7 @@ function initializeLiveTimers() {
   });
 }
 
-// --- NEW FUNCTIONS for Plan Edit/Save ---
+// --- Plan Edit/Save Functions ---
 
 function togglePlanEdit(stepNo, field, isEditing) {
   const viewMode = document.getElementById(`plan-${field}-view-${stepNo}`);
@@ -243,6 +241,7 @@ async function savePlan(partId, stepNo, field) {
       showNotification(`Plan ${field} berhasil disimpan.`, "success");
       document.getElementById(`plan-${field}-text-${stepNo}`).textContent = value || "N/A";
       togglePlanEdit(stepNo, field, false);
+      location.reload();
     } else {
       showNotification(`Gagal menyimpan Plan ${field}: ` + data.error, "error");
     }
@@ -255,16 +254,138 @@ async function savePlan(partId, stepNo, field) {
   }
 }
 
+/**
+ * Checks if planning data (Man and Hours) is complete for a given step.
+ * @param {number} stepNo The step number to check.
+ * @returns {boolean} True if planning is complete, false otherwise.
+ */
+function isPlanningComplete(stepNo) {
+  const planManEl = document.getElementById(`plan-man-text-${stepNo}`);
+  const planHoursEl = document.getElementById(`plan-hours-text-${stepNo}`);
+
+  const planMan = planManEl ? planManEl.textContent.trim() : "";
+  const planHours = planHoursEl ? planHoursEl.textContent.trim() : "";
+
+  if (!planMan || planMan === "N/A" || !planHours || planHours === "N/A") {
+    return false;
+  }
+  return true;
+}
+
+// --- Multi-Delete Logic ---
+
+/**
+ * Updates the display and text of the smart delete button based on the number of selected checkboxes.
+ */
+function updateDeleteSelectedButtonState() {
+  const smartDeleteBtn = document.getElementById("smart-delete-btn");
+  if (!smartDeleteBtn) return;
+
+  const selectedCheckboxes = document.querySelectorAll(".step-checkbox:checked");
+  const selectionCount = selectedCheckboxes.length;
+
+  if (selectionCount > 0) {
+    smartDeleteBtn.disabled = false;
+    smartDeleteBtn.className = "px-4 py-2 bg-yellow-500 text-white text-sm font-medium rounded hover:bg-yellow-600 transition-colors duration-200";
+    smartDeleteBtn.innerHTML = `<i class="fas fa-check-square mr-2"></i>Hapus ${selectionCount} Step Terpilih`;
+    smartDeleteBtn.title = `Hapus ${selectionCount} langkah kerja yang dipilih`;
+  } else {
+    smartDeleteBtn.disabled = false;
+    smartDeleteBtn.className = "px-4 py-2 bg-red-600 text-white text-sm font-medium rounded hover:bg-red-700 transition-colors duration-200";
+    smartDeleteBtn.innerHTML = `<i class="fas fa-trash-alt mr-2"></i>Hapus Semua Step`;
+    smartDeleteBtn.title = "Hapus semua langkah kerja dari MWS ini. Tindakan ini memerlukan konfirmasi.";
+  }
+}
+
+/**
+ * Deletes all steps selected via checkboxes by sending a single request to the backend.
+ */
+async function deleteSelectedSteps(partId) {
+  const selectedCheckboxes = document.querySelectorAll(".step-checkbox:checked");
+  const stepsToDelete = Array.from(selectedCheckboxes).map((cb) => parseInt(cb.dataset.stepNo, 10));
+
+  if (stepsToDelete.length === 0) {
+    showNotification("Tidak ada step yang dipilih untuk dihapus.", "error");
+    return;
+  }
+
+  if (!confirm(`PERINGATAN!\n\nAnda akan menghapus ${stepsToDelete.length} langkah kerja yang dipilih. Tindakan ini tidak dapat diurungkan.\n\nLanjutkan?`)) {
+    return;
+  }
+
+  const button = document.getElementById("smart-delete-btn");
+  const originalHtml = button.innerHTML;
+  button.disabled = true;
+  button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Menghapus ${stepsToDelete.length}...`;
+
+  try {
+    const response = await fetch(`/delete_multiple_steps/${partId}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": csrfToken,
+      },
+      body: JSON.stringify({ steps: stepsToDelete }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok && data.success) {
+      showNotificationAndReload(data.message || `${stepsToDelete.length} step berhasil dihapus.`, "success");
+    } else {
+      showNotification(data.error || "Terjadi kesalahan saat menghapus step.", "error");
+      button.disabled = false;
+      button.innerHTML = originalHtml;
+    }
+  } catch (error) {
+    console.error("Error saat menghapus beberapa step:", error);
+    showNotification("Terjadi kesalahan jaringan.", "error");
+    button.disabled = false;
+    button.innerHTML = originalHtml;
+  }
+}
 document.addEventListener("DOMContentLoaded", function () {
   initializeLiveTimers();
   checkStrippingStatus();
   setInterval(checkStrippingStatus, 5 * 60 * 1000);
+
+  if (currentUserRole === "admin" || currentUserRole === "superadmin") {
+    const selectAllCheckbox = document.getElementById("select-all-steps");
+    const stepCheckboxes = document.querySelectorAll(".step-checkbox");
+
+    updateDeleteSelectedButtonState();
+
+    if (selectAllCheckbox) {
+      selectAllCheckbox.addEventListener("change", (event) => {
+        stepCheckboxes.forEach((checkbox) => {
+          checkbox.checked = event.target.checked;
+        });
+        updateDeleteSelectedButtonState();
+      });
+    }
+
+    stepCheckboxes.forEach((checkbox) => {
+      checkbox.addEventListener("change", () => {
+        if (!checkbox.checked) {
+          selectAllCheckbox.checked = false;
+        } else {
+          const allChecked = Array.from(stepCheckboxes).every((c) => c.checked);
+          selectAllCheckbox.checked = allChecked;
+        }
+        updateDeleteSelectedButtonState();
+      });
+    });
+  }
 });
 
 // --- Role-Specific Functions ---
 
 if (currentUserRole !== "customer") {
   function startTimer(partId, stepNo) {
+    if (!isPlanningComplete(stepNo)) {
+      showNotification("PLAN MAN dan PLAN HOURS harus diisi oleh Admin sebelum memulai pekerjaan.", "error");
+      return;
+    }
     const startBtn = event.currentTarget;
     startBtn.disabled = true;
     startBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
@@ -515,10 +636,126 @@ if (currentUserRole !== "customer") {
       })
       .catch((error) => showNotification("Terjadi kesalahan jaringan.", "error"));
   }
+
+  /**
+   * Enables the final approval button after a status is selected.
+   */
+  window.enableFinalApprove = function (stepNo) {
+    const selectEl = document.getElementById(`status-s-us-select-${stepNo}`);
+    const buttonEl = document.getElementById(`final-approve-btn-${stepNo}`);
+
+    if (selectEl.value) {
+      buttonEl.disabled = false;
+      buttonEl.classList.remove("opacity-50", "cursor-not-allowed");
+      buttonEl.title = "Approve dan selesaikan langkah ini";
+    } else {
+      buttonEl.disabled = true;
+      buttonEl.classList.add("opacity-50", "cursor-not-allowed");
+      buttonEl.title = "Pilih status terlebih dahulu";
+    }
+  };
+
+  /**
+   * Saves the S/US status and then completes the Final Inspection step.
+   */
+  window.finishFinalInspection = async function (partId, stepNo) {
+    const selectEl = document.getElementById(`status-s-us-select-${stepNo}`);
+    const selectedStatus = selectEl.value;
+    const selectedStatusText = selectEl.options[selectEl.selectedIndex].text;
+
+    if (!selectedStatus) {
+      showNotification("Pilih status (RAI/S/U/S) terlebih dahulu.", "error");
+      return;
+    }
+
+    if (!confirm(`Anda akan menyelesaikan Final Inspection dengan status: "${selectedStatusText}".\n\nLanjutkan?`)) {
+      return;
+    }
+
+    const button = document.getElementById(`final-approve-btn-${stepNo}`);
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+
+    try {
+      const updateResponse = await fetch("/update_mws_info", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+        body: JSON.stringify({ partId: partId, status_s_us: selectedStatus }),
+      });
+
+      const updateData = await updateResponse.json();
+
+      if (!updateResponse.ok || !updateData.success) {
+        throw new Error(updateData.error || "Gagal menyimpan status.");
+      }
+
+      updateStepStatus(partId, stepNo, "completed", `Final Inspection berhasil diselesaikan dengan status ${selectedStatus}.`);
+    } catch (error) {
+      console.error("Error during final inspection:", error);
+      showNotification(`Terjadi kesalahan: ${error.message}`, "error");
+      button.disabled = false;
+      button.innerHTML = "Approve & Finish";
+    }
+  };
 }
 
 // --- Admin/Superadmin Functions ---
+
 if (currentUserRole === "admin" || currentUserRole === "superadmin") {
+  function deleteAllSteps(partId) {
+    if (!confirm("PERINGATAN!\n\nApakah Anda benar-benar yakin ingin menghapus SEMUA langkah kerja (steps) dari MWS ini?\n\nTindakan ini tidak dapat diurungkan.")) {
+      return;
+    }
+
+    const button = document.getElementById("smart-delete-btn");
+    const originalHtml = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menghapus...';
+
+    fetch(`/delete_all_steps/${partId}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          showNotificationAndReload("Semua langkah kerja berhasil dihapus.", "success");
+        } else {
+          showNotification(data.error || "Gagal menghapus semua langkah kerja.", "error");
+          button.disabled = false;
+          button.innerHTML = originalHtml;
+        }
+      })
+      .catch((error) => {
+        showNotification("Terjadi kesalahan jaringan.", "error");
+        button.disabled = false;
+        button.innerHTML = originalHtml;
+      });
+  }
+
+  function addFirstStep(partId) {
+    const description = prompt("Masukkan deskripsi untuk langkah kerja baru:");
+    if (!description || description.trim() === "") {
+      showNotification("Deskripsi tidak boleh kosong.", "error");
+      return;
+    }
+
+    fetch(`/insert_step/${partId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+      body: JSON.stringify({ description: description.trim(), after_step_no: 0 }),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          showNotificationAndReload("Langkah kerja baru berhasil ditambahkan.", "success");
+        } else {
+          showNotification("Error: " + data.error, "error");
+        }
+      })
+      .catch((error) => showNotification("Terjadi kesalahan jaringan.", "error"));
+  }
+
   function removeMechanicFromStep(partId, stepNo, nikToRemove) {
     if (!confirm(`Apakah Anda yakin ingin menghapus mekanik dengan NIK ${nikToRemove} dari langkah ini?`)) return;
     const button = event.currentTarget;
@@ -549,8 +786,13 @@ if (currentUserRole === "admin" || currentUserRole === "superadmin") {
 }
 
 // --- Mechanic Functions ---
+
 if (currentUserRole === "mechanic") {
   function addMeToStep(partId, stepNo) {
+    if (!isPlanningComplete(stepNo)) {
+      showNotification("PLAN MAN dan PLAN HOURS harus diisi oleh Admin sebelum memulai pekerjaan.", "error");
+      return;
+    }
     if (!confirm("Apakah Anda yakin ingin Sign On ke langkah kerja ini?")) return;
 
     const button = event.currentTarget;
@@ -580,6 +822,10 @@ if (currentUserRole === "mechanic") {
   }
 
   function approveStep(partId, stepNo) {
+    if (!isPlanningComplete(stepNo)) {
+      showNotification("PLAN MAN dan PLAN HOURS harus diisi oleh Admin sebelum menyetujui.", "error");
+      return;
+    }
     const manCountElement = document.querySelector(`#step-row-${stepNo} .font-semibold span.text-blue-600`);
     const manCount = manCountElement ? parseInt(manCountElement.textContent, 10) : 0;
     if (manCount === 0) {
@@ -615,7 +861,6 @@ if (currentUserRole === "mechanic") {
       });
   }
 
-  // --- FUNGSI BARU UNTUK LAMPIRAN ---
   function uploadStepAttachment(partId, stepNo) {
     const input = document.getElementById(`step-attachment-input-${stepNo}`);
     const files = input.files;
@@ -636,7 +881,7 @@ if (currentUserRole === "mechanic") {
 
     fetch(`/upload_step_attachment/${partId}/${stepNo}`, {
       method: "POST",
-      headers: { "X-CSRFToken": csrfToken }, // FormData sets Content-Type automatically
+      headers: { "X-CSRFToken": csrfToken },
       body: formData,
     })
       .then((response) => response.json())
@@ -656,12 +901,12 @@ if (currentUserRole === "mechanic") {
       });
   }
 
-  function deleteStepAttachment(partId, stepNo, storedFilename) {
+  function deleteStepAttachment(partId, stepNo, public_id) {
     if (!confirm("Apakah Anda yakin ingin menghapus lampiran ini?")) {
       return;
     }
 
-    fetch(`/delete_step_attachment/${partId}/${stepNo}/${storedFilename}`, {
+    fetch(`/delete_step_attachment/${partId}/${stepNo}/${public_id}`, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
@@ -679,5 +924,19 @@ if (currentUserRole === "mechanic") {
       .catch((error) => {
         showNotification("Terjadi kesalahan jaringan.", "error");
       });
+  }
+}
+
+/**
+ * Directs the delete action based on whether any checkboxes are selected.
+ * @param {string} partId - The ID of the MWS part.
+ */
+function handleSmartDelete(partId) {
+  const selectedCheckboxes = document.querySelectorAll(".step-checkbox:checked");
+
+  if (selectedCheckboxes.length > 0) {
+    deleteSelectedSteps(partId);
+  } else {
+    deleteAllSteps(partId);
   }
 }

@@ -18,11 +18,13 @@ class Stripping(db.Model):
     defect = db.Column(db.String(255), nullable=True, name="DEFECT")
     mt_number = db.Column(db.String(100), nullable=True, name="MT NUMBER")
     mt_qty = db.Column(db.Integer, nullable=True, name="MT QTY")
+    mt_date = db.Column(db.Date, nullable=True, name="MT DATE")
     mws_part_id = db.Column(db.Integer, db.ForeignKey('mws_parts.id'), nullable=False, index=True)
     mws_part = relationship('MwsPart', back_populates='stripping')
     customer = association_proxy('mws_part', 'customer')
     iwoNo = association_proxy('mws_part', 'iwoNo')
     partNumber = association_proxy('mws_part', 'partNumber')
+    remark_bdp = db.Column(db.String(100), nullable=True, name="REMARK")
 
 
     def to_dict(self):
@@ -41,8 +43,13 @@ class Stripping(db.Model):
             'defect': self.defect,
             'mt_number': self.mt_number,
             'mt_qty': self.mt_qty,
+            'mt_date' : self.mt_date.isoformat() if self.mt_date else None,
+            'remark_bdp' : self.remark_bdp
         }
 
     def __repr__(self):
         """Representasi string dari objek, berguna untuk debugging."""
         return f'<Stripping id={self.id} bdp_name="{self.bdp_name}" customer="{self.customer}">'
+    
+
+    

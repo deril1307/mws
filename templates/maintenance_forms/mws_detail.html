@@ -12,6 +12,8 @@
     border: 1px solid #e5e7eb;
     padding: 0.75rem;
   }
+  /*-- MODIFIED --*/
+  .select-column { width: 45px; }
   .no-column { width: 50px; }
   .description-column { width: 28%; }
   .plan-man-column, .plan-hours-column, .man-column, .hours-column {
@@ -89,6 +91,11 @@
         <h2 class="text-xl font-semibold text-gray-800">Maintenance Work Sheet</h2>
         <div class="flex items-center space-x-2">
             {% if user.role in ['admin', 'superadmin'] %}
+            <button id="smart-delete-btn" onclick="handleSmartDelete('{{ part_id }}')" class="px-4 py-2 text-white text-sm font-medium rounded transition-colors duration-200">
+            </button>
+            <button onclick="addFirstStep('{{ part_id }}')" class="px-3 py-2 bg-green-500 text-white text-sm font-medium rounded hover:bg-green-600 transition-colors duration-200" title="Tambah Step Baru">
+                <i class="fas fa-plus"></i>
+            </button>
             <a href="{{ url_for('print_mws', part_id=part_id) }}" target="_blank" class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700">
                 <i class="fas fa-print mr-2"></i>Print MWS
             </a>
@@ -97,7 +104,6 @@
       </div>
       <div class="overflow-x-auto">
         {% set is_mws_locked = not (part.preparedBy and part.approvedBy) %}
-
         {% if is_mws_locked and user.role == 'mechanic' %}
         <div class="m-4 p-4 bg-yellow-100 text-yellow-800 border-l-4 border-yellow-500 rounded-md shadow-sm">
           <div class="flex">
@@ -117,6 +123,11 @@
         <table class="worksheet-table w-full">
           <thead class="bg-gray-100">
             <tr>
+              {% if user.role in ['admin', 'superadmin'] %}
+              <th rowspan="2" class="select-column text-center p-2 align-middle">
+                  <input type="checkbox" id="select-all-steps" title="Pilih Semua Step">
+              </th>
+              {% endif %}
               <th rowspan="2" class="no-column text-center p-3 text-sm font-semibold text-gray-700 align-middle">NO</th>
               <th rowspan="2" class="description-column text-left p-3 text-sm font-semibold text-gray-700 align-middle">DESCRIPTION</th>
               <th colspan="2" class="text-center p-3 text-sm font-semibold text-gray-700 bg-blue-100">PLAN</th>
@@ -124,7 +135,7 @@
               <th rowspan="2" class="tech-column text-center p-3 text-sm font-semibold text-gray-700 align-middle">TECH</th>
               <th rowspan="2" class="insp-column text-center p-3 text-sm font-semibold text-gray-700 align-middle">INSP</th>
               <th rowspan="2" class="action-column text-center p-3 text-sm font-semibold text-gray-700 align-middle">{% if user.role in ['admin','superadmin'] %}AKSI{% else %}KETERANGAN{% endif %}</th>
-              <th rowspan="2" class="status-column text-center p-3 text-sm font-semibold text-gray-700 align-middle">LAMPIRAN</th>
+              <th rowspan="2" class="status-column text-center p-3 text-sm font-semibold text-gray-700 align-middle">LAMPIRAN PER STEP</th>
               <th rowspan="2" class="status-column text-center p-3 text-sm font-semibold text-gray-700 align-middle">STATUS</th>
             </tr>
             <tr>
@@ -137,6 +148,11 @@
           <tbody>
             {% for step in part.steps %}
             <tr id="step-row-{{ step.no }}" class="{% if step.description.lower() == 'check' %}check-step-row{% endif %} {% if step.status == 'completed' %}bg-blue-50{% elif step.status == 'in_progress' %}bg-green-50{% else %}bg-red-50{% endif %} hover:bg-gray-50">
+              {% if user.role in ['admin', 'superadmin'] %}
+              <td class="text-center align-middle p-2">
+                  <input type="checkbox" class="step-checkbox" data-step-no="{{ step.no }}">
+              </td>
+              {% endif %}
               <td class="text-center font-medium align-top">{{ step.no }}</td>
               
               <td class="text-sm align-top">
@@ -177,7 +193,7 @@
                           </button>
                       </div>
                   {% else %}
-                      <p class="text-sm text-center text-gray-600">{{ step.planMan or 'N/A' }}</p>
+                      <p id="plan-man-text-{{ step.no }}" class="text-sm text-center text-gray-600">{{ step.planMan or 'N/A' }}</p>
                   {% endif %}
               </td>
 
@@ -196,7 +212,7 @@
                           </button>
                       </div>
                   {% else %}
-                       <p class="text-sm text-center text-gray-600">{{ step.planHours or 'N/A' }}</p>
+                       <p id="plan-hours-text-{{ step.no }}" class="text-sm text-center text-gray-600">{{ step.planHours or 'N/A' }}</p>
                   {% endif %}
               </td>
 
@@ -220,7 +236,18 @@
                   {% endif %}
 
                   {% if user.role == 'mechanic' and user.nik not in step_mechanics and step.tech != 'Approved' %}
-                  <button onclick="addMeToStep('{{ part_id }}', {{ step.no }})" class="w-full mt-2 px-2 py-1 bg-green-500 hover:bg-green-600 text-white rounded text-xs font-bold {% if is_mws_locked or is_busy_based_on_tech %}opacity-50 cursor-not-allowed{% endif %}" {% if is_mws_locked %} disabled title="MWS terkunci. Tunggu approval dari Admin/Superadmin." {% elif is_busy_based_on_tech %} disabled title="Anda masih memiliki pekerjaan aktif di step lain. Selesaikan (Approve by TECH) terlebih dahulu." {% endif %}>
+                  {% set is_planning_incomplete = not (step.planMan and step.planHours) %}
+                  <button 
+                    onclick="addMeToStep('{{ part_id }}', {{ step.no }})" 
+                    class="w-full mt-2 px-2 py-1 bg-green-500 hover:bg-green-600 text-white rounded text-xs font-bold 
+                           {% if is_mws_locked or is_busy_based_on_tech or is_planning_incomplete %}opacity-50 cursor-not-allowed{% endif %}" 
+                    {% if is_mws_locked %} 
+                      disabled title="MWS terkunci. Tunggu approval dari Admin/Superadmin." 
+                    {% elif is_busy_based_on_tech %} 
+                      disabled title="Anda masih memiliki pekerjaan aktif di step lain. Selesaikan (Approve by TECH) terlebih dahulu." 
+                    {% elif is_planning_incomplete %}
+                      disabled title="PLAN MAN dan PLAN HOURS harus diisi oleh Admin terlebih dahulu."
+                    {% endif %}>
                     <i class="fas fa-sign-in-alt mr-1"></i> Sign On
                   </button>
                   {% endif %}
@@ -233,11 +260,28 @@
                   <span id="hours-display-{{ step.no }}" class="font-mono text-lg font-semibold text-gray-700 h-6 flex items-center" {% if step.get('timer_start_time') %} data-start-time="{{ step.get('timer_start_time') }}" data-initial-hours="{{ step.hours or '00:00' }}" {% endif %}>
                     {{ step.hours if step.hours else '00:00' }}
                   </span>
-                  {% if user.role == 'mechanic' and user.nik in step.man and step.tech != 'Approved' %} 
+                  {% if user.role == 'mechanic' and user.nik in step.man and step.tech != 'Approved' %}
+                  {% set is_planning_incomplete = not (step.planMan and step.planHours) %}
                   {% if step.get('timer_start_time') %}
-                  <button onclick="stopTimer('{{ part_id }}', {{ step.no }})" class="w-full px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs" {% if is_mws_locked %}disabled title="MWS terkunci" {% endif %}>Stop</button>
+                  <button 
+                    onclick="stopTimer('{{ part_id }}', {{ step.no }})" 
+                    class="w-full px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs 
+                           {% if is_mws_locked %}opacity-50 cursor-not-allowed{% endif %}" 
+                    {% if is_mws_locked %}disabled title="MWS terkunci"{% endif %}>
+                    Stop
+                  </button>
                   {% else %}
-                  <button onclick="startTimer('{{ part_id }}', {{ step.no }})" class="w-full px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs" {% if is_mws_locked %}disabled title="MWS terkunci" {% endif %}>Start</button>
+                  <button 
+                    onclick="startTimer('{{ part_id }}', {{ step.no }})" 
+                    class="w-full px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs 
+                           {% if is_mws_locked or is_planning_incomplete %}opacity-50 cursor-not-allowed{% endif %}" 
+                    {% if is_mws_locked %} 
+                      disabled title="MWS terkunci"
+                    {% elif is_planning_incomplete %}
+                      disabled title="PLAN MAN dan PLAN HOURS harus diisi oleh Admin terlebih dahulu."
+                    {% endif %}>
+                    Start
+                  </button>
                   {% endif %} 
                   {% endif %}
                 </div>
@@ -245,14 +289,18 @@
 
               <td class="tech-column align-top tech-cell">
                 {% if user.role == 'mechanic' and user.nik in step.man and step.tech != 'Approved' %}
+                {% set is_planning_incomplete = not (step.planMan and step.planHours) %}
                 <div class="min-h-[40px] flex items-center justify-center">
                   <button 
                     onclick="approveStep('{{ part_id }}', {{ step.no }})" 
-                    class="px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded text-sm font-medium {% if is_mws_locked or step.get('timer_start_time') %}opacity-50 cursor-not-allowed{% endif %}"
+                    class="px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded text-sm font-medium 
+                           {% if is_mws_locked or step.get('timer_start_time') or is_planning_incomplete %}opacity-50 cursor-not-allowed{% endif %}"
                     {% if is_mws_locked %}
                       disabled title="MWS terkunci. Tunggu approval dari Admin/Superadmin."
                     {% elif step.get('timer_start_time') %}
                       disabled title="Timer sedang berjalan. Hentikan timer terlebih dahulu untuk approve."
+                    {% elif is_planning_incomplete %}
+                      disabled title="PLAN MAN dan PLAN HOURS harus diisi oleh Admin terlebih dahulu."
                     {% endif %}>
                       Approve
                   </button>
@@ -269,9 +317,33 @@
 
               <td class="insp-column align-top">
                 {% if user.role == 'quality1' and step.status == 'in_progress' and step.tech == 'Approved' %}
-                <div class="min-h-[40px] flex items-center justify-center">
-                  <button onclick="finishStep('{{ part_id }}', {{ step.no }})" class="px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded text-sm font-medium" {% if is_mws_locked %}disabled title="MWS terkunci" {% endif %}>Approve</button>
-                </div>
+                  
+                  {# --- LOGIKA BARU UNTUK FINAL INSPECTION --- #}
+                  {% if step.description.lower().strip() == 'final inspection' %}
+                  <div class="flex flex-col space-y-2 p-1" id="final-inspection-controls-{{ step.no }}">
+                      <select id="status-s-us-select-{{ step.no }}" class="w-full border rounded px-2 py-1 text-xs" onchange="enableFinalApprove({{ step.no }})">
+                          <option value="" selected disabled>-- Pilih Status --</option>
+                          <option value="RAI">RAI (Release Authorize Inspector)</option>
+                          <option value="S">S (Serviceable)</option>
+                          <option value="U/S">U/S (Unserviceable)</option>
+                          <option value="BEYOND REPAIR">Beyond Repair</option>
+                      </select>
+                      <button id="final-approve-btn-{{ step.no }}"
+                              onclick="finishFinalInspection('{{ part_id }}', {{ step.no }})"
+                              class="px-2 py-1.5 bg-green-600 text-white rounded text-xs font-semibold opacity-50 cursor-not-allowed transition-opacity"
+                              disabled
+                              title="Pilih status terlebih dahulu">
+                          Approve & Finish
+                      </button>
+                  </div>
+                  {% else %}
+                  {# --- Tombol asli untuk langkah lainnya --- #}
+                  <div class="min-h-[40px] flex items-center justify-center">
+                    <button onclick="finishStep('{{ part_id }}', {{ step.no }})" class="px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded text-sm font-medium" {% if is_mws_locked %}disabled title="MWS terkunci" {% endif %}>Approve</button>
+                  </div>
+                  {% endif %}
+                  {# --- AKHIR DARI LOGIKA BARU --- #}
+
                 {% else %}
                 <div class="text-center">
                   <span class="text-sm font-semibold text-gray-900">
@@ -316,18 +388,13 @@
                           <ul class="text-xs space-y-1">
                               {% for attachment in step.attachments %}
                                   <li class="flex flex-col bg-gray-100 p-1 rounded">
-                                      {% if attachment.original_filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')) %}
-                                          <a href="{{ attachment.file_url }}" target="_blank" class="block w-24 h-16 overflow-hidden rounded mb-1 self-center">
-                                              <img src="{{ attachment.file_url }}" alt="{{ attachment.original_filename }}" class="object-cover w-full h-full">
-                                          </a>
-                                      {% endif %}
                                       <div class="flex items-center justify-between">
                                           <a href="{{ attachment.file_url }}" target="_blank" class="text-blue-600 hover:underline truncate" title="{{ attachment.original_filename }}">
                                               <i class="fas fa-paperclip mr-1"></i>
                                               {{ attachment.original_filename[:15] }}{% if attachment.original_filename|length > 15 %}...{% endif %}
                                           </a>
                                           {% if user.role == 'mechanic' %}
-                                              <button onclick="deleteStepAttachment('{{ part_id }}', {{ step.no }}, '{{ attachment.stored_filename }}')" class="ml-2 text-red-500 hover:text-red-700 font-bold" title="Hapus Lampiran">&times;</button>
+                                              <button onclick="deleteStepAttachment('{{ part_id }}', {{ step.no }}, '{{ attachment.public_id }}')" class="ml-2 text-red-500 hover:text-red-700 font-bold" title="Hapus Lampiran">&times;</button>
                                           {% endif %}
                                       </div>
                                   </li>

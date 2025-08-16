@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{% block title %}Sistem Aircraft Maintenance Work Sheet{% endblock %}</title>
     <meta name="csrf-token" content="{{ csrf_token() }}" />
+    {% if user and user.role %}
+    <meta name="user-role" content="{{ user.role }}" />
+    {% endif %}
+
     <!-- Font Awesome Lokal -->
     <link href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}" rel="stylesheet" />
 
@@ -127,5 +131,6 @@
   <body class="bg-gray-50 min-h-screen">
     {% block content %}{% endblock %}
     <script src="{{ url_for('static', filename='js/base.js') }}" defer></script>
+    {% block scripts %}{% endblock %}
   </body>
 </html>

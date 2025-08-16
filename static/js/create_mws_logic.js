@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", function () {
-  // --- FUNGSI NOTIFIKASI ---
+  // --- FUNGSI NOTIFIKASI (Tidak berubah) ---
   function showNotification(message, type = "success") {
     const existingNotification = document.getElementById("toast-notification");
     if (existingNotification) {
@@ -47,15 +47,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
     let isManualMode = false; // State untuk melacak mode input
 
-    function populateJobTypes() {
-      if (typeof JOB_TYPES_FROM_SERVER !== "undefined" && Array.isArray(JOB_TYPES_FROM_SERVER)) {
-        // const defaultOptions = ["F.Test", "Repair", "Overhaul", "IRAN", "Recharging"];
-        // // ...
-        // HANYA MENGGUNAKAN DATA DATABASE)
-        const allOptions = [...new Set(JOB_TYPES_FROM_SERVER)].sort();
-        // ...
+    // **MODIFIED:** Fungsi ini sekarang menerima data sebagai argumen
+    function populateJobTypes(jobTypesFromServer) {
+      if (Array.isArray(jobTypesFromServer)) {
+        const allOptions = [...new Set(jobTypesFromServer)].sort();
 
-        list.innerHTML = "";
+        list.innerHTML = ""; // Bersihkan list sebelum diisi
         allOptions.forEach((job) => {
           const li = document.createElement("li");
           li.textContent = job;
@@ -68,11 +65,37 @@ document.addEventListener("DOMContentLoaded", function () {
           list.appendChild(li);
         });
       } else {
-        console.error("Variabel JOB_TYPES_FROM_SERVER tidak ditemukan atau bukan array.");
+        console.error("Data Job Types yang diterima bukan array.");
         list.innerHTML = `<li class="px-4 py-2 text-gray-500">Gagal memuat data.</li>`;
       }
     }
 
+    // **NEW:** Fungsi untuk mengambil data dari server
+    async function fetchAndPopulateJobTypes() {
+      try {
+        const response = await fetch("/api/get_job_types");
+        if (!response.ok) {
+          throw new Error("Gagal mengambil data dari server.");
+        }
+        const result = await response.json();
+
+        if (result.success) {
+          populateJobTypes(result.job_types);
+          // Aktifkan input setelah data berhasil dimuat
+          searchInput.disabled = false;
+          searchInput.placeholder = "Cari atau pilih dari daftar...";
+        } else {
+          throw new Error(result.error || "Gagal memproses data.");
+        }
+      } catch (error) {
+        console.error("Error fetching job types:", error);
+        list.innerHTML = `<li class="px-4 py-2 text-gray-500">Gagal memuat data.</li>`;
+        searchInput.placeholder = "Gagal memuat data...";
+        // Jaga input tetap disabled jika error
+      }
+    }
+
+    // --- Logika event listener lainnya (tidak berubah) ---
     function switchToManualMode() {
       isManualMode = true;
       dropdown.classList.add("hidden");
@@ -128,7 +151,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
     searchInput.addEventListener("focus", () => {
       if (!isManualMode) {
-        // Hanya tampilkan jika ada isi atau jika user klik
         if (list.getElementsByTagName("li").length > 0) {
           dropdown.classList.remove("hidden");
         }
@@ -141,11 +163,12 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     });
 
-    populateJobTypes();
+    // **MODIFIED:** Panggil fungsi fetch saat halaman dimuat
+    fetchAndPopulateJobTypes();
   }
   // ========== AKHIR LOGIKA DROPDOWN ==========
 
-  // SCRIPT SUBMIT FORM
+  // SCRIPT SUBMIT FORM (Tidak berubah)
   const createMwsForm = document.getElementById("createMwsForm");
   if (createMwsForm) {
     createMwsForm.addEventListener("submit", async function (e) {

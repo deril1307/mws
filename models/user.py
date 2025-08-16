@@ -48,11 +48,11 @@ class User(UserMixin, db.Model):
             'position': self.position,
             'last_seen': self.last_seen.isoformat() if self.last_seen else None,
             'assigned_customers': [],
-            'assigned_shop_area': None
+            'assigned_shop_area': []
         }
         if self.area:
             user_dict['assigned_customers'] = self.area.assigned_customers or []
-            user_dict['assigned_shop_area'] = self.area.assigned_shop_area
+            user_dict['assigned_shop_area'] = self.area.assigned_shop_area or []
         return user_dict
 
     def __repr__(self):
@@ -65,6 +65,6 @@ class StaffArea(db.Model):
     nik = db.Column(db.String(50), nullable=False)
     name = db.Column(db.String(100), nullable=False)
     assigned_customers = db.Column(JSON, nullable=True) 
-    assigned_shop_area = db.Column(db.String(100), nullable=True)
+    assigned_shop_area = db.Column(JSON, nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, unique=True)
     user = relationship('User', back_populates='area')

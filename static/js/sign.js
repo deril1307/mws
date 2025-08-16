@@ -1,7 +1,7 @@
 /**
- * (REFACTORED) Mengirim data penandatanganan dokumen ke server.
+ * Mengirim data penandatanganan dokumen ke server.
  * @param {string} partId - ID dari MWS.
- * @param {string} type - Tipe tanda tangan (misal: 'preparedBy').
+ * @param {string} type - Tipe tanda tangan (misal: 'prepared').
  */
 async function signDocument(partId, type) {
   if (!confirm("Apakah Anda yakin ingin menandatangani dokumen ini?")) return;
@@ -16,7 +16,8 @@ async function signDocument(partId, type) {
     const data = await response.json();
 
     if (data.success) {
-      showNotification("Dokumen berhasil di Approved.", "success");
+      //  Menggunakan pesan dari server untuk notifikasi
+      showNotification(data.message || "Dokumen berhasil ditandatangani.", "success");
       location.reload();
     } else {
       showNotification("Error: " + data.error, "error");
@@ -28,7 +29,7 @@ async function signDocument(partId, type) {
 }
 
 /**
- * (REFACTORED) Memperbarui tanggal (seperti start date) pada MWS.
+ * Memperbarui tanggal (seperti start date) pada MWS.
  * @param {string} partId - ID dari MWS.
  * @param {string} field - Nama field tanggal yang akan diupdate.
  * @param {string} value - Nilai tanggal yang baru.
@@ -44,11 +45,7 @@ async function updateDates(partId, field, value) {
     const data = await response.json();
 
     if (data.success) {
-      showNotification("Date updated", "success");
-      if (field === "startDate" && typeof checkStrippingStatus === "function") {
-        // Panggil checkStrippingStatus jika ada setelah update berhasil
-        setTimeout(checkStrippingStatus, 1000);
-      }
+      showNotification("Tanggal berhasil diperbarui.", "success");
     } else {
       showNotification("Error: " + data.error, "error");
     }
@@ -59,7 +56,7 @@ async function updateDates(partId, field, value) {
 }
 
 /**
- * (REFACTORED) Mengirim permintaan untuk membatalkan tanda tangan.
+ * Mengirim permintaan untuk membatalkan tanda tangan.
  * @param {string} partId - ID dari MWS.
  * @param {string} signType - Tipe tanda tangan yang akan dibatalkan.
  * @param {string} confirmMessage - Pesan konfirmasi yang akan ditampilkan.

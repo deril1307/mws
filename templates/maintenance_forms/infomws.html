@@ -42,51 +42,6 @@
   </div>
 </div>
 
-<div id="all-strep-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 z-[120] flex justify-center items-center">
-  <div class="bg-white rounded-lg shadow-xl p-4 sm:p-6 w-full max-w-7xl mx-4 h-[90vh] flex flex-col">
-    <div class="flex justify-between items-center border-b pb-3 mb-4">
-      <h3 class="text-xl font-semibold text-gray-800">All Strep</h3>
-      <button onclick="closeAllStrepModal()" class="text-gray-400 hover:text-gray-600">
-        <span class="sr-only">Close</span>
-        <i class="fas fa-times h-6 w-6"></i>
-      </button>
-    </div>
-    <div class="flex-grow overflow-auto">
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-100 sticky top-0">
-          <tr>
-            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ref Logistic PPC</th>
-            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MDR Doc Defect</th>
-            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remark MWS</th>
-            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Test Result</th>
-            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Schedule Delivery on Time</th>
-            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ECD Finish Workdays</th>
-            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Selisih Work Days</th>
-            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prosentase Schedule</th>
-            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Form Out No</th>
-            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanda Terima FO No</th>
-            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanda Terima FO Date</th>
-            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stripping Report Date</th>
-            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stripping Order by SAP Date</th>
-            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prosentase BDP</th>
-            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">QTY BDP</th>
-            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Selisih Order Work Days</th>
-            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time Stripping Work Days</th>
-            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Max Stripping Date</th>
-            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TASE Stripping</th>
-            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status S/US</th>
-            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ship Transfer TT Date</th>
-            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ship Transfer TT No</th>
-            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Selisih Shipping Work Days</th>
-            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TASE</th>
-          </tr>
-        </thead>
-        <tbody id="all-strep-table-body" class="bg-white divide-y divide-gray-200"></tbody>
-      </table>
-    </div>
-  </div>
-</div>
-
 <style>
   #toast-notification.show {
     transform: translateX(0);
@@ -196,14 +151,6 @@
     <i class="fas fa-paperclip mr-2"></i>
     Lampiran
   </button>
-  <button
-    id="get-all-strep-btn"
-    onclick="openAllStrepModal()"
-    class="bg-yellow-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-opacity-75 transition-all duration-200"
-  >
-    <i class="fas fa-stream mr-2"></i>
-    All Strep
-  </button>
   {% endif %}
 </div>
 
@@ -235,13 +182,14 @@
       <h4 class="font-semibold text-gray-700 mb-2">Lampiran Saat Ini:</h4>
       <ul id="attachment-list" class="space-y-2">
         {% if part.attachments %} {% for att in part.attachments %}
-        <li id="attachment-item-{{ att.stored_filename | replace('.', '-') }}" class="flex items-center justify-between bg-gray-50 p-2 rounded-md hover:bg-gray-100">
+        <li id="attachment-item-{{ att.public_id | replace('/', '-') | replace('.', '-') }}" class="flex items-center justify-between bg-gray-50 p-2 rounded-md hover:bg-gray-100">
           <a href="{{ att.file_url }}" target="_blank" class="text-blue-600 hover:underline truncate pr-4" title="{{ att.original_filename }}">
             <i class="fas fa-file-alt mr-2 text-gray-500"></i>
             {{ att.original_filename }}
           </a>
+
           {% if user.role in ['admin', 'superadmin'] %}
-          <button onclick="deleteAttachment('{{ part.part_id }}', '{{ att.stored_filename }}')" class="text-red-500 hover:text-red-700 text-xs font-semibold" title="Hapus Lampiran">
+          <button onclick="deleteAttachment('{{ part.part_id }}', '{{ att.public_id }}')" class="text-red-500 hover:text-red-700 text-xs font-semibold" title="Hapus Lampiran">
             <i class="fas fa-trash"></i>
           </button>
           {% endif %}
@@ -279,6 +227,8 @@
             <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">DEFECT</th>
             <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">MT NUMBER</th>
             <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">MT QTY</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">MT DATE</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">REMARK BDP</th>
             {% if user.role in ['admin', 'superadmin'] %}
             <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Aksi</th>
             {% endif %}

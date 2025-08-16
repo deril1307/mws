@@ -1,0 +1,501 @@
+{% extends "shared/base.html" %} {% block title %}Semua Data Strep{% endblock %} {% block content %}
+<div class="flex h-screen bg-gray-100 font-sans">
+  {% include 'components/sidebar.html' %}
+
+  <div class="flex-1 flex flex-col overflow-hidden">
+    <header class="bg-white shadow-sm border-b border-gray-200">
+      <div class="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
+        <button id="sidebar-toggle-button" class="md:hidden text-gray-500 hover:text-gray-700 focus:outline-none">
+          <i class="fas fa-bars text-xl"></i>
+        </button>
+        <div class="flex-1 flex justify-center md:justify-start">
+          <h1 class="text-lg sm:text-xl font-bold text-gray-800">Semua Data Strep</h1>
+        </div>
+        <div class="flex items-center space-x-4">{% include 'notifikasi/notifikasi.html' %}</div>
+      </div>
+    </header>
+
+    <main class="flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6">
+      <div class="bg-white rounded-lg shadow-xl p-4 sm:p-6 w-full mx-auto">
+        <div class="flex justify-between items-center border-b pb-3 mb-4">
+          <h3 class="text-xl font-semibold text-gray-800">Detail Semua Strep</h3>
+          <div class="flex items-center">
+            <input type="text" id="search-input" placeholder="Cari data..." class="border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <button id="refresh-btn" class="ml-3 text-blue-600 hover:text-blue-800" title="Refresh Data">
+              <i class="fas fa-sync-alt"></i>
+            </button>
+          </div>
+        </div>
+        <div class="overflow-auto" style="max-height: 75vh">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-100 sticky top-0 z-10">
+              <tr>
+                {% if user.role in ['admin', 'superadmin'] %}
+                <th class="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                {% endif %}
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">INCOMING DATE</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">REF. LOGISTIC / PPC</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CUSTOMER</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">WBS NO.</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PART NAME</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PART NUMBER</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SERIAL NUMBER</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">COMPONENT ORDER</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MDR / DOC / DEFECT</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CAPABILITY</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IWO NO.</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SHOP AREA</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IWO DATE</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">WORKSHEET NO.</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">REMARK MWS</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TEST RESULT</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SCHEDULE DELIVERY</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ECD FINISH (WORKDAYS)</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SELISIH (WORK DAYS)</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">% SCHEDULE</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">WORKSHEET DATE</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">APPROVAL DATE</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">FORM OUT NO.</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TANDA TERIMA FO NO.</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TANDA TERIMA FO DATE</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STRIPPING REPORT DATE</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">% BDP</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">QTY BDP</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SELISIH ORDER (WORK DAYS)</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MAX STRIPPING DATE</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SELISIH STRIPPING (WORK DAYS)</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">%TASE STRIPPING</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STATUS [S / (U/S)]</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">FINISH DATE</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MEN POWERS</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MEN HOURS</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DOCUMENT PENYERTA</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SHIP./TRANSFER DATE</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SHIP./TRANSFER NO.</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SELISIH SHIPPING (WORK DAYS)</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">%TASE SHIPPING</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">REMARK</th>
+              </tr>
+            </thead>
+            <tbody id="all-strep-table-body" class="bg-white divide-y divide-gray-200"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div id="toast-notification" class="fixed top-5 right-5 z-[150] transition-transform duration-300 translate-x-[150%]">
+  <div id="toast-content" class="flex items-center w-full max-w-xs p-4 text-gray-500 bg-white rounded-lg shadow-lg" role="alert"></div>
+</div>
+
+<div id="edit-all-strep-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 z-[130] flex justify-center items-center">
+  <div class="bg-white rounded-lg shadow-xl p-4 sm:p-6 w-full max-w-5xl mx-4 h-[95vh] flex flex-col">
+    <div class="flex justify-between items-center border-b pb-3 mb-4">
+      <h3 class="text-xl font-semibold text-gray-800">Edit Detail Strep: IWO <span id="edit-strep-part-id" class="font-bold text-blue-600"></span></h3>
+      <button onclick="closeEditAllStrepModal()" class="text-gray-400 hover:text-gray-600">
+        <i class="fas fa-times h-6 w-6"></i>
+      </button>
+    </div>
+    <div class="flex-grow overflow-auto p-2">
+      <form id="edit-all-strep-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+        <div><label class="block font-medium text-gray-700">Incoming Date</label><input type="date" id="edit-strep-startDate" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" /></div>
+        <div><label class="block font-medium text-gray-700">Ref. Logistic / PPC</label><input type="text" id="edit-strep-ref_logistic_ppc" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" /></div>
+        <div><label class="block font-medium text-gray-700">Customer</label><input type="text" id="edit-strep-customer" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" /></div>
+        <div><label class="block font-medium text-gray-700">WBS No.</label><input type="text" id="edit-strep-wbsNo" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" /></div>
+        <div><label class="block font-medium text-gray-700">Part Name</label><input type="text" id="edit-strep-tittle" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" /></div>
+        <div><label class="block font-medium text-gray-700">Part Number</label><input type="text" id="edit-strep-partNumber" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" /></div>
+        <div><label class="block font-medium text-gray-700">Serial Number</label><input type="text" id="edit-strep-serialNumber" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" /></div>
+        <div><label class="block font-medium text-gray-700">Component Order</label><input type="text" id="edit-strep-jobType" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" /></div>
+        <div><label class="block font-medium text-gray-700">MDR / Doc / Defect</label><input type="text" id="edit-strep-mdr_doc_defect" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" /></div>
+        <div><label class="block font-medium text-gray-700">Capability</label><input type="text" id="edit-strep-capability" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" /></div>
+        <div><label class="block font-medium text-gray-700">IWO No.</label><input type="text" id="edit-strep-iwoNo" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" /></div>
+        <div><label class="block font-medium text-gray-700">Shop Area</label><input type="text" id="edit-strep-shopArea" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" /></div>
+        <div><label class="block font-medium text-gray-700">IWO Date</label><input type="date" id="edit-strep-iwoDate" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" /></div>
+        <div><label class="block font-medium text-gray-700">Worksheet No.</label><input type="text" id="edit-strep-worksheetNo" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" /></div>
+        <div><label class="block font-medium text-gray-700">Remark MWS</label><input type="text" id="edit-strep-remark_mws" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" /></div>
+        <div><label class="block font-medium text-gray-700">Test Result</label><input type="text" id="edit-strep-test_result" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" /></div>
+        <div><label class="block font-medium text-gray-700">Schedule Delivery</label><input type="text" id="edit-strep-schedule_delivery_on_time" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" readonly /></div>
+        <div><label class="block font-medium text-gray-700">ECD Finish (Workdays)</label><input type="text" id="edit-strep-ecd_finish_workdays" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" readonly /></div>
+        <div><label class="block font-medium text-gray-700">Selisih (Work Days)</label><input type="text" id="edit-strep-selisih_work_days" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" readonly /></div>
+        <div><label class="block font-medium text-gray-700">% Schedule</label><input type="text" id="edit-strep-prosentase_schedule" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" readonly /></div>
+        <div><label class="block font-medium text-gray-700">Worksheet Date</label><input type="date" id="edit-strep-workSheetDate" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" /></div>
+        <div><label class="block font-medium text-gray-700">Approval Date</label><input type="date" id="edit-strep-approvedDate" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" /></div>
+        <div><label class="block font-medium text-gray-700">Form Out No.</label><input type="text" id="edit-strep-form_out_no" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" /></div>
+        <div><label class="block font-medium text-gray-700">Tanda Terima FO No.</label><input type="text" id="edit-strep-tanda_terima_fo_no" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" /></div>
+        <div><label class="block font-medium text-gray-700">Tanda Terima FO Date</label><input type="date" id="edit-strep-tanda_terima_fo_date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" /></div>
+        <div><label class="block font-medium text-gray-700">Stripping Report Date</label><input type="date" id="edit-strep-stripping_report_date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" /></div>
+        <div><label class="block font-medium text-gray-700">% BDP</label><input type="text" id="edit-strep-prosentase_bdp" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" readonly /></div>
+        <div><label class="block font-medium text-gray-700">QTY BDP</label><input type="number" id="edit-strep-qty_bdp" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" /></div>
+        <div><label class="block font-medium text-gray-700">Selisih Order (Work Days)</label><input type="text" id="edit-strep-selisih_order_work_days" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" readonly /></div>
+        <div><label class="block font-medium text-gray-700">Max Stripping Date</label><input type="date" id="edit-strep-max_stripping_date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" readonly /></div>
+        <div><label class="block font-medium text-gray-700">Selisih Stripping (Work Days)</label><input type="number" id="edit-strep-selisih_stripping" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" /></div>
+        <div><label class="block font-medium text-gray-700">%TASE Stripping</label><input type="text" id="edit-strep-tase_stripping" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" readonly /></div>
+        <div><label class="block font-medium text-gray-700">Status [S/(U/S)]</label><input type="text" id="edit-strep-status_s_us" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" /></div>
+        <div><label class="block font-medium text-gray-700">Finish Date</label><input type="date" id="edit-strep-finishDate" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" /></div>
+        <div><label class="block font-medium text-gray-700">Men Powers</label><input type="text" id="edit-strep-men_powers" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" readonly /></div>
+        <div><label class="block font-medium text-gray-700">Men Hours</label><input type="text" id="edit-strep-total_duration" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" readonly /></div>
+        <div><label class="block font-medium text-gray-700">Document Penyerta</label><input type="text" id="edit-strep-document_penyerta" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" /></div>
+        <div><label class="block font-medium text-gray-700">Ship/Transfer (TT) Date</label><input type="date" id="edit-strep-ship_transfer_tt_date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" /></div>
+        <div><label class="block font-medium text-gray-700">Ship/Transfer (TT) No.</label><input type="text" id="edit-strep-ship_transfer_tt_no" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" /></div>
+        <div><label class="block font-medium text-gray-700">Selisih Shipping</label><input type="text" id="edit-strep-selisih_shipping_work_days" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" readonly /></div>
+        <div><label class="block font-medium text-gray-700">%TASE</label><input type="text" id="edit-strep-tase" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" readonly /></div>
+        <div><label class="block font-medium text-gray-700">REMARK</label><input type="text" id="edit-strep-remark" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" /></div>
+      </form>
+    </div>
+    <div class="flex justify-end items-center border-t pt-4 mt-4">
+      <button onclick="closeEditAllStrepModal()" type="button" class="bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-gray-300">Batal</button>
+      <button onclick="saveAllStrepChanges()" id="save-all-strep-changes-btn" type="button" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-blue-700">
+        <i class="fas fa-save mr-2"></i>Simpan Perubahan
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== KODE BARU: MODAL LOGOUT ===================== -->
+<div id="logout-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+  <div id="logout-modal-overlay" class="absolute inset-0 bg-black bg-opacity-60"></div>
+  <div id="logout-modal-panel" class="relative bg-white rounded-lg shadow-xl w-full max-w-md m-4">
+    <div class="flex items-start justify-between p-5 border-b rounded-t">
+      <h3 class="text-xl font-semibold text-gray-900">Konfirmasi Logout</h3>
+      <button type="button" id="logout-modal-close-button" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
+        <i class="fas fa-times w-5 h-5"></i>
+      </button>
+    </div>
+    <div class="p-6">
+      <p class="text-base leading-relaxed text-gray-600">Apakah Anda yakin ingin mengakhiri sesi Anda?</p>
+    </div>
+    <div class="flex items-center p-6 space-x-4 border-t border-gray-200 rounded-b">
+      <button id="logout-modal-confirm-button" type="button" class="text-white bg-red-600 hover:bg-red-700 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center">Ya, Logout</button>
+      <button
+        id="logout-modal-cancel-button"
+        type="button"
+        class="text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 hover:text-gray-900 focus:z-10"
+      >
+        Batal
+      </button>
+    </div>
+  </div>
+</div>
+<!-- ===================== AKHIR KODE BARU ===================== -->
+
+{% endblock %} {% block scripts %}
+<script src="{{ url_for('static', filename='js/sidebar.js') }}"></script>
+<script src="{{ url_for('static', filename='js/notifikasi_logic.js') }}"></script>
+
+<script>
+  (() => {
+    // =========================
+    // Helpers & Global State
+    // =========================
+    const qs = (sel, root = document) => root.querySelector(sel);
+    const qsa = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+
+    const getUserRole = () => qs('meta[name="user-role"]')?.getAttribute("content") || "";
+    const isAdminRole = (r) => r === "admin" || r === "superadmin";
+    const getCsrfToken = () => qs('meta[name="csrf-token"]')?.getAttribute("content") || "";
+
+    let allDataCache = [];
+    let toastTimer;
+
+    // =========================
+    // UI: Toast
+    // =========================
+    function showToast(message, type = "success") {
+      const toast = qs("#toast-notification");
+      const toastContent = qs("#toast-content");
+      if (!toast || !toastContent) return;
+
+      clearTimeout(toastTimer);
+      const successIcon = `<div class="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-green-500 bg-green-100 rounded-lg"><i class="fas fa-check"></i></div>`;
+      const errorIcon = `<div class="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-red-500 bg-red-100 rounded-lg"><i class="fas fa-exclamation-triangle"></i></div>`;
+
+      toastContent.innerHTML = `${type === "success" ? successIcon : errorIcon}<div class="ml-3 text-sm font-normal">${message}</div>`;
+      toast.style.transform = "translateX(0)";
+      toastTimer = setTimeout(() => {
+        toast.style.transform = "translateX(150%)";
+      }, 3000);
+    }
+
+    // =========================
+    // Safe init for dropdown (optional)
+    // =========================
+    function safeSetupDropdown() {
+      try {
+        const btn = qs("#notification-button");
+        const dd = qs("#notification-dropdown");
+        if (typeof setupDropdown === "function" && btn && dd) {
+          setupDropdown("notification-button", "notification-dropdown");
+        } else {
+          console.log("[All Strep] skip setupDropdown (elemen/fungsi tidak ada)");
+        }
+      } catch (e) {
+        console.warn("[All Strep] setupDropdown error:", e);
+      }
+    }
+
+    // =========================
+    // KODE BARU: LOGIKA MODAL LOGOUT
+    // =========================
+    function setupLogoutModal() {
+      const logoutButton = qs("#logout-button-sidebar");
+      const logoutModal = qs("#logout-modal");
+      if (logoutButton && logoutModal) {
+        const confirmButton = qs("#logout-modal-confirm-button");
+        const cancelButton = qs("#logout-modal-cancel-button");
+        const closeButton = qs("#logout-modal-close-button");
+        const overlay = qs("#logout-modal-overlay");
+
+        logoutButton.addEventListener("click", (e) => {
+          e.preventDefault();
+          logoutModal.classList.remove("hidden");
+        });
+
+        const hideModalLogout = () => logoutModal.classList.add("hidden");
+
+        cancelButton.addEventListener("click", hideModalLogout);
+        closeButton.addEventListener("click", hideModalLogout);
+        overlay.addEventListener("click", hideModalLogout);
+
+        confirmButton.addEventListener("click", () => {
+          window.location.href = "{{ url_for('logout') }}";
+        });
+      }
+    }
+    // =========================
+    // AKHIR KODE BARU
+    // =========================
+    async function fetchAllStrepData() {
+      const tableBody = qs("#all-strep-table-body");
+      const userIsAdmin = isAdminRole(getUserRole());
+      if (!tableBody) return;
+
+      console.log("[All Strep] fetchAllStrepData() start");
+      tableBody.innerHTML = `<tr><td colspan="${userIsAdmin ? 44 : 43}" class="text-center py-8">
+      <i class="fas fa-spinner fa-spin text-2xl text-gray-500"></i>
+      <p class="mt-2">Memuat data...</p></td></tr>`;
+
+      try {
+        const resp = await fetch("/get-strep");
+        console.log("[All Strep] /get-strep status:", resp.status);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const result = await resp.json();
+        console.log("[All Strep] data len:", Array.isArray(result?.data) ? result.data.length : "N/A");
+
+        if (result.success) {
+          allDataCache = result.data || [];
+          renderTable(allDataCache);
+        } else {
+          throw new Error(result.error || "Gagal mengambil data dari server.");
+        }
+      } catch (err) {
+        console.error("[All Strep] Fetch error:", err);
+        const colspan = userIsAdmin ? 44 : 43;
+        tableBody.innerHTML = `<tr><td colspan="${colspan}" class="text-center py-4 text-red-500">${err.message}</td></tr>`;
+        showToast(err.message, "error");
+      }
+    }
+    window.fetchAllStrepData = fetchAllStrepData; // untuk debug lewat Console
+
+    // =========================
+    // Render Table
+    // =========================
+    function renderTable(data) {
+      const tableBody = qs("#all-strep-table-body");
+      const userIsAdmin = isAdminRole(getUserRole());
+      if (!tableBody) return;
+
+      tableBody.innerHTML = "";
+
+      if (!data || data.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="${userIsAdmin ? 44 : 43}" class="text-center py-4 text-gray-500">Data tidak ditemukan.</td></tr>`;
+        return;
+      }
+
+      const rowsHtml = data
+        .map((item) => {
+          // Simpan data baris untuk tombol edit
+          const itemData = JSON.stringify(item).replace(/'/g, "&apos;").replace(/"/g, "&quot;");
+
+          const editButtonHtml = userIsAdmin
+            ? `<td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 text-center">
+            <button onclick='openEditAllStrepModal(${itemData})' class="text-blue-600 hover:text-blue-800" title="Edit ${item.part_id || item.iwoNo || ""}">
+              <i class="fas fa-edit"></i>
+            </button>
+           </td>`
+            : "";
+
+          return `
+        <tr class="hover:bg-gray-50">
+          ${editButtonHtml}
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.startDate || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.ref_logistic_ppc || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.customer || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.wbsNo || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.tittle || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.partNumber || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.serialNumber || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.jobType || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.mdr_doc_defect || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.capability || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.iwoNo || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.shopArea || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.iwoDate || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.worksheetNo || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.remark_mws || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.test_result || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.schedule_delivery_on_time || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.ecd_finish_workdays || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.selisih_work_days || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.prosentase_schedule || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.workSheetDate || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.approvedDate || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.form_out_no || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.tanda_terima_fo_no || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.tanda_terima_fo_date || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.stripping_report_date || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.prosentase_bdp || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.qty_bdp || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.selisih_order_work_days || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.max_stripping_date || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.selisih_stripping || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.tase_stripping || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.status_s_us || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.finishDate || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.men_powers || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.total_duration || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.document_penyerta || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.ship_transfer_tt_date || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.ship_transfer_tt_no || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.selisih_shipping_work_days || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.tase || "-"}</td>
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.remark || "-"}</td>
+
+        </tr>
+      `;
+        })
+        .join("");
+
+      tableBody.innerHTML = rowsHtml;
+    }
+
+    // =========================
+    // Modal Edit
+    // =========================
+    window.openEditAllStrepModal = function (itemData) {
+      const modal = qs("#edit-all-strep-modal");
+      if (!modal) return;
+
+      // Judul dan kunci ID untuk update
+      qs("#edit-strep-part-id").textContent = itemData.iwoNo || itemData.part_id || "";
+      const saveBtn = qs("#save-all-strep-changes-btn");
+      if (saveBtn) saveBtn.dataset.partId = itemData.part_id || "";
+
+      // Isi form dari data
+      const form = qs("#edit-all-strep-form");
+      if (form) {
+        qsa("input", form).forEach((input) => {
+          const fieldName = input.id.replace("edit-strep-", "");
+          input.value = itemData[fieldName] ?? "";
+        });
+      }
+      modal.classList.remove("hidden");
+    };
+
+    window.closeEditAllStrepModal = function () {
+      const modal = qs("#edit-all-strep-modal");
+      if (modal) modal.classList.add("hidden");
+    };
+
+    window.saveAllStrepChanges = async function () {
+      const saveButton = qs("#save-all-strep-changes-btn");
+      const partId = saveButton?.dataset.partId;
+      if (!partId) {
+        showToast("Error: Part ID tidak ditemukan.", "error");
+        return;
+      }
+
+      const updatedData = {};
+      qsa("#edit-all-strep-form input").forEach((input) => {
+        if (!input.readOnly) {
+          const fieldName = input.id.replace("edit-strep-", "");
+          updatedData[fieldName] = input.value;
+        }
+      });
+
+      saveButton.disabled = true;
+      saveButton.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i>Menyimpan...`;
+
+      try {
+        const resp = await fetch(`/update_strep/${partId}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCsrfToken(),
+          },
+          body: JSON.stringify(updatedData),
+        });
+
+        const result = await resp.json();
+        if (result.success) {
+          showToast(result.message || "Data berhasil diperbarui.", "success");
+          closeEditAllStrepModal();
+          fetchAllStrepData(); // Refresh tabel
+        } else {
+          showToast(`Error: ${result.error || "Gagal memperbarui data."}`, "error");
+        }
+      } catch (e) {
+        console.error(e);
+        showToast("Terjadi kesalahan jaringan saat menyimpan data.", "error");
+      } finally {
+        saveButton.disabled = false;
+        saveButton.innerHTML = `<i class="fas fa-save mr-2"></i>Simpan Perubahan`;
+      }
+    };
+
+    // =========================
+    // Events
+    // =========================
+    function bindEvents() {
+      const searchInput = qs("#search-input");
+      const refreshBtn = qs("#refresh-btn");
+
+      if (searchInput) {
+        searchInput.addEventListener("keyup", (e) => {
+          const term = e.target.value.toLowerCase();
+          const filtered = allDataCache.filter((item) =>
+            Object.values(item).some((val) =>
+              String(val ?? "")
+                .toLowerCase()
+                .includes(term)
+            )
+          );
+          renderTable(filtered);
+        });
+      }
+
+      if (refreshBtn) {
+        refreshBtn.addEventListener("click", fetchAllStrepData);
+      }
+    }
+
+    // =========================
+    // Init
+    // =========================
+    function onReady() {
+      console.log("[All Strep] DOM ready");
+      console.log("[All Strep] role:", getUserRole(), "isAdmin:", isAdminRole(getUserRole()));
+      safeSetupDropdown();
+      setupLogoutModal(); // Panggil fungsi logout di sini
+      bindEvents();
+      fetchAllStrepData();
+    }
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", onReady);
+    } else {
+      onReady();
+    }
+  })();
+</script>
+{% endblock %}

@@ -1,192 +1,49 @@
-{% extends "shared/base.html" %} {% block title %}Admin Dashboard - Sistem Aircraft Maintenance{% endblock %} {% from "monitoring/tracking_list.html" import render_tracking_list %} {% block content %}
-<style>
-  /* HANYA CSS YANG TIDAK TERKAIT NOTIFIKASI YANG TERSISA */
-  /* CSS BARU UNTUK MODAL LOGOUT */
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  }
-  @keyframes fadeOut {
-    from {
-      opacity: 1;
-    }
-    to {
-      opacity: 0;
-    }
-  }
-  @keyframes scaleIn {
-    from {
-      transform: scale(0.95);
-      opacity: 0;
-    }
-    to {
-      transform: scale(1);
-      opacity: 1;
-    }
-  }
-  .modal-overlay {
-    animation: fadeIn 0.2s ease-out forwards;
-  }
-  .modal-panel {
-    animation: scaleIn 0.2s ease-out forwards;
-  }
-  .modal-overlay.is-hiding {
-    animation: fadeOut 0.2s ease-in forwards;
-  }
+{% extends "shared/base.html" %} {% block title %}Tracking List - Sistem Aircraft Maintenance{% endblock %} {% from "monitoring/tracking_list.html" import render_tracking_list %} {% block content %}
+<div class="flex h-screen bg-gray-100 font-sans">
+  <!-- Memanggil Sidebar yang konsisten di semua halaman -->
+  {% include 'components/sidebar.html' %}
 
-  #status-summary-container {
-    transition: all 0.3s ease-in-out;
-  }
+  <!-- Kontainer Utama (Header + Konten) -->
+  <div class="flex-1 flex flex-col overflow-hidden">
+    <!-- Header Utama -->
+    <header class="bg-white shadow-sm border-b border-gray-200">
+      <div class="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
+        <!-- Tombol Toggle Sidebar untuk Mobile -->
+        <button id="sidebar-toggle-button" class="md:hidden text-gray-500 hover:text-gray-700 focus:outline-none">
+          <i class="fas fa-bars text-xl"></i>
+        </button>
 
-  /* CSS BARU UNTUK STICKY STATUS SUMMARY */
-  #status-summary-container.is-sticky {
-    position: fixed;
-    left: 0;
-    right: 0;
-    /* z-index: 30; -- sedikit di bawah header utama (z-40) */
-    z-index: 30;
-
-    /* Meniru container max-w-7xl */
-    max-width: 100%;
-    margin: 0 auto;
-
-    /* Tampilan baru saat sticky */
-    background-color: rgba(255, 255, 255, 0.85); /* Sedikit transparan */
-    backdrop-filter: saturate(180%) blur(10px); /* Efek glassmorphism */
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    border-bottom: 1px solid #e5e7eb;
-
-    /* Hapus margin atas dan bawah, ganti dengan padding */
-    margin-top: 0 !important;
-    margin-bottom: 0 !important;
-    padding-top: 0.5rem; /* 8px */
-    padding-bottom: 0.5rem; /* 8px */
-
-    /* Menjaga padding horizontal */
-    padding-left: 1rem;
-    padding-right: 1rem;
-  }
-
-  /* Saat sticky, ubah gaya di dalam kartu */
-  .is-sticky .status-card {
-    padding: 0.25rem 0.5rem; /* Padding lebih kecil */
-    background-color: transparent; /* Hapus background kartu */
-    box-shadow: none;
-    border: none;
-  }
-
-  .is-sticky .status-icon-wrapper {
-    padding: 0.3rem; /* Padding ikon lebih kecil */
-    margin-right: 0.75rem; /* Jarak kanan 12px */
-  }
-
-  .is-sticky .status-icon {
-    font-size: 1rem; /* Ukuran ikon lebih kecil (16px) */
-  }
-
-  /* Tata letak teks menjadi horizontal */
-  .is-sticky .status-text-block {
-    display: flex;
-    align-items: baseline;
-    gap: 0.5rem; /* Jarak antara judul dan nilai */
-  }
-
-  .is-sticky .status-title {
-    font-size: 0.75rem; /* Ukuran font judul (12px) */
-    font-weight: 400; /* Normal */
-    color: #4b5563; /* Gray-600 */
-  }
-
-  .is-sticky .status-value {
-    font-size: 1rem; /* Ukuran font nilai (16px) */
-    font-weight: 600; /* Sedikit tebal (semibold) */
-  }
-</style>
-
-<div class="min-h-screen bg-gray-50">
-  <div id="main-header" class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
-    <div class="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
-      <div class="flex justify-between items-center py-3 sm:py-4">
-        <div class="flex items-center">
-          <div class="mr-3 sm:mr-4">
-            <img src="{{ url_for('static', filename='img/logo PT DI.webp') }}" alt="Logo PT DI" class="h-8 w-auto rounded-md shadow-sm" />
-          </div>
-          <div>
-            <h1 class="text-lg sm:text-xl font-bold text-gray-800">Admin Dashboard</h1>
-          </div>
+        <div class="flex-1 flex justify-center md:justify-start">
+          <h1 class="text-lg sm:text-xl font-bold text-gray-800">Daftar Pekerjaan (Tracking List)</h1>
         </div>
 
-        <div class="flex items-center space-x-2 sm:space-x-4">
-          {% include 'notifikasi/notifikasi.html' %}
-          <div class="relative">
-            <button id="user-menu-button" class="flex items-center space-x-2 px-2 py-2 sm:px-3 sm:py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <div class="flex flex-col items-start">
-                <span class="font-medium text-sm text-gray-800">{{ user.name }}</span>
-                <span class="text-xs text-gray-500 hidden sm:inline">NIK : {{ user.nik }}</span>
-              </div>
-              <i id="user-menu-chevron" class="fas fa-chevron-down text-xs text-gray-600 transition-transform duration-200"></i>
-            </button>
-            <div id="user-menu" class="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg py-1 z-50 hidden ring-1 ring-black ring-opacity-5" style="transition: opacity 0.2s ease-out, transform 0.2s ease-out">
-              <div class="px-4 py-3">
-                <span class="font-medium text-sm text-gray-800">{{ user.name }}</span>
-                <span class="text-xs text-gray-500 hidden sm:inline">NIK : {{ user.nik }}</span>
-              </div>
-              <div class="border-t border-gray-100"></div>
-              <a href="{{ url_for('view_profile') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profil</a>
-              <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Pengaturan</a>
-              <div class="border-t border-gray-100"></div>
-              <a href="{{ url_for('logout') }}" id="logout-button" class="block w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-50">Logout</a>
-            </div>
-          </div>
-        </div>
+        <!-- Notifikasi di sebelah kanan -->
+        <div class="flex items-center space-x-4">{% include 'notifikasi/notifikasi.html' %}</div>
       </div>
-    </div>
-  </div>
+    </header>
 
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-    <div class="bg-white p-4 sm:p-6 rounded-xl shadow-sm border mb-8">
-      <div class="flex items-center justify-around space-x-4">
-        <a href="{{ url_for('create_mws') }}" class="flex flex-col items-center text-gray-600 hover:text-blue-600 transition-colors duration-200 group text-center w-1/3">
-          <div class="flex items-center justify-center h-16 w-16 bg-blue-100 group-hover:bg-blue-200 rounded-full transition-colors duration-200">
-            <i class="fas fa-plus-circle text-2xl text-blue-600 transition-colors duration-200"></i>
-          </div>
-          <p class="mt-2 text-sm font-medium">Buat MWS Baru</p>
-        </a>
-        <a href="{{ url_for('manage_users') }}" class="flex flex-col items-center text-gray-600 hover:text-green-600 transition-colors duration-200 group text-center w-1/3">
-          <div class="flex items-center justify-center h-16 w-16 bg-green-100 group-hover:bg-green-200 rounded-full transition-colors duration-200">
-            <i class="fas fa-users-cog text-2xl text-green-600 transition-colors duration-200"></i>
-          </div>
-          <p class="mt-2 text-sm font-medium">Kelola Tim</p>
-        </a>
-        <div class="flex flex-col items-center text-gray-600 text-center w-1/3">
-          <div class="flex items-center justify-center h-16 w-16 bg-yellow-100 rounded-full relative">
-            <i class="fas fa-signature text-2xl text-yellow-600"></i>
-            {% set unsigned_parts_count = parts.values()|selectattr('preparedBy', 'equalto', '')|list|length %} {% if unsigned_parts_count > 0 %}
-            <span class="absolute top-1 right-1 flex h-4 w-4">
-              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
-              <span class="relative inline-flex rounded-full h-4 w-4 bg-yellow-500 text-white text-xs items-center justify-center">{{ unsigned_parts_count }}</span>
-            </span>
-            {% endif %}
-          </div>
-          <p class="mt-2 text-sm font-medium">Prepared By</p>
-          <p class="text-xs text-gray-500">
-            <span class="font-bold {% if unsigned_parts_count > 0 %}text-yellow-600{% else %}text-green-600{% endif %}">{{ unsigned_parts_count }}</span>
-            menunggu
-          </p>
+    <!-- Area Konten Utama yang Dapat Di-scroll -->
+    <main class="flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6">
+      <div class="max-w-7xl mx-auto">
+        <!-- Menampilkan Peringatan Permintaan Mendesak (jika ada) -->
+        {% if urgent_requests %}
+        <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6 rounded-md shadow" role="alert">
+          <p class="font-bold">Pemberitahuan Urgensi</p>
+          <p>Terdapat {{ urgent_requests|length }} pekerjaan yang membutuhkan persetujuan status mendesak.</p>
         </div>
+        {% endif %}
+
+        <!-- KONTEN UTAMA: HANYA MEMANGGIL DAN MENAMPILKAN TRACKING LIST -->
+        {{ render_tracking_list(parts, users, user) }}
       </div>
-    </div>
-    {% include 'monitoring/status_chart.html' with context %} {{ render_tracking_list(parts, users, user) }}
+    </main>
   </div>
 </div>
 
+<!-- Modal Logout (diperlukan di halaman ini) -->
 <div id="logout-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
-  <div id="logout-modal-overlay" class="absolute inset-0 bg-black bg-opacity-60 modal-overlay"></div>
-  <div id="logout-modal-panel" class="relative bg-white rounded-lg shadow-xl w-full max-w-md m-4 modal-panel">
+  <div id="logout-modal-overlay" class="absolute inset-0 bg-black bg-opacity-60"></div>
+  <div id="logout-modal-panel" class="relative bg-white rounded-lg shadow-xl w-full max-w-md m-4">
     <div class="flex items-start justify-between p-5 border-b rounded-t">
       <h3 class="text-xl font-semibold text-gray-900">Konfirmasi Logout</h3>
       <button type="button" id="logout-modal-close-button" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
@@ -209,131 +66,38 @@
   </div>
 </div>
 
+<!-- Memanggil script-script yang dibutuhkan -->
 <script src="{{ url_for('static', filename='js/notifikasi_logic.js') }}"></script>
-
+<script src="{{ url_for('static', filename='js/sidebar.js') }}"></script>
 <script>
   document.addEventListener("DOMContentLoaded", function () {
-    // === Inisialisasi semua dropdown di halaman ini ===
-    // Fungsi 'setupDropdown' dan 'closeAllDropdowns' sekarang berasal dari file notifikasi_logic.js
-    setupDropdown("user-menu-button", "user-menu", "user-menu-chevron");
+    // Inisialisasi dropdown notifikasi
     setupDropdown("notification-button", "notification-dropdown");
 
-    // Event listener global untuk menutup dropdown saat mengklik di luar
-    document.addEventListener("click", (event) => {
-      const userMenuButton = document.getElementById("user-menu-button");
-      const notificationButton = document.getElementById("notification-button");
-      if (userMenuButton && notificationButton && !userMenuButton.contains(event.target) && !notificationButton.contains(event.target)) {
-        closeAllDropdowns();
-      }
-    });
-
-    // === JavaScript untuk Modal Logout (Tidak ada perubahan) ===
-    const logoutButton = document.getElementById("logout-button");
+    // Logika untuk modal logout
+    const logoutButton = document.getElementById("logout-button-sidebar");
     const logoutModal = document.getElementById("logout-modal");
-    const logoutModalOverlay = document.getElementById("logout-modal-overlay");
+    if (!logoutButton || !logoutModal) return;
+
     const confirmButton = document.getElementById("logout-modal-confirm-button");
     const cancelButton = document.getElementById("logout-modal-cancel-button");
     const closeButton = document.getElementById("logout-modal-close-button");
+    const overlay = document.getElementById("logout-modal-overlay");
 
-    function showLogoutModal(e) {
+    logoutButton.addEventListener("click", (e) => {
       e.preventDefault();
       logoutModal.classList.remove("hidden");
-    }
-
-    function hideLogoutModal() {
-      logoutModalOverlay.classList.add("is-hiding");
-      logoutModalOverlay.addEventListener(
-        "animationend",
-        () => {
-          logoutModal.classList.add("hidden");
-          logoutModalOverlay.classList.remove("is-hiding");
-        },
-        { once: true }
-      );
-    }
-
-    function performLogout() {
-      const fadeOutDiv = document.createElement("div");
-      fadeOutDiv.style.position = "fixed";
-      fadeOutDiv.style.top = "0";
-      fadeOutDiv.style.left = "0";
-      fadeOutDiv.style.width = "100vw";
-      fadeOutDiv.style.height = "100vh";
-      fadeOutDiv.style.backgroundColor = "white";
-      fadeOutDiv.style.zIndex = "100";
-      fadeOutDiv.style.opacity = "0";
-      fadeOutDiv.style.transition = "opacity 0.3s ease-in";
-      document.body.appendChild(fadeOutDiv);
-
-      requestAnimationFrame(() => {
-        fadeOutDiv.style.opacity = "1";
-      });
-
-      setTimeout(() => {
-        window.location.href = logoutButton.href;
-      }, 300);
-    }
-
-    logoutButton.addEventListener("click", showLogoutModal);
-    cancelButton.addEventListener("click", hideLogoutModal);
-    closeButton.addEventListener("click", hideLogoutModal);
-    logoutModalOverlay.addEventListener("click", hideLogoutModal);
-    confirmButton.addEventListener("click", () => {
-      hideLogoutModal();
-      performLogout();
     });
 
-    // === LOGIKA BARU UNTUK STICKY STATUS SUMMARY ===
-    const header = document.getElementById("main-header");
-    const statusBar = document.getElementById("status-summary-container");
+    const hideModal = () => logoutModal.classList.add("hidden");
 
-    // Cek jika status bar ada di halaman ini
-    if (header && statusBar) {
-      const contentBelowStatusBar = statusBar.nextElementSibling; // Ini adalah div grafik
-      let placeholder = null;
-      const headerHeight = header.offsetHeight;
+    cancelButton.addEventListener("click", hideModal);
+    closeButton.addEventListener("click", hideModal);
+    overlay.addEventListener("click", hideModal);
 
-      // Hitung posisi trigger (kapan status bar harus menjadi sticky)
-      // Yaitu, posisi atas status bar dikurangi tinggi header
-      const statusBarOffsetTop = statusBar.offsetTop;
-      const triggerPoint = statusBarOffsetTop - headerHeight;
-
-      window.addEventListener(
-        "scroll",
-        function () {
-          // Cek apakah posisi scroll sudah melewati titik trigger
-          if (window.scrollY >= triggerPoint) {
-            if (!statusBar.classList.contains("is-sticky")) {
-              // Tambahkan class sticky
-              statusBar.classList.add("is-sticky");
-              // Atur posisi top agar pas di bawah header
-              statusBar.style.top = `${headerHeight}px`;
-
-              // Buat dan sisipkan placeholder agar konten di bawahnya tidak "lompat"
-              if (!placeholder && contentBelowStatusBar) {
-                placeholder = document.createElement("div");
-                // Beri tinggi yang sama dengan tinggi asli status bar
-                placeholder.style.height = `${statusBar.offsetHeight}px`;
-                statusBar.parentNode.insertBefore(placeholder, contentBelowStatusBar);
-              }
-            }
-          } else {
-            // Jika scroll kembali ke atas, kembalikan ke kondisi normal
-            if (statusBar.classList.contains("is-sticky")) {
-              statusBar.classList.remove("is-sticky");
-              statusBar.style.top = ""; // Hapus inline style top
-
-              // Hapus placeholder
-              if (placeholder) {
-                placeholder.remove();
-                placeholder = null;
-              }
-            }
-          }
-        },
-        { passive: true }
-      ); // Opsi passive untuk performa scroll yang lebih baik
-    }
+    confirmButton.addEventListener("click", () => {
+      window.location.href = "{{ url_for('logout') }}";
+    });
   });
 </script>
 {% endblock %}

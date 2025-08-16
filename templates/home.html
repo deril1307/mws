@@ -1,0 +1,194 @@
+{% extends 'shared/base.html' %} {% block title %}PPC - MWS Control Center | PT Dirgantara Indonesia{% endblock %} {% block content %}
+<nav x-data="{ isOpen: false }" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 backdrop-blur-sm">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between items-center h-16">
+      <div class="flex items-center space-x-3">
+        <div class="w-8 h-8 flex items-center justify-center">
+          <img src="{{ url_for('static', filename='img/Logo PT DI.webp') }}" alt="Logo PT DI" class="h-full w-full object-contain" />
+        </div>
+        <div class="flex flex-col">
+          <span class="text-xl font-semibold text-white">PPC - MWS</span>
+          <span class="text-sm text-blue-200 hidden sm:block">Maintenance Work Sheet</span>
+        </div>
+      </div>
+
+      <div class="hidden md:flex items-center space-x-8">
+        <a href="#home" class="text-white hover:text-blue-300 px-3 py-2 text-sm font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-2 rounded-md">Home</a>
+        <a href="#dashboard-preview" class="text-white hover:text-blue-300 px-3 py-2 text-sm font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-2 rounded-md">Dashboard</a>
+        <a
+          href="{{ url_for('login') }}"
+          class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-2 transition-colors duration-200"
+          >Login</a
+        >
+      </div>
+
+      <div class="md:hidden">
+        <button
+          @click="isOpen = !isOpen"
+          class="inline-flex items-center justify-center p-2 rounded-xl text-white hover:text-blue-300 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-2 transition-colors duration-200"
+          aria-expanded="false"
+        >
+          <span class="sr-only">Open main menu</span>
+          <svg x-show="!isOpen" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="block h-6 w-6">
+            <line x1="4" x2="20" y1="12" y2="12" />
+            <line x1="4" x2="20" y1="6" y2="6" />
+            <line x1="4" x2="20" y1="18" y2="18" />
+          </svg>
+          <svg
+            x-show="isOpen"
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="block h-6 w-6"
+            style="display: none"
+          >
+            <line x1="18" x2="6" y1="6" y2="18" />
+            <line x1="6" x2="18" y1="6" y2="18" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div x-show="isOpen" @click.away="isOpen = false" class="md:hidden" style="display: none">
+      <div class="px-2 pt-2 pb-3 space-y-1 bg-black/50 backdrop-blur-md border-t border-white/20">
+        <a href="#home" @click="isOpen = false" class="block px-3 py-2 text-base font-medium text-white hover:text-blue-300 hover:bg-white/10 rounded-md transition-colors duration-200">Home</a>
+        <a href="#dashboard-preview" @click="isOpen = false" class="block px-3 py-2 text-base font-medium text-white hover:text-blue-300 hover:bg-white/10 rounded-md transition-colors duration-200">Dashboard</a>
+        <a href="{{ url_for('login') }}" @click="isOpen = false" class="block w-full mt-4 px-4 py-2 bg-blue-600 text-white text-center font-medium rounded-xl hover:bg-blue-700 transition-colors duration-200">Login</a>
+      </div>
+    </div>
+  </div>
+</nav>
+<main>
+  <section id="home" class="relative min-h-screen flex items-center justify-center pt-16">
+    <div class="absolute inset-0 bg-cover bg-center bg-no-repeat" style="background-image: url('https://images.pexels.com/photos/358319/pexels-photo-358319.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080&fit=crop')">
+      <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/60"></div>
+    </div>
+    <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <div class="max-w-4xl mx-auto">
+        <h1 class="text-4xl md:text-5xl lg:text-3xl font-semibold text-white tracking-tight mb-6">
+          Welcome to PPC – MWS
+          <span class="block text-blue-300">Control Center</span>
+        </h1>
+        <p class="text-xl md:text-2xl text-blue-100 mb-8 max-w-3xl mx-auto leading-relaxed">Pantau, rencanakan, dan kendalikan perawatan pesawat secara real-time untuk operasi yang andal dan tepat waktu</p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+          <a
+            href="{{ url_for('login') }}"
+            class="inline-flex items-center px-8 py-4 bg-blue-600 text-white text-lg font-semibold rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-2 focus:ring-offset-transparent transition-all duration-200 shadow-lg hover:shadow-xl group"
+          >
+            Login
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform duration-200"
+            >
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="12 5 19 12 12 19" />
+            </svg>
+          </a>
+          <a
+            href="#dashboard-preview"
+            class="inline-flex items-center px-8 py-4 bg-white/90 text-slate-800 text-lg font-semibold rounded-xl hover:bg-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-transparent transition-all duration-200 shadow-lg hover:shadow-xl"
+          >
+            View Dashboard
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="how-it-works" class="py-24 bg-white"></section>
+
+  <section id="dashboard-preview" class="py-24 bg-slate-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-16">
+        <h2 class="text-3xl md:text-4xl font-semibold text-slate-900 mb-4">Dashboard Preview</h2>
+        <p class="text-lg text-slate-600 max-w-2xl mx-auto">Lihat ringkasan status pekerjaan secara live. Gunakan filter untuk data yang lebih spesifik.</p>
+      </div>
+      <div id="chart-container-wrapper">
+        <div id="chart-loader" class="text-center">
+          <div class="loader"></div>
+          <p class="text-slate-600">Memuat data chart...</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="bg-slate-900 text-white"></footer>
+{% endblock %} {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const chartWrapper = document.getElementById("chart-container-wrapper");
+    const loader = document.getElementById("chart-loader");
+
+    async function loadDashboardPreview() {
+      try {
+        // 1. Panggil route /dashboard-preview Anda
+        const response = await fetch("{{ url_for('dashboard_preview') }}");
+
+        if (!response.ok) {
+          throw new Error(`Gagal memuat pratinjau: ${response.statusText}`);
+        }
+
+        // 2. Ambil hasilnya sebagai teks (karena isinya adalah HTML)
+        const htmlContent = await response.text();
+
+        // 3. Sembunyikan loader dan masukkan HTML yang didapat ke dalam div wrapper
+        if (loader) {
+          loader.style.display = "none";
+        }
+        chartWrapper.innerHTML = htmlContent;
+
+        // 4. (Penting) Jalankan SEMUA script yang mungkin ada di dalam HTML yang baru dimuat.
+        // Logika ini disederhanakan untuk memastikan semua skrip (inline dan eksternal) dijalankan.
+        const scripts = chartWrapper.querySelectorAll("script");
+        scripts.forEach((oldScript) => {
+          const newScript = document.createElement("script");
+
+          // Salin semua atribut dari skrip lama ke skrip baru (mis: src, defer)
+          Array.from(oldScript.attributes).forEach((attr) => {
+            newScript.setAttribute(attr.name, attr.value);
+          });
+
+          // Salin konten inline dari skrip lama (mis: const originalData = ...)
+          if (oldScript.innerHTML) {
+            newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+          }
+
+          // Tambahkan skrip baru ke body agar dieksekusi oleh browser
+          document.body.appendChild(newScript);
+          // Hapus skrip lama dari DOM yang dimuat via innerHTML (karena tidak dieksekusi)
+          oldScript.remove();
+        });
+      } catch (error) {
+        console.error("Gagal memuat pratinjau dashboard:", error);
+        if (loader) {
+          loader.style.display = "none";
+        }
+        chartWrapper.innerHTML = `<div class="text-center p-8 bg-red-50 text-red-700 rounded-lg">
+                <h3 class="font-semibold">Gagal Memuat Dashboard</h3>
+                <p class="text-sm">Terjadi kesalahan saat mengambil data dari server. Silakan coba lagi nanti.</p>
+            </div>`;
+      }
+    }
+
+    // Panggil fungsi untuk memulai proses
+    loadDashboardPreview();
+  });
+</script>
+{% endblock %}

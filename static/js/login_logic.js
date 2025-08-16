@@ -9,11 +9,9 @@ document.addEventListener("DOMContentLoaded", function () {
   const nikInput = document.getElementById("nik");
   const passwordInput = document.getElementById("password");
 
-  // (REFACTORED) Event listener untuk submit form dengan async/await
+  // Event listener untuk submit form dengan async/await
   loginForm.addEventListener("submit", async function (e) {
     e.preventDefault();
-
-    // Disable button dan tampilkan status loading
     submitButton.disabled = true;
     submitButtonText.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Memproses...';
     flashContainer.innerHTML = "";
@@ -33,18 +31,16 @@ document.addEventListener("DOMContentLoaded", function () {
       const isSuccess = response.ok;
 
       if (isSuccess && data.redirect_url) {
-        // Tampilkan animasi sukses
         successOverlay.style.opacity = "1";
         successOverlay.style.visibility = "visible";
         setTimeout(() => (successIcon.style.transform = "scale(1)"), 50);
         setTimeout(() => {
           successText.style.transform = "translateY(0)";
           successText.style.opacity = "1";
-        }, 150);
+        }, 50);
         // Arahkan ke halaman dashboard setelah animasi
         setTimeout(() => (window.location.href = data.redirect_url), 100);
       } else {
-        // Tampilkan pesan error
         const errorMessage = `
           <div class="mb-4 p-4 rounded-lg text-sm bg-red-50 border border-red-200 text-red-700 flex items-center">
             <i class="fas fa-exclamation-triangle mr-2"></i>

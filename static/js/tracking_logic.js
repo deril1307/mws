@@ -1,10 +1,5 @@
-// Script JavaScript untuk filter dan aksi pada halaman tracking.
 document.addEventListener("DOMContentLoaded", function () {
-  // --- BAGIAN FILTER (DENGAN FILTER STATUS) ---
   const searchInput = document.getElementById("mws-search-input");
-  // ## PERUBAHAN ##: Variabel untuk step dropdown dihilangkan
-  // const stepDropdown = document.getElementById("step-filter-dropdown");
-  const customerDropdown = document.getElementById("customer-filter-dropdown");
   const statusDropdown = document.getElementById("status-filter-dropdown");
   const clearFiltersBtn = document.getElementById("clear-filters-btn");
   const partsContainer = document.getElementById("parts-container");
@@ -12,103 +7,171 @@ document.addEventListener("DOMContentLoaded", function () {
   const filterSummary = document.getElementById("filter-summary");
   const activeFiltersSpan = document.getElementById("active-filters");
   const filteredCountSpan = document.getElementById("filtered-count");
+  const partCards = Array.from(partsContainer.getElementsByClassName("part-card"));
 
-  // ## PERUBAHAN ##: Pengecekan stepDropdown dihapus dari kondisi if
-  if (searchInput && partsContainer && noResultsMessage && statusDropdown) {
-    const partCards = Array.from(partsContainer.getElementsByClassName("part-card"));
+  // Variabel untuk menyimpan state filter multi-pilih
+  let selectedCustomers = [];
+  let selectedShopAreas = [];
+  function setupCustomDropdown(btnId, panelId, textId, type) {
+    const btn = document.getElementById(btnId);
+    const panel = document.getElementById(panelId);
+    const textSpan = document.getElementById(textId);
 
-    function applyFilters() {
-      const searchTerm = searchInput.value
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-zA-Z0-9]/g, "");
-      // ## PERUBAHAN ##: Variabel untuk step terpilih dihilangkan
-      // const selectedStep = stepDropdown.value.toLowerCase();
-      const selectedCustomer = customerDropdown ? customerDropdown.value : "";
-      const selectedStatus = statusDropdown.value;
-      let visibleCounter = 0;
-      let activeFilters = [];
+    if (!btn || !panel) return;
 
-      if (searchInput.value.trim()) activeFilters.push(`Pencarian: "${searchInput.value}"`);
-      if (selectedCustomer) activeFilters.push(`Customer: "${selectedCustomer}"`);
-      if (selectedStatus) {
-        const statusText = statusDropdown.options[statusDropdown.selectedIndex].text;
-        activeFilters.push(`Status: "${statusText}"`);
+    //  Dapatkan elemen search input dan semua label di dalam panel
+    const searchInput = panel.querySelector('input[type="text"]');
+    const labels = panel.querySelectorAll("label");
+
+    btn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      closeAllDropdowns(panelId);
+      panel.classList.toggle("hidden");
+      // Fokus ke search bar saat dropdown dibuka
+      if (!panel.classList.contains("hidden")) {
+        searchInput.focus();
       }
-      // ## PERUBAHAN ##: Logika untuk menampilkan filter step aktif dihilangkan
-      // if (selectedStep) activeFilters.push(`Step: "${selectedStep}"`);
+    });
 
-      for (const card of partCards) {
-        const titleText = (card.dataset.title || "").toLowerCase().replace(/[^a-zA-Z0-9]/g, "");
-        const customerName = (card.dataset.customer || "").toLowerCase().replace(/[^a-zA-Z0-9]/g, "");
-        const partNumber = (card.dataset.partNumber || "").toLowerCase().replace(/[^a-zA-Z0-9]/g, "");
-        const iwoNo = (card.dataset.iwoNo || "").toLowerCase().replace(/[^a-zA-Z0-9]/g, "");
-        const wbsNo = (card.dataset.wbsNo || "").toLowerCase().replace(/[^a-zA-Z0-9]/g, "");
-        const serialNumber = (card.dataset.serialNumber || "").toLowerCase().replace(/[^a-zA-Z0-9]/g, "");
+    // MODIFIKASI: Tambahkan event listener untuk search bar
+    searchInput.addEventListener("input", () => {
+      const searchTerm = searchInput.value.toLowerCase().trim();
+      labels.forEach((label) => {
+        const labelText = label.textContent.toLowerCase().trim();
+        // Tampilkan atau sembunyikan label berdasarkan kecocokan
+        label.classList.toggle("hidden", !labelText.includes(searchTerm));
+      });
+    });
 
-        // ## PERUBAHAN ##: Logika untuk mencocokkan step dihilangkan
-        // const stepText = (card.querySelector(".step-info")?.textContent || "").toLowerCase();
-
-        const searchMatch =
-          searchTerm === "" || titleText.includes(searchTerm) || customerName.includes(searchTerm) || partNumber.includes(searchTerm) || iwoNo.includes(searchTerm) || wbsNo.includes(searchTerm) || serialNumber.includes(searchTerm);
-
-        // ## PERUBAHAN ##: Variabel stepMatch dihilangkan
-        // const stepMatch = selectedStep === "" || stepText.includes(selectedStep);
-        const customerMatch = selectedCustomer === "" || card.dataset.customer === selectedCustomer;
-        const statusMatch = selectedStatus === "" || card.dataset.status === selectedStatus;
-
-        // ## PERUBAHAN ##: Pengecekan stepMatch dihapus dari kondisi if
-        if (searchMatch && customerMatch && statusMatch) {
-          card.style.display = "flex";
-          visibleCounter++;
-          const numberSpan = card.querySelector(".number-display");
-          if (numberSpan) numberSpan.textContent = visibleCounter;
-        } else {
-          card.style.display = "none";
-        }
-      }
-
-      if (activeFilters.length > 0) {
-        filterSummary.classList.remove("hidden");
-        activeFiltersSpan.textContent = activeFilters.join(", ");
-        filteredCountSpan.textContent = `${visibleCounter} item ditemukan`;
-      } else {
-        filterSummary.classList.add("hidden");
-      }
-      noResultsMessage.style.display = visibleCounter === 0 ? "block" : "none";
-      if (typeof window.filterChartsByCustomer === "function") {
-        window.filterChartsByCustomer(selectedCustomer);
-      }
-    }
-
-    searchInput.addEventListener("input", applyFilters);
-    // ## PERUBAHAN ##: Event listener untuk step dropdown dihilangkan
-    // stepDropdown.addEventListener("change", applyFilters);
-    statusDropdown.addEventListener("change", applyFilters);
-    if (customerDropdown) customerDropdown.addEventListener("change", applyFilters);
-    if (clearFiltersBtn) {
-      clearFiltersBtn.addEventListener("click", () => {
-        searchInput.value = "";
-        // ## PERUBAHAN ##: Reset untuk step dropdown dihilangkan
-        // stepDropdown.value = "";
-        statusDropdown.value = "";
-        if (customerDropdown) customerDropdown.value = "";
+    const checkboxes = panel.querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach((checkbox) => {
+      checkbox.addEventListener("change", () => {
+        updateSelections(checkboxes, type);
+        updateButtonText(textSpan, type);
         applyFilters();
       });
-    }
-    document.addEventListener("click", (e) => {
-      if (e.target.classList.contains("customer-name")) {
-        const customerName = e.target.dataset.customer;
-        if (customerDropdown) {
-          customerDropdown.value = customerName;
-          applyFilters();
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        }
+    });
+  }
+
+  function closeAllDropdowns(excludePanelId = null) {
+    const allPanels = document.querySelectorAll('[id$="-filter-panel"]');
+    allPanels.forEach((p) => {
+      if (p.id !== excludePanelId) {
+        p.classList.add("hidden");
       }
     });
   }
 
-  // --- BAGIAN MODAL KONFIRMASI (TIDAK ADA PERUBAHAN) ---
+  window.addEventListener("click", () => {
+    closeAllDropdowns();
+  });
+
+  function updateSelections(checkboxes, type) {
+    const selected = Array.from(checkboxes)
+      .filter((cb) => cb.checked)
+      .map((cb) => cb.value);
+
+    if (type === "customer") {
+      selectedCustomers = selected;
+    } else if (type === "shop-area") {
+      selectedShopAreas = selected;
+    }
+  }
+
+  function updateButtonText(textSpan, type) {
+    const placeholder = type === "customer" ? "Pilih Customer" : "Pilih Shop Area";
+    const selections = type === "customer" ? selectedCustomers : selectedShopAreas;
+
+    if (selections.length === 0) {
+      textSpan.textContent = placeholder;
+    } else if (selections.length <= 2) {
+      textSpan.textContent = selections.join(", ");
+    } else {
+      textSpan.textContent = `${selections.length} item terpilih`;
+    }
+  }
+
+  setupCustomDropdown("customer-filter-btn", "customer-filter-panel", "customer-filter-text", "customer");
+  setupCustomDropdown("shop-area-filter-btn", "shop-area-filter-panel", "shop-area-filter-text", "shop-area");
+  function applyFilters() {
+    const searchTerm = searchInput.value
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-zA-Z0-9]/g, "");
+    const selectedStatus = statusDropdown.value;
+
+    let visibleCounter = 0;
+    let activeFilters = [];
+
+    if (searchInput.value.trim()) activeFilters.push(`Pencarian: "${searchInput.value}"`);
+    if (selectedCustomers.length > 0) activeFilters.push(`Customer: "${selectedCustomers.join(", ")}"`);
+    if (selectedShopAreas.length > 0) activeFilters.push(`Shop Area: "${selectedShopAreas.join(", ")}"`);
+
+    if (selectedStatus) {
+      const statusText = statusDropdown.options[statusDropdown.selectedIndex].text;
+      activeFilters.push(`Status: "${statusText}"`);
+    }
+
+    for (const card of partCards) {
+      const titleText = (card.dataset.title || "").toLowerCase().replace(/[^a-zA-Z0-9]/g, "");
+      const customerName = (card.dataset.customer || "").toLowerCase().replace(/[^a-zA-Z0-9]/g, "");
+      const partNumber = (card.dataset.partNumber || "").toLowerCase().replace(/[^a-zA-Z0-9]/g, "");
+      const iwoNo = (card.dataset.iwoNo || "").toLowerCase().replace(/[^a-zA-Z0-9]/g, "");
+      const wbsNo = (card.dataset.wbsNo || "").toLowerCase().replace(/[^a-zA-Z0-9]/g, "");
+      const serialNumber = (card.dataset.serialNumber || "").toLowerCase().replace(/[^a-zA-Z0-9]/g, "");
+
+      const searchMatch =
+        searchTerm === "" || titleText.includes(searchTerm) || customerName.includes(searchTerm) || partNumber.includes(searchTerm) || iwoNo.includes(searchTerm) || wbsNo.includes(searchTerm) || serialNumber.includes(searchTerm);
+
+      const customerMatch = selectedCustomers.length === 0 || selectedCustomers.includes(card.dataset.customer);
+      const shopAreaMatch = selectedShopAreas.length === 0 || selectedShopAreas.includes(card.dataset.shopArea);
+      const statusMatch = selectedStatus === "" || card.dataset.status === selectedStatus;
+
+      if (searchMatch && customerMatch && statusMatch && shopAreaMatch) {
+        card.style.display = "flex";
+        visibleCounter++;
+        const numberSpan = card.querySelector(".number-display");
+        if (numberSpan) numberSpan.textContent = visibleCounter;
+      } else {
+        card.style.display = "none";
+      }
+    }
+
+    if (activeFilters.length > 0) {
+      filterSummary.classList.remove("hidden");
+      activeFiltersSpan.textContent = activeFilters.join(" | ");
+      filteredCountSpan.textContent = `${visibleCounter} item ditemukan`;
+    } else {
+      filterSummary.classList.add("hidden");
+    }
+    noResultsMessage.style.display = visibleCounter === 0 ? "block" : "none";
+  }
+
+  searchInput.addEventListener("input", applyFilters);
+  statusDropdown.addEventListener("change", applyFilters);
+
+  clearFiltersBtn.addEventListener("click", () => {
+    searchInput.value = "";
+    statusDropdown.value = "";
+
+    selectedCustomers = [];
+    selectedShopAreas = [];
+
+    // Kosongkan juga search bar di dalam dropdown dan tampilkan semua item
+    document.querySelectorAll('[id$="-filter-panel"]').forEach((panel) => {
+      const searchInput = panel.querySelector('input[type="text"]');
+      if (searchInput) searchInput.value = "";
+      panel.querySelectorAll("label").forEach((label) => label.classList.remove("hidden"));
+      panel.querySelectorAll('input[type="checkbox"]').forEach((cb) => (cb.checked = false));
+    });
+
+    updateButtonText(document.getElementById("customer-filter-text"), "customer");
+    updateButtonText(document.getElementById("shop-area-filter-text"), "shop-area");
+
+    applyFilters();
+  });
+
+  // --- BAGIAN MODAL KONFIRMASI DAN AKSI ---
   const modal = document.getElementById("confirmation-modal");
   const modalContent = document.getElementById("modal-content");
   const modalTitle = document.getElementById("modal-title");
@@ -142,7 +205,6 @@ document.addEventListener("DOMContentLoaded", function () {
     if (e.target === modal) hideConfirmationModal();
   });
 
-  // --- BAGIAN AKSI URGENT ---
   document.body.addEventListener("click", function (event) {
     const button = event.target.closest(".urgent-action-btn");
     if (button) {
@@ -164,7 +226,6 @@ document.addEventListener("DOMContentLoaded", function () {
       } else if (action === "cancel_request") {
         confirmationTitle = "Batalkan Permintaan Urgensi";
         confirmationMessage = "Anda yakin ingin membatalkan permintaan urgensi untuk MWS ini?";
-        // ## PERUBAHAN ##: Logika konfirmasi untuk aksi baru "reject_request"
       } else if (action === "reject_request") {
         confirmationTitle = "Tolak Permintaan Urgensi";
         confirmationMessage = "Anda yakin ingin menolak permintaan urgensi untuk MWS ini? Status akan kembali normal.";
@@ -222,9 +283,7 @@ const hideDeleteModal = () => {
     setTimeout(() => deleteModal.classList.add("hidden"), 300);
   }
 };
-
 cancelDeleteButton?.addEventListener("click", hideDeleteModal);
-
 confirmDeleteButton?.addEventListener("click", async () => {
   if (partIdToDelete) {
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute("content");

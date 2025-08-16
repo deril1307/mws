@@ -5,54 +5,36 @@
     <div class="space-y-4">
       <div>
         <label class="block text-sm font-bold text-gray-700 mb-1">Start Date</label>
-        {% if user.role == 'superadmin' %} {# <<< PERUBAHAN DIMULAI >>> #}
-        <input
-          type="date"
-          value="{{ part.startDate }}"
-          onchange="updateDates('{{ part_id }}', 'startDate', this.value)"
-          class="w-full px-3 py-2 border border-gray-300 rounded-lg {% if is_mws_locked %}bg-gray-100 cursor-not-allowed{% else %}focus:ring-2 focus:ring-blue-500{% endif %}"
-          {%
-          if
-          is_mws_locked
-          %}disabled
-          title="MWS harus di Approved oleh Admin & Superadmin terlebih dahulu."
-          {%
-          endif
-          %}
-        />
-        {# <<< PERUBAHAN SELESAI >>> #} {% else %}
-        <input type="date" value="{{ part.startDate }}" disabled class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed" />
+        {% if user.role == 'superadmin' %}
+        <input type="date" value="{{ part.startDate or '' }}" onchange="updateDates('{{ part_id }}', 'startDate', this.value)" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+        {% else %}
+        <input type="date" value="{{ part.startDate or '' }}" disabled class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed" />
         {% endif %}
       </div>
       <div>
         <label class="block text-sm font-bold text-gray-700 mb-1">Finish Date</label>
         {% if user.role == 'superadmin' %}
-        <input
-          type="date"
-          value="{{ part.finishDate }}"
-          onchange="updateDates('{{ part_id }}', 'finishDate', this.value)"
-          class="w-full px-3 py-2 border border-gray-300 rounded-lg {% if is_mws_locked %}bg-gray-100 cursor-not-allowed{% else %}focus:ring-2 focus:ring-blue-500{% endif %}"
-          {%
-          if
-          is_mws_locked
-          %}disabled
-          title="MWS harus di Approved oleh Admin & Superadmin terlebih dahulu."
-          {%
-          endif
-          %}
-        />
-        {# <<< PERUBAHAN SELESAI >>> #} {% else %}
-        <input type="date" value="{{ part.finishDate }}" disabled class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed" />
+        <input type="date" value="{{ part.finishDate or '' }}" onchange="updateDates('{{ part_id }}', 'finishDate', this.value)" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+        {% else %}
+        <input type="date" value="{{ part.finishDate or '' }}" disabled class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed" />
         {% endif %}
       </div>
       <div>
         <label for="total-duration" class="block text-sm font-bold text-gray-700 mb-1">Total Durasi Pengerjaan</label>
         <div id="total-duration-container" class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed flex items-center">
           <i class="fas fa-stopwatch text-gray-500 mr-2"></i>
-
           <span id="total-duration-display" class="font-mono font-semibold text-gray-900"> {{ part.total_duration or '00:00' }} </span>
+          <span class="text-sm text-gray-600 ml-2">JAM:MENIT</span>
+        </div>
+        {% set status_map = { 'S': 'Serviceable', 'U/S': 'Unserviceable', 'RAI': 'Received As Is' } %}
 
-          <span class="text-sm text-gray-600 ml-2">HH:MM</span>
+        <label for="total-duration" class="block text-sm font-bold text-gray-700 mb-1"> STATUS [S / (U/S) / RAI] </label>
+        <div class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed flex items-center space-x-2">
+          <i></i>
+          <span class="font-mono font-semibold text-gray-900"> {{ part.status_s_us }} </span>
+          {% if part.status_s_us in status_map %}
+          <span class="text-gray-600 text-sm">({{ status_map[part.status_s_us] }})</span>
+          {% endif %}
         </div>
       </div>
     </div>
@@ -61,6 +43,7 @@
   <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
     <h3 class="text-lg font-semibold text-gray-800 mb-4 pb-4 border-b">Approved Maintenance Work Sheet</h3>
     <div class="space-y-4">
+      <!-- Prepared By Section -->
       <div class="p-4 rounded-lg border transition-colors duration-300 {% if part.preparedBy %}border-green-400 bg-green-50 shadow-inner{% else %}border-gray-200 bg-gray-50{% endif %}">
         <div class="flex justify-between items-center">
           <div>
@@ -72,10 +55,11 @@
             </div>
             <p class="text-xs text-gray-500 mt-1 ml-6">{{ part.preparedDate }}</p>
             {% else %}
-            <p class="text-sm text-gray-500 italic mt-1">Menunggu Approved Admin...</p>
+            <p class="text-sm text-gray-500 italic mt-1">Menunggu Approved...</p>
             {% endif %}
           </div>
-          {% if not part.preparedBy and user.role == 'admin' %}
+          <!-- [MODIFIED] Tombol Sign untuk Admin dan Superadmin -->
+          {% if not part.preparedBy and user.role in ['admin', 'superadmin'] %}
           <button
             onclick="signDocument('{{ part_id }}', 'prepared')"
             class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium shadow hover:shadow-md transform hover:-translate-y-0.5 transition-all duration-200"
@@ -86,13 +70,14 @@
           <div class="flex items-center space-x-2">
             <i class="fas fa-check-circle text-2xl text-green-500"></i>
             {% if user.role in ['admin', 'superadmin'] %}
-            <button onclick="cancelSignature('{{ part_id }}', 'prepared', 'Anda yakin ingin membatalkan Approved Prepared By?')" class="px-3 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600">Batal</button>
+            <button onclick="cancelSignature('{{ part_id }}', 'prepared', 'Anda yakin ingin membatalkan tanda tangan Prepared By?')" class="px-3 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600">Batal</button>
             {% endif %}
           </div>
           {% endif %}
         </div>
       </div>
 
+      <!-- Approved By Section -->
       <div class="p-4 rounded-lg border transition-colors duration-300 {% if part.approvedBy %}border-green-400 bg-green-50 shadow-inner{% else %}border-gray-200 bg-gray-50{% endif %}">
         <div class="flex justify-between items-center">
           <div>
@@ -104,10 +89,11 @@
             </div>
             <p class="text-xs text-gray-500 mt-1 ml-6">{{ part.approvedDate }}</p>
             {% else %}
-            <p class="text-sm text-gray-500 italic mt-1">Menunggu Approved Superadmin...</p>
+            <p class="text-sm text-gray-500 italic mt-1">Menunggu Approved...</p>
             {% endif %}
           </div>
-          {% if not part.approvedBy and user.role == 'superadmin' %}
+          <!-- [MODIFIED] Tombol Sign untuk Admin dan Superadmin -->
+          {% if not part.approvedBy and user.role in ['admin', 'superadmin'] %}
           <button
             onclick="signDocument('{{ part_id }}', 'approved')"
             class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium shadow hover:shadow-md transform hover:-translate-y-0.5 transition-all duration-200"
@@ -118,13 +104,14 @@
           <div class="flex items-center space-x-2">
             <i class="fas fa-check-circle text-2xl text-green-500"></i>
             {% if user.role in ['admin', 'superadmin'] %}
-            <button onclick="cancelSignature('{{ part_id }}', 'approved', 'Anda yakin ingin membatalkan Approved Approved By?')" class="px-3 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600">Batal</button>
+            <button onclick="cancelSignature('{{ part_id }}', 'approved', 'Anda yakin ingin membatalkan tanda tangan Approved By?')" class="px-3 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600">Batal</button>
             {% endif %}
           </div>
           {% endif %}
         </div>
       </div>
 
+      <!-- Verified By Section (Tidak ada perubahan logika) -->
       <div class="p-4 rounded-lg border transition-colors duration-300 {% if part.verifiedBy %}border-green-400 bg-green-50 shadow-inner{% else %}border-gray-200 bg-gray-50{% endif %}">
         <div class="flex justify-between items-center">
           <div>
@@ -150,7 +137,7 @@
           <div class="flex items-center space-x-2">
             <i class="fas fa-check-circle text-2xl text-green-500"></i>
             {% if user.role in ['admin', 'superadmin'] %}
-            <button onclick="cancelSignature('{{ part_id }}', 'verified', 'Anda yakin ingin membatalkan Approved Verified By?')" class="px-3 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600">Batal</button>
+            <button onclick="cancelSignature('{{ part_id }}', 'verified', 'Anda yakin ingin membatalkan tanda tangan Verified By?')" class="px-3 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600">Batal</button>
             {% endif %}
           </div>
           {% endif %}

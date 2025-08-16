@@ -1,11 +1,10 @@
 document.addEventListener("DOMContentLoaded", function () {
-  // Fungsi untuk mendapatkan CSRF token dari meta tag
+  // --- Fungsi Global ---
   function getCSRFToken() {
-    const token = document.querySelector('meta[name="csrf-token"]');
-    return token ? token.getAttribute("content") : "";
+    return document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
   }
 
-  // Elemen-elemen modal untuk tambah/edit pengguna
+  // --- Elemen Modal Pengguna ---
   const userModal = document.getElementById("user-modal");
   const userForm = document.getElementById("user-form");
   const modalTitle = document.getElementById("modal-title");
@@ -13,257 +12,317 @@ document.addEventListener("DOMContentLoaded", function () {
   const nikOriginalInput = document.getElementById("nik_original");
   const passwordInput = document.getElementById("password");
   const passwordHelp = document.getElementById("password-help");
-
-  // Ambil elemen untuk field mekanik
   const roleSelect = document.getElementById("role");
   const mechanicFields = document.getElementById("mechanic-fields");
-  const customerCheckboxContainer = document.getElementById("customer-checkbox-container");
-  const assignedShopAreaInput = document.getElementById("assigned_shop_area");
 
-  // Elemen-elemen modal untuk konfirmasi hapus
+  // --- Elemen untuk visibilitas password ---
+  const togglePasswordVisibilityButton = document.getElementById("toggle-password-visibility");
+  const passwordToggleIcon = togglePasswordVisibilityButton.querySelector("i");
+
+  // --- Elemen untuk Customer ---
+  const customerCheckboxContainer = document.getElementById("customer-checkbox-container");
+  const customerSearchInput = document.getElementById("customer-search-input");
+  const selectAllCustomersCheckbox = document.getElementById("select-all-customers");
+
+  // --- Elemen untuk Shop Area ---
+  const shopAreaCheckboxContainer = document.getElementById("shop-area-checkbox-container");
+  const shopAreaSearchInput = document.getElementById("shop-area-search-input");
+  const selectAllShopAreasCheckbox = document.getElementById("select-all-shop-areas");
+
+  // --- Elemen Modal Hapus ---
   const deleteModal = document.getElementById("delete-modal");
   const userToDeleteName = document.getElementById("user-to-delete-name");
   const confirmDeleteButton = document.getElementById("confirm-delete-button");
   const cancelDeleteButton = document.getElementById("cancel-delete-button");
   let nikToDelete = null;
 
-  // Logika Pencarian Pengguna (sudah benar dari pembahasan sebelumnya)
-  const searchInput = document.getElementById("search-input");
-  const userTableBody = document.getElementById("user-table-body");
-  const userRows = userTableBody.querySelectorAll("tr");
-
-  searchInput.addEventListener("input", function () {
+  // --- Pencarian di Tabel Utama ---
+  document.getElementById("search-input").addEventListener("input", function () {
     const searchTerm = this.value.toLowerCase().trim();
-    userRows.forEach((row) => {
-      const nikCell = row.cells[2];
-      const nameCell = row.cells[3];
-      const assignmentCell = row.cells[5];
-
-      if (nikCell && nameCell && assignmentCell) {
-        const nikText = nikCell.textContent.toLowerCase();
-        const nameText = nameCell.textContent.toLowerCase();
-        const assignmentText = assignmentCell.textContent.toLowerCase();
-        if (nikText.includes(searchTerm) || nameText.includes(searchTerm) || assignmentText.includes(searchTerm)) {
-          row.style.display = "";
-        } else {
-          row.style.display = "none";
-        }
-      }
-    });
+    document
+      .getElementById("user-table-body")
+      .querySelectorAll("tr")
+      .forEach((row) => {
+        const rowText = row.textContent.toLowerCase();
+        row.style.display = rowText.includes(searchTerm) ? "" : "none";
+      });
   });
 
-  // <<< PERUBAHAN DIMULAI DI SINI >>>
+  // --- Event listener untuk tombol lihat/sembunyikan password ---
+  togglePasswordVisibilityButton.addEventListener("click", () => {
+    const isPassword = passwordInput.type === "password";
+    passwordInput.type = isPassword ? "text" : "password";
+    passwordToggleIcon.classList.toggle("fa-eye");
+    passwordToggleIcon.classList.toggle("fa-eye-slash");
+  });
 
   /**
-   * Fungsi untuk menampilkan/menyembunyikan field mekanik.
-   * Dibuat menjadi async untuk bisa memanggil populateCustomerCheckboxes.
+   * Fungsi generik untuk mengelola logika checkbox (pencarian, pilih semua).
+   * @param {object} config - Konfigurasi elemen.
    */
-  async function toggleMechanicFields() {
-    if (roleSelect.value === "mechanic") {
-      mechanicFields.classList.remove("hidden");
-      // PANGGIL FUNGSI UNTUK MEMUAT CUSTOMER KETIKA ROLE MECHANIC DIPILIH
-      // Kita panggil dengan array kosong karena kita tidak tahu customer mana yang terpilih
-      // sampai data user diedit dimuat. `populateCustomerCheckboxes` akan menangani
-      // checkbox yang sudah ada jika ada.
-      await populateCustomerCheckboxes();
-    } else {
-      mechanicFields.classList.add("hidden");
-      // Kosongkan container dan reset value jika role bukan mekanik
-      customerCheckboxContainer.innerHTML = '<p class="text-gray-500 text-sm">Pilih role "Mechanic" untuk menampilkan.</p>';
-      assignedShopAreaInput.value = "";
+  function manageCheckboxLogic(config) {
+    function updateSelectAllState() {
+      const allCheckboxes = Array.from(config.container.querySelectorAll(`.${config.wrapperClass} input[type='checkbox']`));
+      if (!allCheckboxes.length) {
+        config.selectAllCheckbox.checked = false;
+        config.selectAllCheckbox.indeterminate = false;
+        return;
+      }
+      const totalChecked = allCheckboxes.filter((cb) => cb.checked).length;
+      if (totalChecked === allCheckboxes.length) {
+        config.selectAllCheckbox.checked = true;
+        config.selectAllCheckbox.indeterminate = false;
+      } else if (totalChecked > 0) {
+        config.selectAllCheckbox.checked = false;
+        config.selectAllCheckbox.indeterminate = true;
+      } else {
+        config.selectAllCheckbox.checked = false;
+        config.selectAllCheckbox.indeterminate = false;
+      }
     }
+
+    config.searchInput.addEventListener("input", () => {
+      const searchTerm = config.searchInput.value.toLowerCase().trim();
+      config.container.querySelectorAll(`.${config.wrapperClass}`).forEach((wrapper) => {
+        const labelText = wrapper.querySelector("label")?.textContent.toLowerCase() || "";
+        wrapper.style.display = labelText.includes(searchTerm) ? "flex" : "none";
+      });
+      // Do not update select all state on search to avoid confusion
+    });
+
+    config.selectAllCheckbox.addEventListener("change", () => {
+      const isChecked = config.selectAllCheckbox.checked;
+      // When "Select All" is toggled, it affects ALL checkboxes, not just visible ones.
+      config.container.querySelectorAll(`.${config.wrapperClass} input[type='checkbox']`).forEach((checkbox) => {
+        checkbox.checked = isChecked;
+      });
+      updateSelectAllState();
+    });
+
+    config.container.addEventListener("change", (event) => {
+      if (event.target.type === "checkbox") {
+        updateSelectAllState();
+      }
+    });
+
+    return { updateSelectAllState };
   }
 
-  // Panggil toggleMechanicFields saat role diubah.
-  // Menggunakan fungsi async sebagai event listener.
-  roleSelect.addEventListener("change", async () => {
-    await toggleMechanicFields();
+  // Inisialisasi logika untuk Customer dan Shop Area
+  const customerLogic = manageCheckboxLogic({
+    searchInput: customerSearchInput,
+    selectAllCheckbox: selectAllCustomersCheckbox,
+    container: customerCheckboxContainer,
+    wrapperClass: "customer-checkbox-wrapper",
+  });
+  const shopAreaLogic = manageCheckboxLogic({
+    searchInput: shopAreaSearchInput,
+    selectAllCheckbox: selectAllShopAreasCheckbox,
+    container: shopAreaCheckboxContainer,
+    wrapperClass: "shop-area-checkbox-wrapper",
   });
 
-  // <<< PERUBAHAN SELESAI DI SINI >>>
-
-  // Fungsi untuk mengambil dan menampilkan customer
-  // Parameter assignedCustomers dibuat optional, akan digunakan saat edit.
-  async function populateCustomerCheckboxes(assignedCustomers = []) {
-    // Jika ada form yang sedang ditampilkan, kita cek customer mana yang sudah terpilih
-    const currentlyChecked = Array.from(customerCheckboxContainer.querySelectorAll('input[type="checkbox"]:checked')).map((cb) => cb.value);
-
-    // Gabungkan customer yang sudah ada (dari edit) dan yang baru saja di-check
-    const finalAssignedCustomers = [...new Set([...assignedCustomers, ...currentlyChecked])];
-
-    customerCheckboxContainer.innerHTML = '<p class="text-gray-500 text-sm">Memuat daftar customer...</p>';
-
+  /**
+   * Fungsi generik untuk mengambil data dan mengisi container checkbox.
+   * @param {object} config
+   */
+  async function populateCheckboxes(config) {
+    config.container.innerHTML = `<p class="text-gray-500 text-sm">Memuat data...</p>`;
     try {
-      const response = await fetch("/get_all_customers");
-      if (!response.ok) throw new Error("Gagal mengambil daftar customer.");
-      const data = await response.json();
+      const response = await fetch(config.endpoint);
+      if (!response.ok) throw new Error("Gagal mengambil data dari server.");
+      const result = await response.json();
+      config.container.innerHTML = ""; // Bersihkan container
 
-      customerCheckboxContainer.innerHTML = ""; // Bersihkan container
+      const items = result[config.itemKey] || [];
+      const isAssignedAll = config.assignedItems.includes("*");
 
-      if (data.customers && data.customers.length > 0) {
-        data.customers.forEach((customerName) => {
-          const isChecked = finalAssignedCustomers.includes(customerName);
-          const checkboxWrapper = document.createElement("div");
-          checkboxWrapper.className = "flex items-center";
+      if (items.length > 0) {
+        items.forEach((item) => {
+          const isChecked = isAssignedAll || config.assignedItems.includes(item);
+          const wrapper = document.createElement("div");
+          wrapper.className = `flex items-center ${config.wrapperClass}`;
 
           const checkbox = document.createElement("input");
           checkbox.type = "checkbox";
-          checkbox.id = `customer-${customerName.replace(/\s+/g, "-")}`;
-          checkbox.name = "assigned_customers";
-          checkbox.value = customerName;
+          checkbox.id = `${config.name}-${item.replace(/[\s/]+/g, "-")}`;
+          checkbox.name = config.name;
+          checkbox.value = item;
           checkbox.checked = isChecked;
           checkbox.className = "h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded";
 
           const label = document.createElement("label");
           label.htmlFor = checkbox.id;
-          label.textContent = customerName;
+          label.textContent = item;
           label.className = "ml-3 block text-sm font-medium text-gray-700";
 
-          checkboxWrapper.appendChild(checkbox);
-          checkboxWrapper.appendChild(label);
-          customerCheckboxContainer.appendChild(checkboxWrapper);
+          wrapper.appendChild(checkbox);
+          wrapper.appendChild(label);
+          config.container.appendChild(wrapper);
         });
       } else {
-        customerCheckboxContainer.innerHTML = '<p class="text-gray-500 text-sm">Tidak ada data customer ditemukan.</p>';
+        config.container.innerHTML = `<p class="text-gray-500 text-sm">Tidak ada data ditemukan.</p>`;
       }
     } catch (error) {
-      console.error("Error populating customers:", error);
-      customerCheckboxContainer.innerHTML = `<p class="text-red-500 text-sm">Error: ${error.message}</p>`;
+      console.error(`Error populating ${config.name}:`, error);
+      config.container.innerHTML = `<p class="text-red-500 text-sm">Error: ${error.message}</p>`;
+    } finally {
+      config.updateSelectAll();
     }
   }
 
   /**
-   * Membuka modal untuk menambah atau mengedit pengguna.
-   * @param {string|null} nik - NIK pengguna yang akan diedit. Jika null, mode tambah.
+   * [FIXED] Shows or hides mechanic-specific fields and populates them with data if needed.
+   * This function is now the single source of truth for managing these fields.
+   * @param {object} userData - Optional user data for pre-populating fields in edit mode.
    */
+  async function toggleMechanicFields(userData = {}) {
+    const assignedCustomers = userData.assigned_customers || [];
+    const assignedShopArea = userData.assigned_shop_area || [];
+
+    if (roleSelect.value === "mechanic") {
+      mechanicFields.classList.remove("hidden");
+
+      // Only populate if the container is empty, or if we are in edit mode (userData is provided).
+      const needsPopulation = customerCheckboxContainer.innerHTML.trim() === "" || Object.keys(userData).length > 0;
+
+      if (needsPopulation) {
+        await Promise.all([
+          populateCheckboxes({
+            endpoint: "/get_all_customers",
+            container: customerCheckboxContainer,
+            name: "assigned_customers",
+            itemKey: "customers",
+            wrapperClass: "customer-checkbox-wrapper",
+            assignedItems: assignedCustomers,
+            updateSelectAll: customerLogic.updateSelectAllState,
+          }),
+          populateCheckboxes({
+            endpoint: "/get_all_shop_areas",
+            container: shopAreaCheckboxContainer,
+            name: "assigned_shop_area",
+            itemKey: "shop_areas",
+            wrapperClass: "shop-area-checkbox-wrapper",
+            assignedItems: assignedShopArea,
+            updateSelectAll: shopAreaLogic.updateSelectAllState,
+          }),
+        ]);
+      }
+    } else {
+      mechanicFields.classList.add("hidden");
+    }
+  }
+
+  // This event listener now correctly populates the fields when the role is changed to 'mechanic'.
+  roleSelect.addEventListener("change", toggleMechanicFields);
+
   window.openUserModal = async (nik = null) => {
     userForm.reset();
-    nikInput.readOnly = false;
-    nikInput.classList.remove("bg-gray-100");
     mechanicFields.classList.add("hidden");
-    customerCheckboxContainer.innerHTML = '<p class="text-gray-500 text-sm">Pilih role "Mechanic" untuk menampilkan.</p>';
+    customerSearchInput.value = "";
+    shopAreaSearchInput.value = "";
+    selectAllCustomersCheckbox.checked = false;
+    selectAllShopAreasCheckbox.checked = false;
+    // Clear the containers to ensure they are repopulated correctly on each modal open.
+    customerCheckboxContainer.innerHTML = "";
+    shopAreaCheckboxContainer.innerHTML = "";
+
+    passwordInput.type = "password";
+    passwordToggleIcon.classList.remove("fa-eye-slash");
+    passwordToggleIcon.classList.add("fa-eye");
 
     if (nik) {
+      // --- Mode Edit (FIXED) ---
+      // The logic is now cleaner and more reliable.
       modalTitle.textContent = "Edit Pengguna";
       nikOriginalInput.value = nik;
-      passwordInput.placeholder = "Kosongkan jika tidak diubah";
-      passwordHelp.textContent = "Kosongkan jika tidak ingin mengubah password.";
       passwordInput.required = false;
+      passwordHelp.textContent = "Kosongkan jika tidak ingin mengubah password.";
 
       try {
-        const response = await fetch(`/users/${nik}`, {
-          headers: { "X-CSRFToken": getCSRFToken() },
-        });
-        if (!response.ok) throw new Error("Gagal mendapatkan data pengguna dari server.");
+        const response = await fetch(`/users/${nik}`);
+        if (!response.ok) throw new Error("Gagal mendapatkan data pengguna.");
         const data = await response.json();
-
-        if (data.error) {
-          alert("Error: " + data.error);
-          return;
-        }
 
         nikInput.value = data.nik;
         document.getElementById("name").value = data.name;
         roleSelect.value = data.role;
+        passwordInput.value = ""; // Never pre-fill password for security
 
-        // Panggil toggleMechanicFields yang akan menangani pemanggilan populateCustomerCheckboxes
-        await toggleMechanicFields();
-        // Jika rolenya mechanic, panggil lagi populateCustomerCheckboxes dengan data yang benar
-        if (data.role === "mechanic") {
-          await populateCustomerCheckboxes(data.assigned_customers || []);
-          assignedShopAreaInput.value = data.assigned_shop_area || "";
-        }
+        // Single call to the refactored function handles both visibility and population.
+        await toggleMechanicFields(data);
       } catch (error) {
-        alert("Gagal mengambil data pengguna. " + error.message);
-        console.error("Fetch error:", error);
+        alert("Gagal memuat data pengguna: " + error.message);
         return;
       }
     } else {
-      // Mode Tambah
+      // --- Mode Tambah (FIXED) ---
+      // This is also simplified.
       modalTitle.textContent = "Tambah Pengguna Baru";
       nikOriginalInput.value = "";
-      passwordInput.placeholder = "Password wajib diisi";
-      passwordHelp.textContent = "Password wajib diisi untuk pengguna baru.";
       passwordInput.required = true;
-      // Untuk mode tambah, cukup panggil toggleMechanicFields. Jika role defaultnya mechanic,
-      // ia akan memuat daftar customer.
+      passwordHelp.textContent = "Password wajib diisi untuk pengguna baru.";
+
+      // Call the function to set the initial state.
+      // If the default role is 'mechanic' (for admin), fields will show and populate.
+      // If the user (superadmin) changes the role to 'mechanic', the event listener will handle it.
       await toggleMechanicFields();
     }
     userModal.classList.remove("hidden");
   };
 
-  // Sisa kode (closeUserModal, openDeleteModal, submit form, etc.) tidak perlu diubah.
-  // ... (Sisa kode Anda dari sini ke bawah tetap sama)
+  window.closeUserModal = () => userModal.classList.add("hidden");
 
-  /**
-   * Menutup modal tambah/edit pengguna.
-   */
-  window.closeUserModal = () => {
-    userModal.classList.add("hidden");
-  };
-
-  /**
-   * Membuka modal konfirmasi penghapusan.
-   */
   window.openDeleteModal = (nik, name) => {
     nikToDelete = nik;
     userToDeleteName.textContent = name;
     deleteModal.classList.remove("hidden");
   };
 
-  /**
-   * Menutup modal konfirmasi penghapusan.
-   */
-  window.closeDeleteModal = () => {
-    deleteModal.classList.add("hidden");
-  };
+  window.closeDeleteModal = () => deleteModal.classList.add("hidden");
 
   cancelDeleteButton.addEventListener("click", closeDeleteModal);
 
   userForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-
-    const isEditMode = nikOriginalInput.value !== "";
-    if (!isEditMode && !passwordInput.value) {
-      alert("Password wajib diisi untuk pengguna baru.");
-      return;
-    }
-
     const formData = new FormData(userForm);
     const data = Object.fromEntries(formData.entries());
 
-    const selectedCustomers = Array.from(customerCheckboxContainer.querySelectorAll('input[name="assigned_customers"]:checked')).map((cb) => cb.value);
-    data.assigned_customers = selectedCustomers;
+    if (data.role === "mechanic") {
+      if (selectAllCustomersCheckbox.checked) {
+        data.assigned_customers = ["*"];
+      } else {
+        data.assigned_customers = Array.from(customerCheckboxContainer.querySelectorAll('input[name="assigned_customers"]:checked')).map((cb) => cb.value);
+      }
 
-    if (isEditMode && data.password === "") {
-      delete data.password;
-    }
-
-    if (data.role !== "mechanic") {
+      if (selectAllShopAreasCheckbox.checked) {
+        data.assigned_shop_area = ["*"];
+      } else {
+        data.assigned_shop_area = Array.from(shopAreaCheckboxContainer.querySelectorAll('input[name="assigned_shop_area"]:checked')).map((cb) => cb.value);
+      }
+    } else {
       delete data.assigned_customers;
       delete data.assigned_shop_area;
+    }
+
+    if (data.nik_original && data.password === "") {
+      delete data.password;
     }
 
     try {
       const response = await fetch("/users", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRFToken": getCSRFToken(),
-        },
+        headers: { "Content-Type": "application/json", "X-CSRFToken": getCSRFToken() },
         body: JSON.stringify(data),
       });
       const result = await response.json();
-
       if (response.ok && result.success) {
-        closeUserModal();
         location.reload();
       } else {
-        alert("Error: " + (result.error || "Gagal menyimpan data. Silakan cek kembali input Anda."));
+        alert("Error: " + (result.error || "Gagal menyimpan data."));
       }
     } catch (error) {
-      alert("Terjadi kesalahan pada jaringan. Tidak dapat menghubungi server.");
-      console.error("Submit error:", error);
+      alert("Tidak dapat terhubung ke server.");
     }
   });
 
@@ -274,17 +333,14 @@ document.addEventListener("DOMContentLoaded", function () {
         method: "DELETE",
         headers: { "X-CSRFToken": getCSRFToken() },
       });
-      const result = await response.json();
-
-      if (response.ok && result.success) {
-        closeDeleteModal();
+      if (response.ok) {
         location.reload();
       } else {
+        const result = await response.json();
         alert("Error: " + (result.error || "Gagal menghapus pengguna."));
       }
     } catch (error) {
-      alert("Terjadi kesalahan pada jaringan saat menghapus.");
-      console.error("Delete error:", error);
+      alert("Tidak dapat terhubung ke server.");
     }
   });
 });

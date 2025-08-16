@@ -8,4 +8,4 @@ python-dotenv==1.0.0
 SQLAlchemy==2.0.31
 Werkzeug==3.0.1
 WTForms==3.1.1
-
+holidays

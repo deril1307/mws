@@ -1,57 +1,97 @@
-<div id="status-summary-container" class="transition-all duration-300 ease-in-out mt-8 grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-  {% set total_parts = parts|length %} {% set completed_parts = parts.values()|selectattr('status', 'equalto', 'completed')|list|length %} {% set in_progress_parts = parts.values()|selectattr('status', 'equalto', 'in_progress')|list|length
-  %} {% set pending_parts = parts.values()|selectattr('status', 'equalto', 'pending')|list|length %}
-
-  <div class="status-card bg-white p-5 rounded-xl shadow-sm border flex items-center card-hover">
-    <div class="status-icon-wrapper p-3 bg-blue-100 rounded-lg mr-4">
-      <i class="status-icon fas fa-clipboard-list text-blue-600 text-xl"></i>
-    </div>
-    <div class="status-text-block">
-      <p class="status-title text-sm font-medium text-gray-600">Total WorkSheet</p>
-      <p id="total-ws-stat" class="status-value text-2xl font-bold text-gray-900">{{ total_parts }}</p>
-    </div>
-  </div>
-
-  <div class="status-card bg-white p-5 rounded-xl shadow-sm border flex items-center card-hover">
-    <div class="status-icon-wrapper p-3 bg-blue-100 rounded-lg mr-4">
-      <i class="status-icon fas fa-check-circle text-blue-600 text-xl"></i>
-    </div>
-    <div class="status-text-block">
-      <p class="status-title text-sm font-medium text-gray-600">WorkSheet Finish</p>
-      <p id="completed-ws-stat" class="status-value text-2xl font-bold text-gray-900">{{ completed_parts }}</p>
-    </div>
-  </div>
-
-  <div class="status-card bg-white p-5 rounded-xl shadow-sm border flex items-center card-hover">
-    <div class="status-icon-wrapper p-3 bg-green-100 rounded-lg mr-4">
-      <i class="status-icon fas fa-clock text-green-600 text-xl"></i>
-    </div>
-    <div class="status-text-block">
-      <p class="status-title text-sm font-medium text-gray-600">Worksheet In Progress</p>
-      <p id="inprogress-ws-stat" class="status-value text-2xl font-bold text-gray-900">{{ in_progress_parts }}</p>
-    </div>
-  </div>
-
-  <div class="status-card bg-white p-5 rounded-xl shadow-sm border flex items-center card-hover">
-    <div class="status-icon-wrapper p-3 bg-red-100 rounded-lg mr-4">
-      <i class="status-icon fas fa-pause-circle text-red-600 text-xl"></i>
-    </div>
-    <div class="status-text-block">
-      <p class="status-title text-sm font-medium text-gray-600">WorkSheet Pending</p>
-      <p id="pending-ws-stat" class="status-value text-2xl font-bold text-gray-900">{{ pending_parts }}</p>
-    </div>
-  </div>
-</div>
-
-<div id="chart-container" class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-8">
-  <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-4">
-    <h2 class="text-xl font-semibold text-gray-800 flex items-center mb-4 md:mb-0">
+<div id="chart-container" class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+  <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-4 gap-4">
+    <h2 class="text-xl font-semibold text-gray-800 flex items-center shrink-0">
       <i class="fas fa-chart-pie mr-3 text-green-600"></i>Grafik Status
-      <span id="customer-chart-label" class="ml-2 text-sm font-normal text-gray-500"></span>
+      <span id="customer-chart-label" class="ml-2 text-sm font-normal text-gray-500">- Semua Customer | Semua Shop Area</span>
     </h2>
+
+    <div class="flex items-start gap-3">
+      <div class="relative">
+        <select id="chart-year-filter" class="w-full sm:w-auto px-4 py-2 pr-8 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+          <option value="">Semua Tahun</option>
+          {% set all_years = [] %} {% for part_id, part in parts.items() %} {% if part.iwoNo and part.iwoNo[:2] | string | length == 2 and part.iwoNo[:2].isdigit() %} {% set year = "20" + part.iwoNo[:2] %} {% if year not in all_years %} {%
+          set _ = all_years.append(year) %} {% endif %} {% endif %} {% endfor %} {% for year in all_years | sort(reverse=True) %}
+          <option value="{{ year }}">{{ year }}</option>
+          {% endfor %}
+        </select>
+        <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+          <i class="fas fa-calendar-alt text-gray-400"></i>
+        </div>
+      </div>
+
+      <div class="relative">
+        <button
+          id="chart-customer-filter-btn"
+          type="button"
+          class="inline-flex justify-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+        >
+          <i class="fas fa-users mr-2 text-gray-400"></i>
+          <span>Customer</span>
+          <i class="fas fa-chevron-down -mr-1 ml-2 h-5 w-5 mt-0.5"></i>
+        </button>
+
+        <div id="customer-filter-panel" class="hidden origin-top-right absolute right-0 mt-2 w-80 rounded-md shadow-2xl bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-20">
+          <div class="p-4">
+            <h3 class="text-sm font-semibold text-gray-800 mb-3">Pilih Satu atau Lebih Customer</h3>
+            <div id="customer-button-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-2">
+              {% set all_customers = [] %} {% for part_id, part in parts.items() %} {% if part.customer not in all_customers %} {% set _ = all_customers.append(part.customer) %} {% endif %} {% endfor %} {% for customer in all_customers |
+              sort %}
+              <button
+                type="button"
+                class="customer-select-btn w-full text-xs font-medium px-2 py-1.5 border border-gray-300 truncate text-center transition-colors duration-150 hover:bg-gray-100 hover:border-gray-400 focus:outline-none"
+                data-customer="{{ customer }}"
+                title="{{ customer }}"
+              >
+                {{ customer }}
+              </button>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="px-4 py-3 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
+            <button id="chart-filter-reset-btn" type="button" class="px-3 py-1.5 text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md">Reset</button>
+            <button id="chart-filter-apply-btn" type="button" class="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-md">Terapkan</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="relative">
+        <button
+          id="chart-shop-area-filter-btn"
+          type="button"
+          class="inline-flex justify-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+        >
+          <i class="fas fa-store mr-2 text-gray-400"></i>
+          <span>Shop Area</span>
+          <i class="fas fa-chevron-down -mr-1 ml-2 h-5 w-5 mt-0.5"></i>
+        </button>
+
+        <div id="shop-area-filter-panel" class="hidden origin-top-right absolute right-0 mt-2 w-80 rounded-md shadow-2xl bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-20">
+          <div class="p-4">
+            <h3 class="text-sm font-semibold text-gray-800 mb-3">Pilih Satu atau Lebih Shop Area</h3>
+            <div id="shop-area-button-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-2">
+              {% set all_shop_areas = [] %} {% for part_id, part in parts.items() %} {% if part.shopArea not in all_shop_areas %} {% set _ = all_shop_areas.append(part.shopArea) %} {% endif %} {% endfor %} {% for shop_area in all_shop_areas
+              | sort %}
+              <button
+                type="button"
+                class="shop-area-select-btn w-full text-xs font-medium px-2 py-1.5 border border-gray-300 truncate text-center transition-colors duration-150 hover:bg-gray-100 hover:border-gray-400 focus:outline-none"
+                data-shop-area="{{ shop_area }}"
+                title="{{ shop_area }}"
+              >
+                {{ shop_area }}
+              </button>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="px-4 py-3 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
+            <button id="chart-filter-reset-btn-shop-area" type="button" class="px-3 py-1.5 text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md">Reset</button>
+            <button id="chart-filter-apply-btn-shop-area" type="button" class="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-md">Terapkan</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
     <div style="height: 300px; position: relative">
       <canvas id="mwsStatusChart"></canvas>
     </div>
@@ -61,12 +101,20 @@
     <div style="height: 300px; position: relative">
       <canvas id="mwsUrgencyChart"></canvas>
     </div>
+    <div style="height: 300px; position: relative">
+      <canvas id="mwsShopAreaChart"></canvas>
+    </div>
+  </div>
+
+  <div class="border-t pt-6 mt-8">
+    <div style="height: 320px; position: relative">
+      <canvas id="mwsTimelineChart"></canvas>
+    </div>
   </div>
 </div>
 
 <script>
-  // Data ini spesifik untuk halaman ini, jadi tetap dipertahankan.
+  // Variabel ini akan diisi oleh data dari backend (Flask/Jinja2)
   const originalData = {{ parts | tojson }};
 </script>
-
 <script src="{{ url_for('static', filename='js/chart_logic.js') }}" defer></script>

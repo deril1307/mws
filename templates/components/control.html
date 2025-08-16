@@ -1,0 +1,320 @@
+{% extends "shared/base.html" %} {% block title %}Control Data{% endblock %} {% block content %}
+<div class="flex h-screen bg-gray-100 font-sans">
+  {% include 'components/sidebar.html' %}
+  <div class="flex-1 flex flex-col overflow-hidden">
+    <header class="bg-white shadow-sm border-b border-gray-200">
+      <div class="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
+        <button id="sidebar-toggle-button" class="md:hidden text-gray-500 hover:text-gray-700 focus:outline-none">
+          <i class="fas fa-bars text-xl"></i>
+        </button>
+        <div class="flex-1 flex justify-center md:justify-start">
+          <h1 class="text-lg sm:text-xl font-bold text-gray-800">Halaman Control</h1>
+        </div>
+        <div class="flex items-center space-x-4">{% include 'notifikasi/notifikasi.html' %}</div>
+      </div>
+    </header>
+
+    <main class="flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6">
+      <div class="bg-white rounded-lg shadow-xl p-4 sm:p-6 w-full mx-auto">
+        <div class="flex flex-col sm:flex-row justify-between items-center border-b pb-3 mb-4 gap-4">
+          <h3 class="text-xl font-semibold text-gray-800">Detail Control</h3>
+          <div class="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+            <div class="relative w-full sm:w-64">
+              <input type="text" id="searchInput" class="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Cari IWO, Part Name, S/N..." />
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i class="fas fa-search text-gray-400"></i>
+              </div>
+            </div>
+            <button id="download-excel-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg text-sm inline-flex items-center transition duration-300 w-full sm:w-auto justify-center">
+              <i class="fas fa-file-excel mr-2"></i>
+              <span>Download Excel</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="overflow-auto" style="max-height: 70vh">
+          <table id="control-table" class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-100 sticky top-0 z-10">
+              <tr>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IWO No</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Incoming</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Schedule</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Finish Date</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status [S/US]</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Part Name</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Serial Number</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">WBS No.</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Shop Area</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">C/O</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">%TASE</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">%TASe BDP</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">BDP Name</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">BDP Number</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">BDP Number Eqv.</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">QTY</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">OP Number</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">OP Date</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Defect</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MT Number</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MT Qty</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MT Date</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remark</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody" class="bg-white divide-y divide-gray-200">
+              {% for group in control_data | groupby('mws_part.iwoNo') %} {% for item in group.list %}
+              <tr class="hover:bg-gray-50" data-group-id="{{ group.grouper }}">
+                {% if loop.first %}
+                <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 align-top border-r" rowspan="{{ group.list | length }}">
+                  <button type="button" class="view-detail-btn bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-3 rounded text-xs inline-flex items-center transition duration-300" data-iwo-no="{{ group.grouper }}">
+                    <i class="fas fa-list-alt mr-1"></i>
+                    Detail
+                  </button>
+                </td>
+                <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-600 font-semibold align-top border-r" rowspan="{{ group.list | length }}">{{ item.mws_part.customer or '-' }}</td>
+                <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 align-top border-r" rowspan="{{ group.list | length }}">{{ item.mws_part.iwoNo or '-' }}</td>
+                <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 align-top border-r" rowspan="{{ group.list | length }}">{{ item.mws_part.startDate.strftime('%Y-%m-%d') if item.mws_part.startDate else '-' }}</td>
+                <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 align-top border-r" rowspan="{{ group.list | length }}">
+                  {{ item.mws_part.schedule_delivery_on_time.strftime('%Y-%m-%d') if item.mws_part.schedule_delivery_on_time else '-' }}
+                </td>
+                <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 align-top border-r" rowspan="{{ group.list | length }}">{{ item.mws_part.finishDate.strftime('%Y-%m-%d') if item.mws_part.finishDate else '-' }}</td>
+                <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 align-top border-r" rowspan="{{ group.list | length }}">{{ item.mws_part.status_s_us or '-' }}</td>
+                <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 align-top border-r" rowspan="{{ group.list | length }}">{{ item.mws_part.tittle or '-' }}</td>
+                <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 align-top border-r" rowspan="{{ group.list | length }}">{{ item.mws_part.serialNumber or '-' }}</td>
+                <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 align-top border-r" rowspan="{{ group.list | length }}">{{ item.mws_part.wbsNo or '-' }}</td>
+                <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 align-top border-r" rowspan="{{ group.list | length }}">{{ item.mws_part.shopArea or '-' }}</td>
+                <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 align-top border-r" rowspan="{{ group.list | length }}">{{ item.mws_part.jobType or '-' }}</td>
+                <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 align-top border-r" rowspan="{{ group.list | length }}">{{ item.mws_part.tase or '-' }}</td>
+                <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 align-top border-r" rowspan="{{ group.list | length }}">{{ item.mws_part.prosentase_bdp or '-' }}</td>
+                {% endif %} {% set has_defect_data = item.defect or item.mt_number or (item.mt_qty is not none) or item.mt_date or item.remark_bdp %}
+                <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 {% if has_defect_data %}bg-yellow-200{% endif %}">{{ item.bdp_name or '-' }}</td>
+                <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 {% if has_defect_data %}bg-yellow-200{% endif %}">{{ item.bdp_number or '-' }}</td>
+                <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 {% if has_defect_data %}bg-yellow-200{% endif %}">{{ item.bdp_number_eqv or '-' }}</td>
+                <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 {% if has_defect_data %}bg-yellow-200{% endif %}">{{ item.qty or '-' }}</td>
+                <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 {% if has_defect_data %}bg-yellow-200{% endif %}">{{ item.op_number or '-' }}</td>
+                <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 {% if has_defect_data %}bg-yellow-200{% endif %}">{{ item.op_date.strftime('%Y-%m-%d') if item.op_date else '-' }}</td>
+                <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 {% if has_defect_data %}bg-yellow-200{% endif %}">{{ item.defect or '-' }}</td>
+                <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 {% if has_defect_data %}bg-yellow-200{% endif %}">{{ item.mt_number or '-' }}</td>
+                <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 {% if has_defect_data %}bg-yellow-200{% endif %}">{{ item.mt_qty if item.mt_qty is not none else '-' }}</td>
+                <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 {% if has_defect_data %}bg-yellow-200{% endif %}">{{ item.mt_date.strftime('%Y-%m-%d') if item.mt_date else '-' }}</td>
+                <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 {% if has_defect_data %}bg-yellow-200{% endif %}">{{ item.remark_bdp or '-' }}</td>
+              </tr>
+              {% endfor %} {% else %}
+              <tr>
+                <td colspan="26" class="text-center py-4 text-gray-500">Data tidak ditemukan.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div id="detailModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 hidden">
+  <div class="relative top-20 mx-auto p-5 border w-full max-w-3xl shadow-lg rounded-md bg-white">
+    <div class="flex justify-between items-center pb-3 border-b">
+      <h3 class="text-2xl font-bold text-gray-800">Control untuk IWO: <span id="modal-iwo-no" class="text-blue-600"></span></h3>
+      <button id="closeModalBtn" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
+        <i class="fas fa-times fa-lg"></i>
+      </button>
+    </div>
+    <div id="modalBodyContent" class="mt-4 space-y-4 max-h-[60vh] overflow-y-auto"></div>
+    <div class="flex justify-end items-center mt-4 pt-3 border-t">
+      <button id="closeModalFooterBtn" class="px-4 py-2 bg-gray-500 text-white text-base font-medium rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">Tutup</button>
+    </div>
+  </div>
+</div>
+
+<div id="logout-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+  <div id="logout-modal-overlay" class="absolute inset-0 bg-black bg-opacity-60"></div>
+  <div id="logout-modal-panel" class="relative bg-white rounded-lg shadow-xl w-full max-w-md m-4">
+    <div class="flex items-start justify-between p-5 border-b rounded-t">
+      <h3 class="text-xl font-semibold text-gray-900">Konfirmasi Logout</h3>
+      <button type="button" id="logout-modal-close-button" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
+        <i class="fas fa-times w-5 h-5"></i>
+      </button>
+    </div>
+    <div class="p-6">
+      <p class="text-base leading-relaxed text-gray-600">Apakah Anda yakin ingin mengakhiri sesi Anda?</p>
+    </div>
+    <div class="flex items-center p-6 space-x-4 border-t border-gray-200 rounded-b">
+      <button id="logout-modal-confirm-button" type="button" class="text-white bg-red-600 hover:bg-red-700 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center">Ya, Logout</button>
+      <button
+        id="logout-modal-cancel-button"
+        type="button"
+        class="text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 hover:text-gray-900 focus:z-10"
+      >
+        Batal
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script src="{{ url_for('static', filename='js/sidebar.js') }}"></script>
+<script src="{{ url_for('static', filename='js/info_mws_logic.js') }}"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<script src="{{ url_for('static', filename='js/notifikasi_logic.js') }}"></script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // Panggil fungsi setupDropdown untuk notifikasi
+    setupDropdown("notification-button", "notification-dropdown");
+
+    // ===================== KODE BARU: LOGIKA MODAL LOGOUT =====================
+    const logoutButton = document.getElementById("logout-button-sidebar");
+    const logoutModal = document.getElementById("logout-modal");
+    if (logoutButton && logoutModal) {
+      const confirmButton = document.getElementById("logout-modal-confirm-button");
+      const cancelButton = document.getElementById("logout-modal-cancel-button");
+      const closeButton = document.getElementById("logout-modal-close-button");
+      const overlay = document.getElementById("logout-modal-overlay");
+
+      logoutButton.addEventListener("click", (e) => {
+        e.preventDefault();
+        logoutModal.classList.remove("hidden");
+      });
+
+      const hideModalLogout = () => logoutModal.classList.add("hidden");
+
+      cancelButton.addEventListener("click", hideModalLogout);
+      closeButton.addEventListener("click", hideModalLogout);
+      overlay.addEventListener("click", hideModalLogout);
+
+      confirmButton.addEventListener("click", () => {
+        window.location.href = "{{ url_for('logout') }}";
+      });
+    }
+    // ===================== AKHIR KODE BARU =====================
+
+    // Fungsi pencarian tetap berfungsi seperti biasa
+    const searchInput = document.getElementById("searchInput");
+    const tableBody = document.getElementById("tableBody");
+    if (searchInput && tableBody) {
+      const allGroupIds = [...new Set(Array.from(tableBody.querySelectorAll("tr"), (tr) => tr.dataset.groupId))];
+      searchInput.addEventListener("keyup", function () {
+        const filterText = searchInput.value.toUpperCase();
+        allGroupIds.forEach((groupId) => {
+          const firstRowOfGroup = tableBody.querySelector(`tr[data-group-id="${groupId}"]`);
+          if (!firstRowOfGroup) return;
+          const iwoNo = firstRowOfGroup.cells[2]?.textContent.toUpperCase() || "";
+          const partName = firstRowOfGroup.cells[8]?.textContent.toUpperCase() || "";
+          const serialNumber = firstRowOfGroup.cells[9]?.textContent.toUpperCase() || "";
+          const isMatch = iwoNo.includes(filterText) || partName.includes(filterText) || serialNumber.includes(filterText);
+          const rowsInGroup = tableBody.querySelectorAll(`tr[data-group-id="${groupId}"]`);
+          rowsInGroup.forEach((row) => {
+            row.style.display = isMatch ? "" : "none";
+          });
+        });
+      });
+    }
+
+    const modal = document.getElementById("detailModal");
+    const closeModalBtn = document.getElementById("closeModalBtn");
+    const closeModalFooterBtn = document.getElementById("closeModalFooterBtn");
+    const modalIwoNo = document.getElementById("modal-iwo-no");
+    const modalBodyContent = document.getElementById("modalBodyContent");
+
+    function showModalWithData(iwoNo) {
+      modalIwoNo.textContent = iwoNo;
+      modalBodyContent.innerHTML = ""; // Kosongkan konten modal sebelum diisi
+
+      const firstRow = document.querySelector(`tr[data-group-id="${iwoNo}"]`);
+      if (!firstRow) return;
+
+      // Ambil data header dari baris pertama grup
+      const customer = firstRow.cells[1]?.textContent || "-";
+      const partName = firstRow.cells[8]?.textContent || "-";
+      const serialNumber = firstRow.cells[9]?.textContent || "-";
+      const incomingDate = firstRow.cells[3]?.textContent || "-";
+      const scheduleDate = firstRow.cells[4]?.textContent || "-";
+      const status = firstRow.cells[6]?.textContent || "-";
+
+      // Buat elemen untuk header info di dalam modal
+      const headerInfo = document.createElement("div");
+      headerInfo.className = "p-4 border rounded-lg bg-blue-50 mb-4";
+      headerInfo.innerHTML = `
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2 text-sm">
+            <div><strong>Customer:</strong> <span class="text-gray-700 font-semibold">${customer}</span></div>
+            <div><strong>Part Name:</strong> <span class="text-gray-700">${partName}</span></div>
+            <div><strong>Serial Number:</strong> <span class="text-gray-700">${serialNumber}</span></div>
+            <div><strong>Incoming:</strong> <span class="text-gray-700">${incomingDate}</span></div>
+            <div><strong>Schedule:</strong> <span class="text-gray-700">${scheduleDate}</span></div>
+            <div><strong>Status:</strong> <span class="text-gray-700 font-semibold">${status}</span></div>
+        </div>
+      `;
+      modalBodyContent.appendChild(headerInfo);
+
+      // Ambil semua baris yang termasuk dalam grup IWO yang sama
+      const rows = document.querySelectorAll(`tr[data-group-id="${iwoNo}"]`);
+      rows.forEach((row, index) => {
+        // Baris pertama (dengan rowspan) punya > 11 sel, data barang mulai dari indeks 14.
+        // Baris selanjutnya punya <= 11 sel, data barang mulai dari indeks 0.
+        const bdpDataStartIndex = row.cells.length > 11 ? 14 : 0;
+
+        // Ambil data dari sel dengan aman menggunakan optional chaining (?.)
+        const bdpName = row.cells[bdpDataStartIndex + 0]?.textContent || "-";
+        const bdpNumber = row.cells[bdpDataStartIndex + 1]?.textContent || "-";
+        const bdpNumberEqv = row.cells[bdpDataStartIndex + 2]?.textContent || "-";
+        const qty = row.cells[bdpDataStartIndex + 3]?.textContent || "-";
+        const opNumber = row.cells[bdpDataStartIndex + 4]?.textContent || "-";
+        const opDate = row.cells[bdpDataStartIndex + 5]?.textContent || "-";
+        const defect = row.cells[bdpDataStartIndex + 6]?.textContent || "-";
+        const mtNumber = row.cells[bdpDataStartIndex + 7]?.textContent || "-";
+        const mtQty = row.cells[bdpDataStartIndex + 8]?.textContent || "-";
+        const mtDate = row.cells[bdpDataStartIndex + 9]?.textContent || "-";
+        const remark = row.cells[bdpDataStartIndex + 10]?.textContent || "-";
+
+        // Buat kartu untuk setiap item/barang
+        const card = document.createElement("div");
+        card.className = "p-4 border rounded-lg shadow-sm bg-gray-50";
+        card.innerHTML = `
+          <h4 class="font-bold text-lg text-gray-700 mb-3 border-b pb-2">Barang ke-${index + 1}: <span class="font-normal">${bdpName}</span></h4>
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 text-sm">
+            <div><strong>BDP Number:</strong> <span class="text-gray-600">${bdpNumber}</span></div>
+            <div><strong>BDP Number Eqv:</strong> <span class="text-gray-600">${bdpNumberEqv}</span></div>
+            <div><strong>QTY:</strong> <span class="text-gray-600 font-semibold">${qty}</span></div>
+            <div><strong>OP Number:</strong> <span class="text-gray-600">${opNumber}</span></div>
+            <div><strong>OP Date:</strong> <span class="text-gray-600">${opDate}</span></div>
+            <div><strong>Defect:</strong> <span class="text-gray-600">${defect}</span></div>
+            <div><strong>MT Number:</strong> <span class="text-gray-600">${mtNumber}</span></div>
+            <div><strong>MT Qty:</strong> <span class="text-gray-600">${mtQty}</span></div>
+            <div><strong>MT Date:</strong> <span class="text-gray-600">${mtDate}</span></div>
+            <div class="sm:col-span-2 md:col-span-3 mt-1"><strong>Remark:</strong> <span class="text-gray-600">${remark}</span></div>
+          </div>
+        `;
+
+        modalBodyContent.appendChild(card);
+      });
+
+      modal.classList.remove("hidden"); // Tampilkan modal
+    }
+
+    function hideModal() {
+      modal.classList.add("hidden");
+    }
+
+    // Tambahkan event listener ke seluruh body tabel untuk menangkap klik pada tombol detail
+    tableBody.addEventListener("click", function (event) {
+      const button = event.target.closest(".view-detail-btn");
+      if (button) {
+        const iwoNo = button.dataset.iwoNo;
+        showModalWithData(iwoNo);
+      }
+    });
+
+    // Event listener untuk tombol tutup modal
+    closeModalBtn.addEventListener("click", hideModal);
+    closeModalFooterBtn.addEventListener("click", hideModal);
+    modal.addEventListener("click", function (event) {
+      // Tutup modal jika klik di luar area konten modal
+      if (event.target === modal) {
+        hideModal();
+      }
+    });
+  });
+</script>
+{% endblock %}

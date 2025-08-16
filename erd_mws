@@ -1,0 +1,56 @@
+// ERD MWS System
+digraph {
+	fontsize=10 rankdir=LR
+	users [label="users
+id
+nik
+name
+password
+role
+position
+last_seen" shape=box]
+	staff_areas [label="staff_areas
+id
+nik
+name
+assigned_customers
+assigned_shop_area
+user_id" shape=box]
+	mws_parts [label="mws_parts
+id
+part_id
+partNumber
+serialNumber
+jobType
+customer_id
+startDate
+finishDate
+status" shape=box]
+	mws_steps [label="mws_steps
+id
+mws_part_id
+no
+description
+status
+planMan
+planHours
+hours" shape=box]
+	stripping [label="stripping
+id
+mws_part_id
+bdp_name
+bdp_number
+qty
+unit
+op_number
+op_date
+defect" shape=box]
+	customers [label="customers
+id
+name
+address" shape=box]
+	users -> staff_areas [label="1..1"]
+	mws_parts -> mws_steps [label="1..∞"]
+	mws_parts -> stripping [label="1..∞"]
+	customers -> mws_parts [label="1..∞"]
+}

@@ -17,19 +17,56 @@
 
     <div class="flex flex-wrap items-center justify-start md:justify-end gap-3 w-full">
       {% if current_user.role != 'customer' %}
-      <div class="relative">
-        <select id="customer-filter-dropdown" class="w-full sm:w-auto px-4 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 appearance-none">
-          <option value="">Semua Customer</option>
-          {% set all_customers = [] %} {% for part_id, part in parts.items() %} {% if part.customer not in all_customers %} {% set _ = all_customers.append(part.customer) %} {% endif %} {% endfor %} {% for customer in all_customers | sort
-          %}
-          <option value="{{ customer }}">{{ customer }}</option>
-          {% endfor %}
-        </select>
-        <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-          <i class="fas fa-users text-gray-400"></i>
+      <div class="relative w-full sm:w-auto" id="customer-filter-container">
+        <button
+          id="customer-filter-btn"
+          type="button"
+          class="inline-flex justify-between w-full sm:w-48 rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        >
+          <span id="customer-filter-text" class="truncate">Pilih Customer</span>
+          <i class="fas fa-chevron-down -mr-1 ml-2 h-5 w-5 flex items-center"></i>
+        </button>
+        <div id="customer-filter-panel" class="origin-top-right absolute left-0 right-0 sm:left-auto sm:right-0 mt-2 w-full sm:w-64 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10 hidden">
+          <div class="p-2 border-b">
+            <input type="text" placeholder="Cari customer..." class="w-full px-2 py-1 border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500" />
+          </div>
+          <div class="py-1 h-48 overflow-y-auto">
+            {% set all_customers = [] %} {% for part_id, part in parts.items() %} {% if part.customer not in all_customers %} {% set _ = all_customers.append(part.customer) %} {% endif %} {% endfor %} {% for customer in all_customers | sort
+            %}
+            <label class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer">
+              <input type="checkbox" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" value="{{ customer }}" data-filter-type="customer" />
+              <span class="ml-3">{{ customer }}</span>
+            </label>
+            {% endfor %}
+          </div>
         </div>
       </div>
       {% endif %}
+
+      <div class="relative w-full sm:w-auto" id="shop-area-filter-container">
+        <button
+          id="shop-area-filter-btn"
+          type="button"
+          class="inline-flex justify-between w-full sm:w-48 rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        >
+          <span id="shop-area-filter-text" class="truncate">Pilih Shop Area</span>
+          <i class="fas fa-chevron-down -mr-1 ml-2 h-5 w-5 flex items-center"></i>
+        </button>
+        <div id="shop-area-filter-panel" class="origin-top-right absolute right-0 mt-2 w-64 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10 hidden">
+          <div class="p-2 border-b">
+            <input type="text" placeholder="Cari shop area..." class="w-full px-2 py-1 border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500" />
+          </div>
+          <div class="py-1 h-48 overflow-y-auto">
+            {% set all_shop_areas = [] %} {% for part_id, part in parts.items() %} {% if part.shopArea and part.shopArea not in all_shop_areas %} {% set _ = all_shop_areas.append(part.shopArea) %} {% endif %} {% endfor %} {% for area in
+            all_shop_areas | sort %}
+            <label class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer">
+              <input type="checkbox" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" value="{{ area }}" data-filter-type="shop-area" />
+              <span class="ml-3">{{ area }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
 
       <div class="relative">
         <select id="status-filter-dropdown" class="w-full sm:w-auto px-4 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 appearance-none">
@@ -37,6 +74,7 @@
           <option value="pending">Pending</option>
           <option value="in_progress">In Progress</option>
           <option value="completed">Completed</option>
+          <option value="fo">FO</option>
         </select>
         <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
           <i class="fas fa-tag text-gray-400"></i>
@@ -66,12 +104,11 @@
       </div>
     </div>
 
-    {# --- PERUBAHAN LOGIKA DIMULAI DI SINI --- #} {# Logika filter 'if current_user.role == mechanic' dihapus. #} {# Template sekarang percaya bahwa 'parts' dari backend sudah benar. #} {% set relevant_parts = parts.items() %} {# ---
-    PERUBAHAN LOGIKA SELESAI --- #} {% if relevant_parts %}
-    <div id="parts-container" class="space-y-6">
+    {% set relevant_parts = parts.items() %} {% if relevant_parts %}
+    <div id="parts-container" class="space-y-4">
       {% for part_id, part in relevant_parts | sort(attribute='1.is_urgent', reverse=True) | sort(attribute='1.urgent_request', reverse=True) %}
       <div
-        class="part-card flex border rounded-lg card-hover overflow-hidden shadow-sm transition-all duration-300 {% if part.is_urgent %} border-red-500 border-2 {% elif part.urgent_request %} border-yellow-400 border-2 {% elif part.status == 'completed' %} border-l-8 border-l-blue-500 border-gray-200 {% elif part.status == 'in_progress' %} border-l-8 border-l-green-500 border-gray-200 {% elif part.status == 'pending' %} border-l-8 border-l-red-400 border-gray-200 {% else %} border-gray-200 {% endif %}"
+        class="part-card flex border rounded-lg card-hover overflow-hidden shadow-sm transition-all duration-300 {% if part.is_urgent %} border-red-500 border-2 {% elif part.urgent_request %} border-yellow-400 border-2 {% elif part.shopArea == 'FO' %} border-l-8 border-l-gray-800 border-gray-200 {% elif part.status == 'completed' %} border-l-8 border-l-blue-500 border-gray-200 {% elif part.status == 'in_progress' %} border-l-8 border-l-green-500 border-gray-200 {% elif part.status == 'pending' %} border-l-8 border-l-red-400 border-gray-200 {% else %} border-gray-200 {% endif %}"
         data-original-order="{{ loop.index }}"
         data-customer="{{ part.customer }}"
         data-part-id="{{ part_id }}"
@@ -80,24 +117,25 @@
         data-iwo-no="{{ part.iwoNo }}"
         data-wbs-no="{{ part.wbsNo if part.wbsNo else '' }}"
         data-serial-number="{{ part.serialNumber if part.serialNumber else '' }}"
-        data-status="{{ part.status }}"
+        data-status="{% if part.shopArea == 'FO' %}fo{% else %}{{ part.status }}{% endif %}"
+        data-shop-area="{{ part.shopArea if part.shopArea else '' }}"
       >
         <div class="flex-shrink-0 w-16 flex items-center justify-center bg-gray-50 border-r border-gray-200">
           <span class="number-display text-2xl font-bold text-gray-400">{{ loop.index }}</span>
         </div>
 
         <div class="flex-grow">
-          <div class="p-5 bg-white">
+          <div class="p-4 bg-white">
             <div class="flex flex-col md:flex-row md:justify-between md:items-start">
               <div class="flex-1 mb-4 md:mb-0">
                 <div class="flex items-center mb-2 flex-wrap gap-2">
-                  <h3 class="mws-title text-lg font-semibold text-gray-800 mr-3">Customer : {{ part.customer }} - Part Name : {{ part.tittle.name if part.tittle is mapping else part.tittle }}</h3>
+                  <h3 class="mws-title text-lg font-semibold text-gray-800 mr-3">{{ part.customer }} - {{ part.tittle.name if part.tittle is mapping else part.tittle }}</h3>
                   <span
-                    class="px-3 py-1 rounded-full text-xs font-bold flex items-center {% if part.is_urgent %} bg-red-100 text-red-800 border border-red-300 {% elif part.status == 'completed' %} bg-blue-100 text-blue-800 border border-blue-300 {% elif part.status == 'in_progress' %} bg-green-100 text-green-800 border border-green-300 {% elif part.status == 'pending' %} bg-red-100 text-red-800 border border-red-300 {% else %} bg-gray-100 text-gray-800 border border-gray-300 {% endif %}"
+                    class="px-3 py-1 rounded-full text-xs font-bold flex items-center {% if part.is_urgent %} bg-red-100 text-red-800 border border-red-300 {% elif part.shopArea == 'FO' %} bg-gray-600 text-white border border-gray-600 {% elif part.status == 'completed' %} bg-blue-100 text-blue-800 border border-blue-300 {% elif part.status == 'in_progress' %} bg-green-100 text-green-800 border border-green-300 {% elif part.status == 'pending' %} bg-red-100 text-red-800 border border-red-300 {% else %} bg-gray-100 text-gray-800 border border-gray-300 {% endif %}"
                   >
                     {% if part.is_urgent %}
-                    <i class="fas fa-fire-alt mr-2"></i> URGENT !! {% elif part.status == 'completed' %} <i class="mr-2"></i> Completed {% elif part.status == 'in_progress' %} <i class="mr-2"></i> In Progress {% elif part.status ==
-                    'pending' %} <i class="mr-2"></i> Pending {% else %} <i class="mr-2"></i> Pending {% endif %}
+                    <i class="fas fa-fire-alt mr-2"></i> URGENT !! {% elif part.shopArea == 'FO' %} <i class="fas fa-tools mr-2" style="display: none"></i> FO {% elif part.status == 'completed' %} <i class="mr-2"></i> Completed {% elif
+                    part.status == 'in_progress' %} <i class="mr-2"></i> In Progress {% elif part.status == 'pending' %} <i class="mr-2"></i> Pending {% else %} <i class="mr-2"></i> Pending {% endif %}
                   </span>
 
                   {% if part.urgent_request and not part.is_urgent and current_user.role in ['admin', 'superadmin'] %}
@@ -108,10 +146,6 @@
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-2 text-sm text-gray-600">
                   <div class="flex flex-col space-y-1">
                     <div><span class="font-medium text-black">Part Number:</span> <span class="searchable-part-number text-black">{{ part.partNumber }}</span></div>
-                    <div class="customer-info">
-                      <span class="font-medium text-black">Customer:</span>
-                      <span class="customer-name searchable-customer cursor-pointer hover:text-blue-600 hover:underline text-black" data-customer="{{ part.customer }}">{{ part.customer }}</span>
-                    </div>
                     <div><span class="font-medium text-black">IWO No:</span> <span class="searchable-iwo-no text-black">{{ part.iwoNo }}</span></div>
                   </div>
                   <div class="flex flex-col space-y-1">
@@ -120,7 +154,10 @@
                     {% endif %} {% if part.serialNumber %}
                     <div><span class="font-medium text-black">Serial Number:</span> <span class="searchable-serial-number text-black">{{ part.serialNumber }}</span></div>
                     {% endif %}
-                    <div><span class="font-medium text-black">Job:</span> <span class="text-black">{{ part.jobType }}</span></div>
+                    <div><span class="font-medium text-black">Component Order:</span> <span class="text-black">{{ part.jobType }}</span></div>
+                    {% if part.shopArea %}
+                    <div><span class="font-medium text-black">Shop Area:</span> <span class="text-black">{{ part.shopArea }}</span></div>
+                    {% endif %}
                   </div>
                 </div>
               </div>
@@ -137,7 +174,7 @@
                 <button class="urgent-action-btn px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white text-xs font-bold rounded-lg" data-part-id="{{ part_id }}" data-action="toggle">
                   <i class="fas fa-times-circle mr-1"></i> Cancel Urgent
                 </button>
-                {% else %}
+                {% elif part.status != 'completed' %}
                 <button class="urgent-action-btn px-3 py-2 bg-yellow-400 hover:bg-yellow-500 text-yellow-800 text-xs font-bold rounded-lg" data-part-id="{{ part_id }}" data-action="toggle">
                   <i class="fas fa-exclamation-triangle mr-1"></i> Jadikan Urgent
                 </button>
@@ -146,7 +183,7 @@
                 {% elif part.urgent_request %}
                 <button class="px-3 py-2 bg-gray-300 text-gray-500 text-xs font-bold rounded-lg cursor-not-allowed" disabled><i class="fas fa-clock mr-1"></i> Menunggu Persetujuan</button>
                 <button class="urgent-action-btn px-3 py-2 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-lg" data-part-id="{{ part_id }}" data-action="cancel_request"><i class="fas fa-ban mr-1"></i> Batal Urgensi</button>
-                {% else %}
+                {% elif part.status != 'completed' %}
                 <button class="urgent-action-btn px-3 py-2 bg-red-500 hover:bg-orange-600 text-white text-xs font-bold rounded-lg" data-part-id="{{ part_id }}" data-action="request"><i class="fas fa-bell mr-1"></i> Minta Urgensi</button>
                 {% endif %} {% endif %} {% if current_user.role == 'admin' %}
                 <a href="{{ url_for('mws_detail', part_id=part_id) }}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium"> <i class="fas fa-eye mr-2"></i>Kelola MWS </a>
@@ -171,8 +208,20 @@
 
           {% set completed_steps = part.steps|selectattr('status', 'equalto', 'completed')|list|length %} {% set total_steps = part.steps|length if part.steps else 1 %} {% set progress_percentage = (completed_steps / total_steps *
           100)|round|int %}
-          <div class="p-4 border-t {% if part.status == 'completed' %} bg-blue-50 {% elif part.status == 'in_progress' %} bg-green-50 {% elif part.status == 'pending' %} bg-red-50 {% else %} bg-gray-50 {% endif %}">
-            {% if part.status == 'completed' %}
+          <div
+            class="p-3 border-t {% if part.shopArea == 'FO' %} bg-gray-100 {% elif part.status == 'completed' %} bg-blue-50 {% elif part.status == 'in_progress' %} bg-green-50 {% elif part.status == 'pending' %} bg-red-50 {% else %} bg-gray-50 {% endif %}"
+          >
+            {% if part.shopArea == 'FO' %}
+            <div class="flex items-center">
+              <div class="flex-shrink-0">
+                <i class="fas fa-tools text-gray-600 text-2xl"></i>
+              </div>
+              <div class="ml-4 flex-grow">
+                <div class="text-md font-bold text-gray-600">Form Out</div>
+                <div class="text-sm text-gray-600">Pekerjaan di area FO.</div>
+              </div>
+            </div>
+            {% elif part.status == 'completed' %}
             <div class="flex items-center">
               <div class="flex-shrink-0">
                 <i class="fas fa-check-circle text-blue-500 text-2xl"></i>
@@ -241,7 +290,6 @@
   </div>
 </div>
 
-{# --- MODAL DAN SCRIPT TIDAK ADA PERUBAHAN --- #} {# Confirmation Modal #}
 <div id="confirmation-modal" class="fixed inset-0 bg-gray-800 bg-opacity-60 overflow-y-auto h-full w-full flex items-center justify-center hidden z-50 transition-opacity duration-300">
   <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md mx-4 transform transition-all duration-300 scale-95 opacity-0" id="modal-content">
     <div class="text-center">
@@ -264,7 +312,6 @@
   </div>
 </div>
 
-{# Delete Modal #}
 <div id="delete-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 hidden opacity-0">
   <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
     <div class="mt-3 text-center">

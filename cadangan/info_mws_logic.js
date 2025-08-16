@@ -233,7 +233,7 @@ function displayStrippingReportInTable(data) {
   tableBody.innerHTML = "";
 
   if (data.length === 0) {
-    const colspan = userIsAdmin ? 13 : 12;
+    const colspan = userIsAdmin ? 12 : 11;
     tableBody.innerHTML = `<tr><td colspan="${colspan}" class="text-center py-4 text-gray-500 border border-gray-300">Data tidak ditemukan</td></tr>`;
   } else {
     data.forEach((item) => {
@@ -260,7 +260,6 @@ function displayStrippingReportInTable(data) {
           <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 border border-gray-300">${item.mt_number || "-"}</td>
           <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 border border-gray-300">${item.mt_qty || "-"}</td>
           <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 border border-gray-300">${item.mt_date || "-"}</td>
-          <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 border border-gray-300">${item.remark_bdp || "-"}</td>
           ${actionButtons}
         </tr>
       `;
@@ -268,189 +267,6 @@ function displayStrippingReportInTable(data) {
     });
   }
 }
-
-// =====================================================================
-// LOGIKA UNTUK "ALL STREP" (semua part)
-// =====================================================================
-
-window.openAllStrepModal = async function () {
-  const modal = document.getElementById("all-strep-modal");
-  const tableBody = document.getElementById("all-strep-table-body");
-  const button = document.getElementById("get-all-strep-btn");
-  if (!modal || !tableBody || !button) return;
-
-  button.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Memuat...`;
-  button.disabled = true;
-  tableBody.innerHTML = `<tr><td colspan="44" class="text-center py-8"><i class="fas fa-spinner fa-spin text-2xl text-gray-500"></i></td></tr>`;
-  modal.classList.remove("hidden");
-
-  try {
-    const response = await fetch(`/get_all_strep`);
-    const result = await response.json();
-
-    if (result.success) {
-      const userIsAdmin = document.body.dataset.userRole === "admin" || document.body.dataset.userRole === "superadmin";
-      displayAllStrepInModalTable(result.data, userIsAdmin);
-    } else {
-      showToast(`Error: ${result.error}`, "error");
-      tableBody.innerHTML = `<tr><td colspan="44" class="text-center py-4 text-red-500">${result.error}</td></tr>`;
-    }
-  } catch (error) {
-    console.error("Terjadi kesalahan jaringan:", error);
-    showToast("Terjadi kesalahan jaringan saat mengambil data ALL Strep.", "error");
-    tableBody.innerHTML = `<tr><td colspan="44" class="text-center py-4 text-red-500">Gagal memuat data.</td></tr>`;
-  } finally {
-    button.innerHTML = `<i class="fas fa-stream mr-2"></i> ALL Strep`;
-    button.disabled = false;
-  }
-};
-
-window.closeAllStrepModal = function () {
-  const modal = document.getElementById("all-strep-modal");
-  if (modal) modal.classList.add("hidden");
-};
-
-function displayAllStrepInModalTable(data, userIsAdmin = false) {
-  const tableBody = document.getElementById("all-strep-table-body");
-  if (!tableBody) return;
-
-  tableBody.innerHTML = "";
-
-  if (!data || data.length === 0) {
-    const colspan = userIsAdmin ? 44 : 43;
-    tableBody.innerHTML = `<tr><td colspan="${colspan}" class="text-center py-4 text-gray-500">Data tidak ditemukan</td></tr>`;
-    return;
-  }
-
-  const rowsHtml = data
-    .map((item) => {
-      const itemData = JSON.stringify(item).replace(/'/g, "&apos;").replace(/"/g, "&quot;");
-      const editButtonHtml = userIsAdmin
-        ? `<td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 text-center">
-            <button onclick='openEditAllStrepModal(${itemData})' class="text-blue-600 hover:text-blue-800" title="Edit ${item.part_id}">
-              <i class="fas fa-edit"></i>
-            </button>
-           </td>`
-        : "";
-      return `
-        <tr class="hover:bg-gray-50">
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.startDate || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.ref_logistic_ppc || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.customer || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.wbsNo || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.tittle || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.partNumber || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.serialNumber || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.jobType || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.mdr_doc_defect || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.capability || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.iwoNo || "-"}</td>
-           <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.shopArea || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.iwoDate || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.worksheetNo || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.remark_mws || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.test_result || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.schedule_delivery_on_time || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.ecd_finish_workdays || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.selisih_work_days || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.prosentase_schedule || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.startDate || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.approvedDate || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.form_out_no || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.tanda_terima_fo_no || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.tanda_terima_fo_date || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.stripping_report_date || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.stripping_order_by_sap_date || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.prosentase_bdp || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.qty_bdp || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.selisih_order_work_days || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.max_stripping_date || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.selisih_stripping || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.tase_stripping || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.status_s_us || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.finishDate || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.men_powers || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.total_duration || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.document_penyerta || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.ship_transfer_tt_date || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.ship_transfer_tt_no || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.selisih_shipping_work_days || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.tase || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.remark || "-"}</td>
-          ${editButtonHtml}
-        </tr>
-      `;
-    })
-    .join("");
-  tableBody.innerHTML = rowsHtml;
-}
-
-window.openEditAllStrepModal = function (itemData) {
-  const modal = document.getElementById("edit-all-strep-modal");
-  if (!modal) return;
-  document.getElementById("edit-strep-part-id").textContent = itemData.iwoNo;
-  document.getElementById("save-all-strep-changes-btn").dataset.partId = itemData.part_id;
-  const form = document.getElementById("edit-all-strep-form");
-  const inputs = form.querySelectorAll("input");
-  inputs.forEach((input) => {
-    const fieldName = input.id.replace("edit-strep-", "");
-    input.value = itemData[fieldName] || "";
-  });
-
-  // Tampilkan modal
-  modal.classList.remove("hidden");
-};
-
-window.closeEditAllStrepModal = function () {
-  const modal = document.getElementById("edit-all-strep-modal");
-  if (modal) modal.classList.add("hidden");
-};
-
-window.saveAllStrepChanges = async function () {
-  const saveButton = document.getElementById("save-all-strep-changes-btn");
-  const partId = saveButton.dataset.partId;
-  const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute("content");
-  if (!partId) {
-    showToast("Error: Part ID tidak ditemukan.", "error");
-    return;
-  }
-
-  const updatedData = {};
-  const form = document.getElementById("edit-all-strep-form");
-  const inputs = form.querySelectorAll("input");
-  inputs.forEach((input) => {
-    const fieldName = input.id.replace("edit-strep-", "");
-    updatedData[fieldName] = input.value;
-  });
-
-  saveButton.disabled = true;
-  saveButton.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i>Menyimpan...`;
-
-  try {
-    const response = await fetch(`/update_all_strep/${partId}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRFToken": csrfToken,
-      },
-      body: JSON.stringify(updatedData),
-    });
-    const result = await response.json();
-    if (result.success) {
-      showToast(result.message, "success");
-      closeEditAllStrepModal();
-      openAllStrepModal(); // Refresh tabel data
-    } else {
-      showToast(`Error: ${result.error}`, "error");
-    }
-  } catch (error) {
-    console.error("Save error:", error);
-    showToast("Terjadi kesalahan jaringan saat menyimpan data.", "error");
-  } finally {
-    saveButton.disabled = false;
-    saveButton.innerHTML = `<i class="fas fa-save mr-2"></i>Simpan Perubahan`;
-  }
-};
 
 window.deleteStripping = async function (strepId) {
   if (!confirm("Apakah Anda yakin ingin menghapus data stripping ini?")) return;
@@ -472,7 +288,9 @@ window.deleteStripping = async function (strepId) {
     showToast("Terjadi kesalahan jaringan.", "error");
   }
 };
+
 const inputClass = "w-full bg-gray-50 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-1";
+
 window.toggleStrippingEditMode = function (button, itemData) {
   const row = button.closest("tr");
   row.dataset.originalHtml = row.innerHTML;
@@ -488,7 +306,6 @@ window.toggleStrippingEditMode = function (button, itemData) {
     <td class="p-1"><input type="text" value="${itemData.mt_number || ""}" class="${inputClass}" data-field="mt_number"></td>
     <td class="p-1"><input type="text" value="${itemData.mt_qty || ""}" class="${inputClass}" data-field="mt_qty"></td>
     <td class="p-1"><input type="date" value="${itemData.mt_date || ""}" class="${inputClass}" data-field="mt_date"></td>
-    <td class="p-1"><input type="text" value="${itemData.remark_bdp || ""}" class="${inputClass}" data-field="remark_bdp"></td>
     <td class="px-4 py-3 whitespace-nowrap text-sm text-center border border-gray-300">
         <button onclick="saveStrippingEdit(${itemData.id}, this)" class="text-green-600 hover:text-green-800 mr-3" title="Simpan"><i class="fas fa-check"></i></button>
         <button onclick="cancelStrippingEdit(this)" class="text-gray-600 hover:text-gray-800" title="Batal"><i class="fas fa-times"></i></button>
@@ -500,26 +317,24 @@ window.saveStrippingEdit = async function (strepId, button) {
   const row = button.closest("tr");
   const inputs = row.querySelectorAll("input");
   const formData = {};
-  // Ambil nilai dari semua input, termasuk yang kosong.
+
+  // ***FIXED LOGIC***
+  // Always send the field to the backend, even if its value is empty.
+  // This allows the backend to know it should clear the field.
   inputs.forEach((input) => {
     formData[input.dataset.field] = input.value;
   });
+
   const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute("content");
   const partId = document
     .getElementById("get-stripping-report-btn")
     .onclick.toString()
     .match(/'([^']+)'/)[1];
-
   try {
-    const response = await fetch(`/edit_stripping/${strepId}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
-      body: JSON.stringify(formData),
-    });
+    const response = await fetch(`/edit_stripping/${strepId}`, { method: "POST", headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken }, body: JSON.stringify(formData) });
     const result = await response.json();
     if (result.success) {
       showToast(result.message, "success");
-      // Muat ulang data untuk menampilkan perubahan
       getStrippingReportData(partId, true);
     } else {
       showToast(`Error: ${result.error}`, "error");
@@ -537,10 +352,6 @@ window.cancelStrippingEdit = function (button) {
 window.addStrippingRow = function () {
   const tableBody = document.getElementById("stripping-report-table-body");
   if (document.getElementById("new-stripping-row")) return;
-  const noDataRow = tableBody.querySelector('td[colspan="13"]');
-  if (noDataRow) {
-    noDataRow.parentElement.remove();
-  }
   const newRowHtml = `
     <tr id="new-stripping-row" class="bg-yellow-50">
         <td class="p-1"><input type="text" placeholder="Nama BDP..." class="${inputClass}" data-field="bdp_name"></td>
@@ -554,7 +365,6 @@ window.addStrippingRow = function () {
         <td class="p-1"><input type="text" placeholder="Nomor MT..." class="${inputClass}" data-field="mt_number"></td>
         <td class="p-1"><input type="text" placeholder="Qty MT..." class="${inputClass}" data-field="mt_qty"></td>
         <td class="p-1"><input type="date" placeholder="Qty Date..." class="${inputClass}" data-field="mt_date"></td>
-        <td class="p-1"><input type="text" placeholder="Remark..." class="${inputClass}" data-field="remark_bdp"></td>
         <td class="px-4 py-3 whitespace-nowrap text-sm text-center border border-gray-300">
             <button onclick="saveNewStripping(this)" class="text-green-600 hover:text-green-800 mr-3" title="Simpan"><i class="fas fa-check"></i></button>
             <button onclick="this.closest('tr').remove()" class="text-gray-600 hover:text-gray-800" title="Batal"><i class="fas fa-times"></i></button>
@@ -573,8 +383,8 @@ window.saveNewStripping = async function (button) {
   const formData = {};
   let hasValue = false;
   inputs.forEach((input) => {
-    formData[input.dataset.field] = input.value;
     if (input.value) {
+      formData[input.dataset.field] = input.value;
       hasValue = true;
     }
   });
@@ -607,15 +417,13 @@ document.addEventListener("DOMContentLoaded", () => {
   if (userRole) {
     document.body.dataset.userRole = userRole;
   }
+
   const attachmentInput = document.getElementById("attachment-file-input");
   const uploadButton = document.getElementById("upload-attachment-btn");
+
   if (attachmentInput && uploadButton) {
     attachmentInput.addEventListener("change", () => {
-      if (attachmentInput.files.length > 0) {
-        uploadButton.disabled = false;
-      } else {
-        uploadButton.disabled = true;
-      }
+      uploadButton.disabled = attachmentInput.files.length === 0;
     });
   }
 
@@ -625,12 +433,14 @@ document.addEventListener("DOMContentLoaded", () => {
       updatedData[input.dataset.field] = input.value;
     });
     try {
-      const response = await fetch("/update_mws_information", { method: "POST", headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken }, body: JSON.stringify(updatedData) });
+      const response = await fetch("/update_mws_info", { method: "POST", headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken }, body: JSON.stringify(updatedData) });
       const data = await response.json();
       if (data.success) {
         showToast("Informasi MWS berhasil diperbarui.", "success");
-        // Reload halaman untuk memastikan semua data (termasuk yang dikalkulasi server) terupdate
-        window.location.reload();
+        document.querySelectorAll(".mws-info-edit").forEach((input) => {
+          input.previousElementSibling.textContent = input.value || "N/A";
+        });
+        toggleEditMode(false);
       } else {
         showToast("Error: " + data.error, "error");
       }
