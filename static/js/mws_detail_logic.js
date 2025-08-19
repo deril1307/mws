@@ -677,7 +677,7 @@ if (currentUserRole !== "customer") {
     button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
 
     try {
-      const updateResponse = await fetch("/update_mws_info", {
+      const updateResponse = await fetch("/update_mws_information", {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
         body: JSON.stringify({ partId: partId, status_s_us: selectedStatus }),

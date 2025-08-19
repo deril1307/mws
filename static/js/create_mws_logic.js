@@ -190,7 +190,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const csrfToken = document.querySelector('input[name="csrf_token"]').value;
 
       try {
-        const response = await fetch("/create_mws", {
+        const response = await fetch("/create-mws", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

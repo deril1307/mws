@@ -1,5 +1,5 @@
 <style>
-  /* CSS untuk notifikasi */
+  /* CSS untuk notifikasi (TIDAK ADA PERUBAHAN, HANYA DISERTAKAN UNTUK KELENGKAPAN) */
   #notification-dropdown {
     transition: opacity 0.2s ease-out, transform 0.2s ease-out;
   }
@@ -31,17 +31,33 @@
   #notification-list::-webkit-scrollbar-thumb:hover {
     background: #64748b;
   }
+
+  /* {# CSS BARU UNTUK HEADER GRUP #} */
+  .notification-group-header {
+    padding: 8px 16px;
+    background-color: #f8fafc;
+    border-top: 1px solid #e5e7eb;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 0.75rem; /* 12px */
+    font-weight: 600;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  /* {# CSS BARU UNTUK MEMASTIKAN BORDER TIDAK TUMPANG TINDIH #} */
+  #notification-list .notification-group-header:first-child {
+    border-top: none;
+  }
 </style>
 
 <div class="relative">
   <button id="notification-button" class="relative text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded-full p-1">
     <i class="fas fa-bell text-xl"></i>
 
-    {# Hitung total notifikasi #} {% set notif_count = 0 %} {# --- BLOK BARU: Logika untuk menghitung notifikasi Verified By --- #} {% set unverified_tasks = parts.values()|selectattr('verifiedBy', 'equalto', '')|list %} {% set
-    unverified_count = unverified_tasks|length %} {% if current_user.role in ['admin', 'superadmin', 'quality2'] %} {% set urgent_req_count = urgent_requests|length if urgent_requests else 0 %} {% set prepared_by_tasks =
-    parts.values()|selectattr('preparedBy', 'equalto', '')|list %} {% set prepared_by_count = prepared_by_tasks|length %} {% set unapproved_tasks = [] %} {% set unapproved_count = 0 %} {% if current_user.role == 'superadmin' %} {% set
-    unapproved_tasks = parts.values()|selectattr('approvedBy', 'equalto', '')|list %} {% set unapproved_count = unapproved_tasks|length %} {% endif %} {% set notif_count = urgent_req_count + prepared_by_count + unapproved_count +
-    unverified_count %} {% elif current_user.role == 'mechanic' %} {% if notifications %} {% set notif_count = notifications|length %} {% endif %} {% endif %} {# Tampilkan badge jika ada notifikasi #} {% if notif_count > 0 %}
+    {# --- BLOK PERHITUNGAN JUMLAH NOTIFIKASI (TIDAK BERUBAH) --- #} {% set notif_count = 0 %} {% if current_user.role in ['admin', 'superadmin', 'quality2', 'quality1'] %} {% set urgent_req_count = urgent_requests|length if urgent_requests
+    else 0 %} {% set prepared_by_count = prepared_by_tasks|length if prepared_by_tasks else 0 %} {% set unverified_count = unverified_tasks|length if unverified_tasks else 0 %} {% set unapproved_count = 0 %} {% if current_user.role ==
+    'superadmin' %} {% set unapproved_count = unapproved_tasks|length if unapproved_tasks else 0 %} {% endif %} {% set notif_count = urgent_req_count + prepared_by_count + unapproved_count + unverified_count %} {% elif current_user.role ==
+    'mechanic' %} {% if notifications %} {% set notif_count = notifications|length %} {% endif %} {% endif %} {# Tampilkan badge jika ada notifikasi #} {% if notif_count > 0 %}
     <span class="absolute -top-1 -right-1 flex h-5 w-5">
       <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
       <span class="relative inline-flex rounded-full h-5 w-5 bg-red-500 text-white text-xs items-center justify-center"> {{ notif_count }} </span>
@@ -50,12 +66,20 @@
   </button>
 
   <div id="notification-dropdown" class="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-md shadow-lg z-50 hidden ring-1 ring-black ring-opacity-5" style="transform-origin: top right">
-    {% if current_user.role in ['admin', 'superadmin', 'quality2'] %}
+    {# ================================================================== #} {# === TAMPILAN BARU UNTUK ADMIN, SUPERADMIN, DAN QUALITY (GROUPED) === #} {# ================================================================== #} {% if
+    current_user.role in ['admin', 'superadmin', 'quality2', 'quality1'] %}
     <div class="px-4 py-3 border-b">
       <p class="text-sm font-semibold text-gray-900">Notifikasi</p>
     </div>
     <div id="notification-list" class="max-h-96 overflow-y-auto">
-      {% if urgent_requests or prepared_by_tasks or unapproved_tasks or unverified_tasks %} {# --- Permintaan Urgensi --- #} {% if urgent_requests %} {% for req in urgent_requests %}
+      {# Cek apakah ada notifikasi sama sekali untuk menampilkan pesan "kosong" #} {% if not (urgent_requests or prepared_by_tasks or unapproved_tasks or unverified_tasks) %}
+      <div class="text-center py-10 px-4">
+        <i class="fas fa-check-circle text-gray-300 text-4xl mb-2"></i>
+        <p class="text-sm text-gray-500">Tidak ada notifikasi baru.</p>
+      </div>
+      {% else %} {# --- GRUP 1: PERMINTAAN URGENT (BUTUH TINDAKAN SEGERA) --- #} {% if urgent_requests %}
+      <div class="notification-group-header">Tindakan Mendesak</div>
+      {% for req in urgent_requests %}
       <a href="{{ url_for('mws_detail', part_id=req.part_id) }}" class="notification-item unread-urgent block px-4 py-3 hover:bg-gray-100">
         <div class="flex items-start">
           <div class="flex-shrink-0 h-10 w-10 rounded-full bg-red-100 flex items-center justify-center mr-3">
@@ -68,59 +92,56 @@
           </div>
         </div>
       </a>
-      {% endfor %} {% endif %} {# --- BLOK BARU: Notifikasi untuk Menunggu Verifikasi --- #} {% if unverified_tasks %} {% for task in unverified_tasks %}
-      <a href="{{ url_for('mws_detail', part_id=task.part_id) }}" class="notification-item unread block px-4 py-3">
-        <div class="flex items-start">
-          <div class="flex-shrink-0 h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center mr-3">
-            <i class="fas fa-signature text-indigo-600"></i>
-          </div>
-          <div class="flex-1">
-            <p class="text-sm font-semibold text-indigo-800">Menunggu "Verified By" Oleh quality CVDR</p>
-            <p class="text-sm text-gray-800">MWS untuk Part Number <strong>{{ task.partNumber }}</strong> perlu diverifikasi.</p>
-            <p class="text-xs text-gray-500 mt-1">Customer: {{ task.customer }}</p>
-          </div>
-        </div>
-      </a>
-      {% endfor %} {% endif %} {# --- Menunggu Persetujuan (superadmin) --- #} {% if current_user.role == 'superadmin' and unapproved_tasks %} {% for task in unapproved_tasks %}
-      <a href="{{ url_for('mws_detail', part_id=task.part_id) }}" class="notification-item unread block px-4 py-3">
-        <div class="flex items-start">
-          <div class="flex-shrink-0 h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center mr-3">
-            <i class="fas fa-signature text-purple-600"></i>
-          </div>
-          <div class="flex-1">
-            <p class="text-sm font-semibold text-purple-800">Menunggu "Approved By" Oleh Superadmin</p>
-            <p class="text-sm text-gray-800">MWS untuk Part Number <strong>{{ task.partNumber }}</strong> perlu disetujui.</p>
-            <p class="text-xs text-gray-500 mt-1">Customer: {{ task.customer }}</p>
-          </div>
-        </div>
-      </a>
-      {% endfor %} {% endif %} {# --- Menunggu "Prepared By" --- #} {% if prepared_by_tasks %} {% for task in prepared_by_tasks %}
+      {% endfor %} {% endif %} {# --- GRUP 2: MENUNGGU TANDA TANGAN (APPROVALS) --- #} {% if prepared_by_tasks or unapproved_tasks or unverified_tasks %}
+      <div class="notification-group-header">Menunggu Tanda Tangan</div>
+      {# Menunggu "Prepared By" #} {% if prepared_by_tasks %} {% for task in prepared_by_tasks %}
       <a href="{{ url_for('mws_detail', part_id=task.part_id) }}" class="notification-item unread-urgent block px-4 py-3 hover:bg-gray-100">
         <div class="flex items-start">
-          <div class="flex-shrink-0 h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center mr-3">
-            <i class="fas fa-user-edit text-yellow-600"></i>
-          </div>
+          <div class="flex-shrink-0 h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center mr-3"><i class="fas fa-user-edit text-yellow-600"></i></div>
           <div class="flex-1">
-            <p class="text-sm font-semibold text-yellow-800">Menunggu "Prepared By" Oleh Admin</p>
+            <p class="text-sm font-semibold text-yellow-800">Menunggu "Prepared By"</p>
             <p class="text-sm text-gray-800">MWS untuk Part Number <strong>{{ task.partNumber }}</strong></p>
             <p class="text-xs text-gray-500 mt-1">Customer: {{ task.customer }}</p>
           </div>
         </div>
       </a>
-      {% endfor %} {% endif %} {% else %}
-      <div class="text-center py-10 px-4">
-        <i class="fas fa-check-circle text-gray-300 text-4xl mb-2"></i>
-        <p class="text-sm text-gray-500">Tidak ada notifikasi baru.</p>
-      </div>
-      {% endif %}
+      {% endfor %} {% endif %} {# Menunggu "Approved By" (Superadmin) #} {% if current_user.role == 'superadmin' and unapproved_tasks %} {% for task in unapproved_tasks %}
+      <a href="{{ url_for('mws_detail', part_id=task.part_id) }}" class="notification-item unread block px-4 py-3">
+        <div class="flex items-start">
+          <div class="flex-shrink-0 h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center mr-3"><i class="fas fa-signature text-purple-600"></i></div>
+          <div class="flex-1">
+            <p class="text-sm font-semibold text-purple-800">Menunggu "Approved By"</p>
+            <p class="text-sm text-gray-800">MWS untuk Part Number <strong>{{ task.partNumber }}</strong> perlu disetujui.</p>
+            <p class="text-xs text-gray-500 mt-1">Customer: {{ task.customer }}</p>
+          </div>
+        </div>
+      </a>
+      {% endfor %} {% endif %} {# Menunggu "Verified By" #} {% if unverified_tasks %} {% for task in unverified_tasks %}
+      <a href="{{ url_for('mws_detail', part_id=task.part_id) }}" class="notification-item unread block px-4 py-3">
+        <div class="flex items-start">
+          <div class="flex-shrink-0 h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center mr-3"><i class="fas fa-signature text-indigo-600"></i></div>
+          <div class="flex-1">
+            <p class="text-sm font-semibold text-indigo-800">Menunggu "Verified By"</p>
+            <p class="text-sm text-gray-800">MWS untuk Part Number <strong>{{ task.partNumber }}</strong> perlu diverifikasi.</p>
+            <p class="text-xs text-gray-500 mt-1">Customer: {{ task.customer }}</p>
+          </div>
+        </div>
+      </a>
+      {% endfor %} {% endif %} {% endif %} {% endif %} {# Akhir dari cek notifikasi #}
     </div>
 
-    {% elif current_user.role == 'mechanic' %}
+    {# ================================================== #} {# === TAMPILAN BARU UNTUK MECHANIC (GROUPED) === #} {# ================================================== #} {% elif current_user.role == 'mechanic' %}
     <div class="px-4 py-3 border-b">
       <p class="text-sm font-semibold text-gray-900">Tugas Anda</p>
     </div>
     <div id="notification-list" class="max-h-96 overflow-y-auto">
-      {% if notifications %} {% for task in notifications %}
+      {% if notifications %} {# Variabel flag untuk menandai apakah header grup sudah ditampilkan #} {% set in_progress_header_shown = false %} {% set pending_header_shown = false %} {# Loop utama untuk semua tugas. Pengurutan sudah
+      dihandle oleh app.py (in_progress dulu baru pending) #} {% for task in notifications %} {# Tampilkan header "SEDANG DIKERJAKAN" hanya sekali jika ada tugas 'in_progress' #} {% if task.status == 'in_progress' and not
+      in_progress_header_shown %}
+      <div class="notification-group-header">Sedang Dikerjakan</div>
+      {% set in_progress_header_shown = true %} {% endif %} {# Tampilkan header "TUGAS MENUNGGU" hanya sekali jika ada tugas 'pending' #} {% if task.status == 'pending' and not pending_header_shown %}
+      <div class="notification-group-header">Tugas Menunggu</div>
+      {% set pending_header_shown = true %} {% endif %} {# Render item notifikasi seperti biasa #}
       <a href="{{ url_for('mws_detail', part_id=task.part_id) }}" class="notification-item unread-urgent block px-4 py-3 hover:bg-gray-100">
         <div class="flex items-start">
           <div
@@ -134,7 +155,7 @@
           </div>
           <div class="flex-1">
             <p class="text-sm text-gray-800">Tugas untuk <strong>{{ task.tittle }}</strong> ({{ task.partNumber }})</p>
-            <p class="text-xs font-bold mt-1 {% if task.status == 'in_progress' %}text-green-700{% elif task.status == 'pending' %}text-yellow-700{% endif %}">Status: {{ task.status|capitalize }}</p>
+            <p class="text-xs font-bold mt-1 {% if task.status == 'in_progress' %}text-green-700 {% elif task.status == 'pending' %}text-yellow-700{% endif %}">Status: {{ task.status|capitalize }}</p>
             <p class="text-xs text-gray-500 mt-1">Customer: {{ task.customer }}</p>
           </div>
         </div>

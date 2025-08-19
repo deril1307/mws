@@ -1,28 +1,35 @@
 /**
- * Menutup semua dropdown yang terbuka, kecuali yang dikecualikan.
+ * PUSTAKA LOGIKA NOTIFIKASI & DROPDOWN
+ * File ini hanya berisi definisi fungsi (blueprint).
+ * File ini tidak menjalankan kode apa pun sendirian.
+ */
+
+/**
+ * Menutup semua dropdown yang terdaftar, kecuali yang dikecualikan.
  * @param {string|null} excludeMenuId - (Opsional) ID dari menu yang tidak akan ditutup.
  */
 function closeAllDropdowns(excludeMenuId = null) {
-  // Daftar semua dropdown yang ada di aplikasi.
+  // Daftar semua dropdown yang bisa dikelola oleh fungsi ini.
   const allDropdowns = [
-    { menuId: "user-menu", chevronId: "user-menu-chevron" },
-    { menuId: "notification-dropdown", chevronId: null },
-    // Tambahkan dropdown lain di sini jika ada di masa depan.
+    { menuId: "user-menu" },
+    { menuId: "notification-dropdown" },
+    // Tambahkan dropdown lain di sini jika ada.
   ];
 
-  allDropdowns.forEach(({ menuId, chevronId }) => {
+  allDropdowns.forEach(({ menuId }) => {
     const menu = document.getElementById(menuId);
-    if (!menu) return; // Lewati jika menu tidak ada di halaman ini
-
-    const chevron = chevronId ? document.getElementById(chevronId) : null;
-
-    // Jika menu ada, tidak dikecualikan, dan sedang terbuka.
-    if (menu.id !== excludeMenuId && !menu.classList.contains("hidden")) {
+    if (menu && menu.id !== excludeMenuId && !menu.classList.contains("hidden")) {
       menu.classList.add("hidden");
       menu.style.transform = "scale(0.95)";
       menu.style.opacity = "0";
-      if (chevron) {
-        chevron.classList.remove("rotate-180");
+
+      // Juga atur ulang chevron jika ada
+      const button = document.querySelector(`[aria-controls="${menuId}"]`);
+      if (button) {
+        const chevron = button.querySelector(".fa-chevron-down");
+        if (chevron) {
+          chevron.classList.remove("rotate-180");
+        }
       }
     }
   });
@@ -37,14 +44,28 @@ function closeAllDropdowns(excludeMenuId = null) {
 function setupDropdown(buttonId, menuId, chevronId = null) {
   const button = document.getElementById(buttonId);
   const menu = document.getElementById(menuId);
-  if (!button || !menu) return; // Hentikan jika elemen tidak ditemukan
+
+  if (!button || !menu) {
+    // Pesan ini akan muncul di console jika tombol atau menu tidak ditemukan
+    console.warn(`Elemen tidak ditemukan untuk setupDropdown: buttonId=${buttonId}, menuId=${menuId}`);
+    return;
+  }
+
+  // Menambahkan atribut untuk aksesibilitas dan relasi
+  button.setAttribute("aria-haspopup", "true");
+  button.setAttribute("aria-expanded", "false");
+  button.setAttribute("aria-controls", menuId);
 
   const chevron = chevronId ? document.getElementById(chevronId) : null;
 
   button.addEventListener("click", (event) => {
-    event.stopPropagation();
+    event.stopPropagation(); // Mencegah event 'click' window berjalan
     const isHidden = menu.classList.toggle("hidden");
 
+    // Perbarui status aksesibilitas
+    button.setAttribute("aria-expanded", !isHidden);
+
+    // Jika dropdown dibuka, tutup semua dropdown lain
     if (!isHidden) {
       closeAllDropdowns(menuId);
     }
@@ -53,6 +74,7 @@ function setupDropdown(buttonId, menuId, chevronId = null) {
       chevron.classList.toggle("rotate-180", !isHidden);
     }
 
+    // Animasi
     requestAnimationFrame(() => {
       menu.style.transform = isHidden ? "scale(0.95)" : "scale(1)";
       menu.style.opacity = isHidden ? "0" : "1";
@@ -60,13 +82,4 @@ function setupDropdown(buttonId, menuId, chevronId = null) {
   });
 }
 
-// Event listener ini akan berjalan setelah DOM siap
-document.addEventListener("DOMContentLoaded", () => {
-  // Menambahkan event listener ke window untuk menutup dropdown saat mengklik di luar.
-  window.addEventListener("click", (event) => {
-    const isClickInsideDropdown = event.target.closest("#user-menu-button, #user-menu, #notification-button, #notification-dropdown");
-    if (!isClickInsideDropdown) {
-      closeAllDropdowns();
-    }
-  });
-});
+// PERHATIKAN: Blok "DOMContentLoaded" yang ada sebelumnya TELAH DIHAPUS TOTAL DARI FILE INI.

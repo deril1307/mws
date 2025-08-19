@@ -5,9 +5,9 @@
       <span id="customer-chart-label" class="ml-2 text-sm font-normal text-gray-500">- Semua Customer | Semua Shop Area</span>
     </h2>
 
-    <div class="flex items-start gap-3">
-      <div class="relative">
-        <select id="chart-year-filter" class="w-full sm:w-auto px-4 py-2 pr-8 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+    <div class="flex flex-col sm:flex-row items-stretch sm:items-start gap-3 w-full sm:w-auto">
+      <div class="relative w-full sm:w-auto">
+        <select id="chart-year-filter" class="w-full px-4 py-2 pr-8 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
           <option value="">Semua Tahun</option>
           {% set all_years = [] %} {% for part_id, part in parts.items() %} {% if part.iwoNo and part.iwoNo[:2] | string | length == 2 and part.iwoNo[:2].isdigit() %} {% set year = "20" + part.iwoNo[:2] %} {% if year not in all_years %} {%
           set _ = all_years.append(year) %} {% endif %} {% endif %} {% endfor %} {% for year in all_years | sort(reverse=True) %}
@@ -19,7 +19,7 @@
         </div>
       </div>
 
-      <div class="relative">
+      <div class="relative w-full sm:w-auto">
         <button
           id="chart-customer-filter-btn"
           type="button"
@@ -30,7 +30,7 @@
           <i class="fas fa-chevron-down -mr-1 ml-2 h-5 w-5 mt-0.5"></i>
         </button>
 
-        <div id="customer-filter-panel" class="hidden origin-top-right absolute right-0 mt-2 w-80 rounded-md shadow-2xl bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-20">
+        <div id="customer-filter-panel" class="hidden origin-top-right absolute right-0 mt-2 w-72 rounded-md shadow-2xl bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-20">
           <div class="p-4">
             <h3 class="text-sm font-semibold text-gray-800 mb-3">Pilih Satu atau Lebih Customer</h3>
             <div id="customer-button-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-2">
@@ -54,7 +54,7 @@
         </div>
       </div>
 
-      <div class="relative">
+      <div class="relative w-full sm:w-auto">
         <button
           id="chart-shop-area-filter-btn"
           type="button"
@@ -65,7 +65,7 @@
           <i class="fas fa-chevron-down -mr-1 ml-2 h-5 w-5 mt-0.5"></i>
         </button>
 
-        <div id="shop-area-filter-panel" class="hidden origin-top-right absolute right-0 mt-2 w-80 rounded-md shadow-2xl bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-20">
+        <div id="shop-area-filter-panel" class="hidden origin-top-right absolute right-0 mt-2 w-72 rounded-md shadow-2xl bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-20">
           <div class="p-4">
             <h3 class="text-sm font-semibold text-gray-800 mb-3">Pilih Satu atau Lebih Shop Area</h3>
             <div id="shop-area-button-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-2">

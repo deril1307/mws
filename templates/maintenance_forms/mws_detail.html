@@ -238,17 +238,17 @@
                   {% if user.role == 'mechanic' and user.nik not in step_mechanics and step.tech != 'Approved' %}
                   {% set is_planning_incomplete = not (step.planMan and step.planHours) %}
                   <button 
-                    onclick="addMeToStep('{{ part_id }}', {{ step.no }})" 
-                    class="w-full mt-2 px-2 py-1 bg-green-500 hover:bg-green-600 text-white rounded text-xs font-bold 
-                           {% if is_mws_locked or is_busy_based_on_tech or is_planning_incomplete %}opacity-50 cursor-not-allowed{% endif %}" 
-                    {% if is_mws_locked %} 
-                      disabled title="MWS terkunci. Tunggu approval dari Admin/Superadmin." 
-                    {% elif is_busy_based_on_tech %} 
-                      disabled title="Anda masih memiliki pekerjaan aktif di step lain. Selesaikan (Approve by TECH) terlebih dahulu." 
-                    {% elif is_planning_incomplete %}
-                      disabled title="PLAN MAN dan PLAN HOURS harus diisi oleh Admin terlebih dahulu."
-                    {% endif %}>
-                    <i class="fas fa-sign-in-alt mr-1"></i> Sign On
+                      onclick="addMeToStep('{{ part_id }}', {{ step.no }})" 
+                      class="w-full mt-2 px-2 py-1 bg-green-500 hover:bg-green-600 text-white rounded text-xs font-bold 
+                            {% if is_mws_locked or is_mechanic_busy or is_planning_incomplete %}opacity-50 cursor-not-allowed{% endif %}" 
+                      {% if is_mws_locked %} 
+                        disabled title="MWS terkunci. Tunggu approval dari Admin/Superadmin." 
+                      {% elif is_mechanic_busy %} 
+                        disabled title="Anda masih terikat pada pekerjaan yang belum selesai. Anda baru bisa Sign On ke pekerjaan baru setelah pekerjaan lama di-approve oleh Quality (INSP)." 
+                      {% elif is_planning_incomplete %}
+                        disabled title="PLAN MAN dan PLAN HOURS harus diisi oleh Admin terlebih dahulu."
+                      {% endif %}>
+                      <i class="fas fa-sign-in-alt mr-1"></i> Sign On
                   </button>
                   {% endif %}
                   </div>

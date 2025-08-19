@@ -641,7 +641,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function executeDuplicate(originalPartId) {
     try {
-      const response = await fetch(`/duplicate_mws/${originalPartId}`, { method: "POST", headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken } });
+      const response = await fetch(`/duplicate-mws/${originalPartId}`, { method: "POST", headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken } });
       const data = await response.json();
       if (data.success) {
         showToast("MWS berhasil diduplikasi. Mengalihkan...", "success");

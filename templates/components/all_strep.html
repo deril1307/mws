@@ -17,11 +17,17 @@
 
     <main class="flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6">
       <div class="bg-white rounded-lg shadow-xl p-4 sm:p-6 w-full mx-auto">
-        <div class="flex justify-between items-center border-b pb-3 mb-4">
+        <div class="flex flex-col sm:flex-row justify-between items-center border-b pb-3 mb-4 gap-4">
           <h3 class="text-xl font-semibold text-gray-800">Detail Semua Strep</h3>
-          <div class="flex items-center">
-            <input type="text" id="search-input" placeholder="Cari data..." class="border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <button id="refresh-btn" class="ml-3 text-blue-600 hover:text-blue-800" title="Refresh Data">
+          <div class="flex items-center flex-wrap gap-2">
+            <input type="text" id="search-input" placeholder="Cari IWO, P/N, S/N, Customer..." class="border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64" />
+
+            <select id="sort-order-select" class="border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="desc" selected>Urutkan: Terbaru</option>
+              <option value="asc">Urutkan: Terlama</option>
+            </select>
+
+            <button id="refresh-btn" class="text-blue-600 hover:text-blue-800 p-2" title="Refresh Data">
               <i class="fas fa-sync-alt"></i>
             </button>
           </div>
@@ -68,6 +74,7 @@
                 <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STATUS [S / (U/S)]</th>
                 <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">FINISH DATE</th>
                 <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MEN POWERS</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">LIST MAN</th>
                 <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MEN HOURS</th>
                 <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DOCUMENT PENYERTA</th>
                 <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SHIP./TRANSFER DATE</th>
@@ -77,18 +84,21 @@
                 <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">REMARK</th>
               </tr>
             </thead>
-            <tbody id="all-strep-table-body" class="bg-white divide-y divide-gray-200"></tbody>
+            <tbody id="all-strep-table-body" class="bg-white divide-y divide-gray-200">
+              <!-- Data will be loaded here by JavaScript -->
+            </tbody>
           </table>
+        </div>
+        <div id="pagination-container" class="mt-4 flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0">
+          <span id="pagination-info" class="text-sm text-gray-700"></span>
+          <div id="pagination-controls" class="flex items-center space-x-1"></div>
         </div>
       </div>
     </main>
   </div>
 </div>
 
-<div id="toast-notification" class="fixed top-5 right-5 z-[150] transition-transform duration-300 translate-x-[150%]">
-  <div id="toast-content" class="flex items-center w-full max-w-xs p-4 text-gray-500 bg-white rounded-lg shadow-lg" role="alert"></div>
-</div>
-
+<!-- Modal Edit -->
 <div id="edit-all-strep-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 z-[130] flex justify-center items-center">
   <div class="bg-white rounded-lg shadow-xl p-4 sm:p-6 w-full max-w-5xl mx-4 h-[95vh] flex flex-col">
     <div class="flex justify-between items-center border-b pb-3 mb-4">
@@ -145,14 +155,19 @@
     </div>
     <div class="flex justify-end items-center border-t pt-4 mt-4">
       <button onclick="closeEditAllStrepModal()" type="button" class="bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-gray-300">Batal</button>
-      <button onclick="saveAllStrepChanges()" id="save-all-strep-changes-btn" type="button" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-blue-700">
+      <button onclick="saveAllStrepChanges()" id="save-all-strep-changes-btn" type="button" class="ml-3 bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-blue-700">
         <i class="fas fa-save mr-2"></i>Simpan Perubahan
       </button>
     </div>
   </div>
 </div>
 
-<!-- ===================== KODE BARU: MODAL LOGOUT ===================== -->
+<!-- Toast Notification -->
+<div id="toast-notification" class="fixed top-5 right-5 z-[150] transition-transform duration-300 translate-x-[150%]">
+  <div id="toast-content" class="flex items-center w-full max-w-xs p-4 text-gray-500 bg-white rounded-lg shadow-lg" role="alert"></div>
+</div>
+
+<!-- Logout Modal -->
 <div id="logout-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
   <div id="logout-modal-overlay" class="absolute inset-0 bg-black bg-opacity-60"></div>
   <div id="logout-modal-panel" class="relative bg-white rounded-lg shadow-xl w-full max-w-md m-4">
@@ -177,7 +192,6 @@
     </div>
   </div>
 </div>
-<!-- ===================== AKHIR KODE BARU ===================== -->
 
 {% endblock %} {% block scripts %}
 <script src="{{ url_for('static', filename='js/sidebar.js') }}"></script>
@@ -189,17 +203,24 @@
     // Helpers & Global State
     // =========================
     const qs = (sel, root = document) => root.querySelector(sel);
-    const qsa = (sel, root = document) => Array.from(root.querySelectorAll(sel));
-
+    const getCsrfToken = () => qs('meta[name="csrf-token"]')?.getAttribute("content") || "";
     const getUserRole = () => qs('meta[name="user-role"]')?.getAttribute("content") || "";
     const isAdminRole = (r) => r === "admin" || r === "superadmin";
-    const getCsrfToken = () => qs('meta[name="csrf-token"]')?.getAttribute("content") || "";
 
-    let allDataCache = [];
-    let toastTimer;
+    let userMap = {};
+    let toastTimer, debounceTimer;
+    let state = {
+      currentPage: 1,
+      totalPages: 1,
+      totalItems: 0,
+      perPage: 50,
+      searchTerm: "",
+      sortOrder: "desc",
+      isLoading: false,
+    };
 
     // =========================
-    // UI: Toast
+    // UI: Toast Notification
     // =========================
     function showToast(message, type = "success") {
       const toast = qs("#toast-notification");
@@ -207,176 +228,196 @@
       if (!toast || !toastContent) return;
 
       clearTimeout(toastTimer);
-      const successIcon = `<div class="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-green-500 bg-green-100 rounded-lg"><i class="fas fa-check"></i></div>`;
-      const errorIcon = `<div class="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-red-500 bg-red-100 rounded-lg"><i class="fas fa-exclamation-triangle"></i></div>`;
-
-      toastContent.innerHTML = `${type === "success" ? successIcon : errorIcon}<div class="ml-3 text-sm font-normal">${message}</div>`;
+      const icon =
+        type === "success"
+          ? `<div class="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-green-500 bg-green-100 rounded-lg"><i class="fas fa-check"></i></div>`
+          : `<div class="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-red-500 bg-red-100 rounded-lg"><i class="fas fa-exclamation-triangle"></i></div>`;
+      toastContent.innerHTML = `${icon}<div class="ml-3 text-sm font-normal">${message}</div>`;
       toast.style.transform = "translateX(0)";
-      toastTimer = setTimeout(() => {
-        toast.style.transform = "translateX(150%)";
-      }, 3000);
+      toastTimer = setTimeout(() => (toast.style.transform = "translateX(150%)"), 3000);
     }
 
     // =========================
-    // Safe init for dropdown (optional)
+    // Data Fetching
     // =========================
-    function safeSetupDropdown() {
-      try {
-        const btn = qs("#notification-button");
-        const dd = qs("#notification-dropdown");
-        if (typeof setupDropdown === "function" && btn && dd) {
-          setupDropdown("notification-button", "notification-dropdown");
-        } else {
-          console.log("[All Strep] skip setupDropdown (elemen/fungsi tidak ada)");
-        }
-      } catch (e) {
-        console.warn("[All Strep] setupDropdown error:", e);
-      }
-    }
-
-    // =========================
-    // KODE BARU: LOGIKA MODAL LOGOUT
-    // =========================
-    function setupLogoutModal() {
-      const logoutButton = qs("#logout-button-sidebar");
-      const logoutModal = qs("#logout-modal");
-      if (logoutButton && logoutModal) {
-        const confirmButton = qs("#logout-modal-confirm-button");
-        const cancelButton = qs("#logout-modal-cancel-button");
-        const closeButton = qs("#logout-modal-close-button");
-        const overlay = qs("#logout-modal-overlay");
-
-        logoutButton.addEventListener("click", (e) => {
-          e.preventDefault();
-          logoutModal.classList.remove("hidden");
-        });
-
-        const hideModalLogout = () => logoutModal.classList.add("hidden");
-
-        cancelButton.addEventListener("click", hideModalLogout);
-        closeButton.addEventListener("click", hideModalLogout);
-        overlay.addEventListener("click", hideModalLogout);
-
-        confirmButton.addEventListener("click", () => {
-          window.location.href = "{{ url_for('logout') }}";
-        });
-      }
-    }
-    // =========================
-    // AKHIR KODE BARU
-    // =========================
-    async function fetchAllStrepData() {
+    async function fetchData() {
+      if (state.isLoading) return;
+      state.isLoading = true;
       const tableBody = qs("#all-strep-table-body");
       const userIsAdmin = isAdminRole(getUserRole());
-      if (!tableBody) return;
+      const colspan = userIsAdmin ? 46 : 45;
 
-      console.log("[All Strep] fetchAllStrepData() start");
-      tableBody.innerHTML = `<tr><td colspan="${userIsAdmin ? 44 : 43}" class="text-center py-8">
-      <i class="fas fa-spinner fa-spin text-2xl text-gray-500"></i>
-      <p class="mt-2">Memuat data...</p></td></tr>`;
+      tableBody.innerHTML = `<tr><td colspan="${colspan}" class="text-center py-8"><i class="fas fa-spinner fa-spin text-2xl text-gray-500"></i><p class="mt-2">Memuat data...</p></td></tr>`;
 
       try {
-        const resp = await fetch("/get-strep");
-        console.log("[All Strep] /get-strep status:", resp.status);
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        const result = await resp.json();
-        console.log("[All Strep] data len:", Array.isArray(result?.data) ? result.data.length : "N/A");
-
-        if (result.success) {
-          allDataCache = result.data || [];
-          renderTable(allDataCache);
-        } else {
-          throw new Error(result.error || "Gagal mengambil data dari server.");
+        const url = new URL("/get-strep", window.location.origin);
+        url.searchParams.append("page", state.currentPage);
+        url.searchParams.append("per_page", state.perPage);
+        if (state.searchTerm) {
+          url.searchParams.append("q", state.searchTerm);
         }
+        url.searchParams.append("sort_order", state.sortOrder);
+
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error(`HTTP Error: ${resp.status}`);
+        const result = await resp.json();
+
+        if (!result.success) throw new Error(result.error || "Gagal mengambil data.");
+
+        const users = result.data?.users;
+        if (users && typeof users === "object" && !Array.isArray(users)) {
+          userMap = Object.keys(users).reduce((acc, nik) => {
+            if (users[nik] && users[nik].name) acc[nik] = users[nik].name;
+            return acc;
+          }, {});
+        } else {
+          userMap = {};
+        }
+
+        renderTable(result.data.parts || []);
+        updatePagination(result.meta);
       } catch (err) {
         console.error("[All Strep] Fetch error:", err);
-        const colspan = userIsAdmin ? 44 : 43;
         tableBody.innerHTML = `<tr><td colspan="${colspan}" class="text-center py-4 text-red-500">${err.message}</td></tr>`;
         showToast(err.message, "error");
+        updatePagination(null);
+      } finally {
+        state.isLoading = false;
       }
     }
-    window.fetchAllStrepData = fetchAllStrepData; // untuk debug lewat Console
 
     // =========================
-    // Render Table
+    // Table & Pagination Rendering
     // =========================
     function renderTable(data) {
       const tableBody = qs("#all-strep-table-body");
       const userIsAdmin = isAdminRole(getUserRole());
       if (!tableBody) return;
 
-      tableBody.innerHTML = "";
-
       if (!data || data.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="${userIsAdmin ? 44 : 43}" class="text-center py-4 text-gray-500">Data tidak ditemukan.</td></tr>`;
+        const colspan = userIsAdmin ? 46 : 45;
+        tableBody.innerHTML = `<tr><td colspan="${colspan}" class="text-center py-4 text-gray-500">Data tidak ditemukan.</td></tr>`;
         return;
       }
 
-      const rowsHtml = data
+      tableBody.innerHTML = data
         .map((item) => {
-          // Simpan data baris untuk tombol edit
           const itemData = JSON.stringify(item).replace(/'/g, "&apos;").replace(/"/g, "&quot;");
-
           const editButtonHtml = userIsAdmin
-            ? `<td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 text-center">
-            <button onclick='openEditAllStrepModal(${itemData})' class="text-blue-600 hover:text-blue-800" title="Edit ${item.part_id || item.iwoNo || ""}">
-              <i class="fas fa-edit"></i>
-            </button>
-           </td>`
+            ? `<td class="px-2 py-2 whitespace-nowrap text-sm text-center"><button onclick='openEditAllStrepModal(${itemData})' class="text-blue-600 hover:text-blue-800" title="Edit ${
+                item.part_id || ""
+              }"><i class="fas fa-edit"></i></button></td>`
             : "";
+          const uniqueNiks = new Set();
+          if (item.steps && Array.isArray(item.steps)) {
+            item.steps.forEach((step) => {
+              try {
+                const manNiks = JSON.parse(step.man || "[]");
+                if (Array.isArray(manNiks)) manNiks.forEach((nik) => uniqueNiks.add(nik));
+              } catch (e) {}
+            });
+          }
+          const listManHtml =
+            Array.from(uniqueNiks)
+              .map((nik, i) => `${i + 1}. ${userMap[nik] || `NIK: ${nik}`}`)
+              .join("<br>") || "-";
 
-          return `
-        <tr class="hover:bg-gray-50">
+          return `<tr class="hover:bg-gray-50">
           ${editButtonHtml}
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.startDate || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.ref_logistic_ppc || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.customer || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.wbsNo || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.tittle || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.partNumber || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.serialNumber || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.jobType || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.mdr_doc_defect || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.capability || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.iwoNo || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.shopArea || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.iwoDate || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.worksheetNo || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.remark_mws || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.test_result || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.schedule_delivery_on_time || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.ecd_finish_workdays || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.selisih_work_days || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.prosentase_schedule || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.workSheetDate || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.approvedDate || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.form_out_no || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.tanda_terima_fo_no || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.tanda_terima_fo_date || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.stripping_report_date || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.prosentase_bdp || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.qty_bdp || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.selisih_order_work_days || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.max_stripping_date || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.selisih_stripping || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.tase_stripping || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.status_s_us || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.finishDate || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.men_powers || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.total_duration || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.document_penyerta || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.ship_transfer_tt_date || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.ship_transfer_tt_no || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.selisih_shipping_work_days || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.tase || "-"}</td>
-          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item.remark || "-"}</td>
-
-        </tr>
-      `;
+          ${[
+            "startDate",
+            "ref_logistic_ppc",
+            "customer",
+            "wbsNo",
+            "tittle",
+            "partNumber",
+            "serialNumber",
+            "jobType",
+            "mdr_doc_defect",
+            "capability",
+            "iwoNo",
+            "shopArea",
+            "iwoDate",
+            "worksheetNo",
+            "remark_mws",
+            "test_result",
+            "schedule_delivery_on_time",
+            "ecd_finish_workdays",
+            "selisih_work_days",
+            "prosentase_schedule",
+            "workSheetDate",
+            "approvedDate",
+            "form_out_no",
+            "tanda_terima_fo_no",
+            "tanda_terima_fo_date",
+            "stripping_report_date",
+            "prosentase_bdp",
+            "qty_bdp",
+            "selisih_order_work_days",
+            "max_stripping_date",
+            "selisih_stripping",
+            "tase_stripping",
+            "status_s_us",
+            "finishDate",
+            "men_powers",
+          ]
+            .map((field) => `<td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item[field] || "-"}</td>`)
+            .join("")}
+          <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${listManHtml}</td>
+          ${["total_duration", "document_penyerta", "ship_transfer_tt_date", "ship_transfer_tt_no", "selisih_shipping_work_days", "tase", "remark"]
+            .map((field) => `<td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500">${item[field] || "-"}</td>`)
+            .join("")}
+        </tr>`;
         })
         .join("");
+    }
 
-      tableBody.innerHTML = rowsHtml;
+    function updatePagination(meta) {
+      const controls = qs("#pagination-controls");
+      const info = qs("#pagination-info");
+      if (!controls || !info) return;
+
+      if (!meta || meta.total_items === 0) {
+        controls.innerHTML = "";
+        info.innerHTML = "Tidak ada data untuk ditampilkan.";
+        return;
+      }
+
+      state.currentPage = meta.page;
+      state.totalPages = meta.total_pages;
+      state.totalItems = meta.total_items;
+
+      const from = (meta.page - 1) * meta.per_page + 1;
+      const to = Math.min(meta.page * meta.per_page, meta.total_items);
+      info.textContent = `Menampilkan ${from} - ${to} dari ${meta.total_items} data.`;
+
+      let html = "";
+      html += `<button data-page="${meta.page - 1}" class="px-3 py-1 rounded-md text-sm font-medium ${!meta.has_prev ? "bg-gray-200 text-gray-400 cursor-not-allowed" : "bg-white text-gray-700 hover:bg-gray-100"}" ${
+        !meta.has_prev ? "disabled" : ""
+      }>« Prev</button>`;
+
+      const pagesToShow = [];
+      const range = 2;
+      for (let i = 1; i <= meta.total_pages; i++) {
+        if (i === 1 || i === meta.total_pages || (i >= meta.page - range && i <= meta.page + range)) {
+          pagesToShow.push(i);
+        }
+      }
+
+      let lastPage = 0;
+      pagesToShow.forEach((p) => {
+        if (lastPage > 0 && p > lastPage + 1) {
+          html += `<span class="px-3 py-1 text-sm">...</span>`;
+        }
+        html += `<button data-page="${p}" class="px-3 py-1 rounded-md text-sm font-medium ${p === meta.page ? "bg-blue-600 text-white cursor-default" : "bg-white text-gray-700 hover:bg-gray-100"}">${p}</button>`;
+        lastPage = p;
+      });
+
+      html += `<button data-page="${meta.page + 1}" class="px-3 py-1 rounded-md text-sm font-medium ${!meta.has_next ? "bg-gray-200 text-gray-400 cursor-not-allowed" : "bg-white text-gray-700 hover:bg-gray-100"}" ${
+        !meta.has_next ? "disabled" : ""
+      }>Next »</button>`;
+
+      controls.innerHTML = html;
     }
 
     // =========================
@@ -385,16 +426,11 @@
     window.openEditAllStrepModal = function (itemData) {
       const modal = qs("#edit-all-strep-modal");
       if (!modal) return;
-
-      // Judul dan kunci ID untuk update
       qs("#edit-strep-part-id").textContent = itemData.iwoNo || itemData.part_id || "";
-      const saveBtn = qs("#save-all-strep-changes-btn");
-      if (saveBtn) saveBtn.dataset.partId = itemData.part_id || "";
-
-      // Isi form dari data
+      qs("#save-all-strep-changes-btn").dataset.partId = itemData.part_id || "";
       const form = qs("#edit-all-strep-form");
       if (form) {
-        qsa("input", form).forEach((input) => {
+        form.querySelectorAll("input").forEach((input) => {
           const fieldName = input.id.replace("edit-strep-", "");
           input.value = itemData[fieldName] ?? "";
         });
@@ -402,100 +438,103 @@
       modal.classList.remove("hidden");
     };
 
-    window.closeEditAllStrepModal = function () {
-      const modal = qs("#edit-all-strep-modal");
-      if (modal) modal.classList.add("hidden");
-    };
+    window.closeEditAllStrepModal = () => qs("#edit-all-strep-modal")?.classList.add("hidden");
 
     window.saveAllStrepChanges = async function () {
-      const saveButton = qs("#save-all-strep-changes-btn");
-      const partId = saveButton?.dataset.partId;
-      if (!partId) {
-        showToast("Error: Part ID tidak ditemukan.", "error");
-        return;
-      }
+      const saveBtn = qs("#save-all-strep-changes-btn");
+      const partId = saveBtn?.dataset.partId;
+      if (!partId) return showToast("Error: Part ID tidak ditemukan.", "error");
 
       const updatedData = {};
-      qsa("#edit-all-strep-form input").forEach((input) => {
-        if (!input.readOnly) {
-          const fieldName = input.id.replace("edit-strep-", "");
-          updatedData[fieldName] = input.value;
-        }
-      });
-
-      saveButton.disabled = true;
-      saveButton.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i>Menyimpan...`;
-
-      try {
-        const resp = await fetch(`/update_strep/${partId}`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": getCsrfToken(),
-          },
-          body: JSON.stringify(updatedData),
+      qs("#edit-all-strep-form")
+        .querySelectorAll("input:not([readonly])")
+        .forEach((input) => {
+          updatedData[input.id.replace("edit-strep-", "")] = input.value;
         });
 
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i>Menyimpan...`;
+
+      try {
+        const resp = await fetch(`/update-strep/${partId}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-CSRFToken": getCsrfToken() },
+          body: JSON.stringify(updatedData),
+        });
         const result = await resp.json();
-        if (result.success) {
-          showToast(result.message || "Data berhasil diperbarui.", "success");
-          closeEditAllStrepModal();
-          fetchAllStrepData(); // Refresh tabel
-        } else {
-          showToast(`Error: ${result.error || "Gagal memperbarui data."}`, "error");
-        }
+        if (!resp.ok || !result.success) throw new Error(result.error || "Gagal menyimpan data.");
+        showToast(result.message || "Data berhasil diperbarui.", "success");
+        closeEditAllStrepModal();
+        fetchData();
       } catch (e) {
-        console.error(e);
-        showToast("Terjadi kesalahan jaringan saat menyimpan data.", "error");
+        showToast(`Error: ${e.message}`, "error");
       } finally {
-        saveButton.disabled = false;
-        saveButton.innerHTML = `<i class="fas fa-save mr-2"></i>Simpan Perubahan`;
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = `<i class="fas fa-save mr-2"></i>Simpan Perubahan`;
       }
     };
 
     // =========================
-    // Events
+    // Events & Initialization
     // =========================
     function bindEvents() {
-      const searchInput = qs("#search-input");
-      const refreshBtn = qs("#refresh-btn");
+      qs("#search-input").addEventListener("keyup", (e) => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          const searchTerm = e.target.value.trim();
+          if (state.searchTerm !== searchTerm) {
+            state.searchTerm = searchTerm;
+            state.currentPage = 1;
+            fetchData();
+          }
+        }, 350);
+      });
 
-      if (searchInput) {
-        searchInput.addEventListener("keyup", (e) => {
-          const term = e.target.value.toLowerCase();
-          const filtered = allDataCache.filter((item) =>
-            Object.values(item).some((val) =>
-              String(val ?? "")
-                .toLowerCase()
-                .includes(term)
-            )
-          );
-          renderTable(filtered);
-        });
-      }
+      qs("#sort-order-select").addEventListener("change", (e) => {
+        state.sortOrder = e.target.value;
+        state.currentPage = 1;
+        fetchData();
+      });
 
-      if (refreshBtn) {
-        refreshBtn.addEventListener("click", fetchAllStrepData);
-      }
+      qs("#refresh-btn").addEventListener("click", () => {
+        qs("#search-input").value = "";
+        qs("#sort-order-select").value = "desc";
+        state.searchTerm = "";
+        state.sortOrder = "desc";
+        state.currentPage = 1;
+        fetchData();
+      });
+
+      qs("#pagination-controls").addEventListener("click", (e) => {
+        const button = e.target.closest("button");
+        if (button && !button.disabled) {
+          const page = parseInt(button.dataset.page, 10);
+          if (page && page !== state.currentPage) {
+            state.currentPage = page;
+            fetchData();
+          }
+        }
+      });
     }
 
-    // =========================
-    // Init
-    // =========================
-    function onReady() {
-      console.log("[All Strep] DOM ready");
-      console.log("[All Strep] role:", getUserRole(), "isAdmin:", isAdminRole(getUserRole()));
-      safeSetupDropdown();
-      setupLogoutModal(); // Panggil fungsi logout di sini
+    function setupLogoutModal() {
+      const logoutButton = qs("#logout-button-sidebar");
+      const modal = qs("#logout-modal");
+      if (!logoutButton || !modal) return;
+      const closeTriggers = [qs("#logout-modal-cancel-button"), qs("#logout-modal-close-button"), qs("#logout-modal-overlay")];
+      logoutButton.addEventListener("click", (e) => {
+        e.preventDefault();
+        modal.classList.remove("hidden");
+      });
+      closeTriggers.forEach((el) => el.addEventListener("click", () => modal.classList.add("hidden")));
+      qs("#logout-modal-confirm-button").addEventListener("click", () => (window.location.href = "{{ url_for('logout') }}"));
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
       bindEvents();
-      fetchAllStrepData();
-    }
-
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", onReady);
-    } else {
-      onReady();
-    }
+      setupLogoutModal();
+      fetchData();
+    });
   })();
 </script>
 {% endblock %}

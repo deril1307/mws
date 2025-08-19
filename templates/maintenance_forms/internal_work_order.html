@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Internal Work Order</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+      /* CSS untuk layout cetak dan tampilan layar */
+      body {
+        font-family: "Inter", sans-serif;
+        background-color: #e5e7eb; /* bg-gray-200 */
+      }
+
+      .sheet {
+        width: 282mm;
+        height: 195mm;
+        border: 1.6px solid #000;
+        margin: 20px auto;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        background-color: white;
+      }
+
+      @page {
+        size: A4 landscape;
+        margin: 7.5mm;
+      }
+
+      @media print {
+        html,
+        body {
+          width: 297mm;
+          height: 210mm;
+          margin: 0;
+          padding: 0;
+          font-family: Arial, Helvetica, sans-serif;
+        }
+        .no-print {
+          display: none !important;
+        }
+        .sheet {
+          margin: 0;
+          border: none;
+          width: 100%;
+          height: 100%;
+          box-shadow: none;
+        }
+      }
+
+      /* Semua style dari file HTML yang Anda berikan sebelumnya */
+      :root {
+        --b: #000;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      .header {
+        padding: 6mm 10mm 5mm 10mm;
+        border-bottom: 1.6px solid var(--b);
+      }
+      .header-inner {
+        position: relative;
+        min-height: 30mm;
+        display: flex;
+        align-items: flex-start;
+      }
+      .mark-left {
+        display: flex;
+        gap: 6mm;
+        align-items: flex-start;
+      }
+      .logo {
+        width: 26mm;
+        height: auto; /* Disesuaikan agar gambar responsif */
+      }
+      .logo-caption {
+        font-size: 8px;
+        font-weight: bold;
+        text-align: center;
+        margin-top: 2mm;
+      }
+      .company {
+        margin-top: 1mm;
+        font-size: 10px;
+      }
+      .company .bold {
+        font-weight: bold;
+      }
+      .company div {
+        margin: 0.4mm 0;
+      }
+      .title {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        top: 0;
+        right: 0;
+        text-align: center;
+      }
+      .title h1 {
+        margin: 0;
+        margin-top: 2mm;
+        font-size: 16px;
+        font-weight: bold;
+        text-decoration: underline;
+      } /* Penambahan font-weight: bold */
+      .addressed {
+        padding: 4mm 10mm 4mm 10mm;
+        border-bottom: 1.6px solid var(--b);
+      }
+      .addr-grid {
+        display: grid;
+        grid-template-columns: 20% 55% 25%;
+        gap: 0;
+      }
+      .addr-grid > div {
+        padding: 0 0;
+      }
+      .addr-label {
+        font-weight: bold;
+        font-size: 10.5px;
+      }
+      .chk-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        column-gap: 18mm;
+        row-gap: 4.5mm;
+        padding-left: 3mm;
+      }
+      .chk {
+        display: flex;
+        align-items: center;
+        gap: 3mm;
+        white-space: nowrap;
+        font-size: 10.5px;
+      }
+      .box {
+        width: 5.4mm;
+        height: 5.4mm;
+        border: 1px solid var(--b);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        line-height: 1;
+      }
+      .box.checked::after {
+        content: "X";
+        font-size: 12px;
+      }
+      .addr-right {
+        position: relative;
+        padding-left: 2mm;
+      }
+      .stack-right {
+        display: flex;
+        flex-direction: column;
+        gap: 7.4mm;
+        margin-top: -1mm;
+      }
+      .stack-right .row {
+        display: flex;
+        align-items: center;
+        gap: 4mm;
+      }
+      .dotted {
+        border-bottom: 1px dotted var(--b);
+        width: 60mm;
+        height: 0;
+      }
+      .wo-date {
+        padding: 2mm 10mm 1.5mm 10mm;
+      }
+      .wo-date-grid {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 0;
+        align-items: center;
+        font-size: 10.5px;
+      }
+      .wo-date-grid .cell {
+        padding: 0;
+      }
+      .fill {
+        display: inline-block;
+        vertical-align: bottom;
+        width: 70mm;
+        height: 0;
+        border-bottom: 1px solid var(--b);
+        margin-left: 3mm;
+      }
+      .main-container {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        border-top: 1.6px solid var(--b);
+      }
+      .main-container table {
+        width: 100%;
+        border-collapse: collapse;
+        height: 100%;
+        font-size: 10.5px;
+      }
+      .main thead th {
+        border: 1px solid var(--b);
+        height: 11mm;
+        font-weight: bold;
+        text-align: center;
+        vertical-align: middle;
+        padding: 1mm;
+      }
+      .main td {
+        border: 1px solid var(--b);
+        padding: 1.5mm 1.2mm;
+        vertical-align: top;
+      }
+      .c-no {
+        width: 5.8%;
+      }
+      .c-wbs {
+        width: 17%;
+      }
+      .c-qty {
+        width: 7.2%;
+      }
+      .c-desc {
+        width: 29%;
+      }
+      .c-small {
+        width: 6.4%;
+      }
+      .c-iwo {
+        width: 11.5%;
+      }
+      .c-cust {
+        width: 10%;
+      }
+      .main th,
+      .main td {
+        text-align: center;
+      }
+      .desc {
+        text-align: left;
+      }
+      .footer {
+        margin-top: auto;
+        border-top: 1.6px solid var(--b);
+        display: grid;
+        grid-template-columns: 40% 30% 30%;
+        min-height: 32mm;
+        font-size: 10.5px;
+      }
+      .footer > div {
+        border-right: 1px solid var(--b);
+        padding: 3mm 6mm;
+      }
+      .footer > div:last-child {
+        border-right: none;
+      }
+      .classif {
+        font-weight: bold;
+      }
+      .classif-row {
+        display: flex;
+        align-items: center;
+        gap: 10mm;
+        margin-top: 4mm;
+      }
+      .note {
+        font-weight: bold;
+        margin-top: 5mm;
+      }
+      .sign-title {
+        text-align: center;
+        font-weight: bold;
+      }
+      .sign-line {
+        margin: 14mm 0 2mm 0;
+        border-bottom: 1px solid var(--b);
+        height: 0;
+      }
+      .sig {
+        text-align: center;
+      }
+      .under {
+        text-decoration: underline;
+      }
+      .place-date {
+        text-align: right;
+        margin-bottom: 2mm;
+        font-weight: bold;
+      }
+      .prepared-by {
+        margin-top: 4.5mm;
+        font-weight: bold;
+      }
+      .code {
+        position: absolute;
+        right: 6mm;
+        bottom: 3mm;
+        font-weight: bold;
+        font-size: 9px;
+        z-index: 10;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Kontrol Pencarian dan Cetak (di luar area cetak) -->
+    <div class="no-print container mx-auto p-4 max-w-4xl">
+      <div class="bg-white p-4 rounded-lg shadow-md mb-4">
+        <h2 class="text-xl font-bold mb-3">Cari Internal Work Order</h2>
+        <form method="GET" action="{{ url_for('internal_work_order') }}" class="flex items-center gap-2">
+          <input type="text" name="search_iwo" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" placeholder="Masukkan Nomor IWO..." value="{{ search_query or '' }}" />
+          <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-5 rounded-md">Cari</button>
+          <button onclick="window.print()" type="button" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-5 rounded-md">Cetak</button>
+        </form>
+        {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %} {% for category, message in messages %}
+        <div class="mt-3 p-3 rounded-md {{ 'bg-yellow-100 text-yellow-800' if category == 'warning' else 'bg-red-100 text-red-800' }}" role="alert">{{ message }}</div>
+        {% endfor %} {% endif %} {% endwith %}
+      </div>
+    </div>
+
+    <!-- Area Cetak -->
+    <div class="sheet">
+      <!-- Header -->
+      <div class="header">
+        <div class="header-inner">
+          <div class="mark-left">
+            <div>
+              <!-- Logo diubah menjadi gambar -->
+              <div class="logo">
+                <img src="{{ url_for('static', filename='img/logo PT DI.webp') }}" alt="Logo PT DI" style="width: 100%; height: auto" />
+              </div>
+              <div class="logo-caption">DIRGANTARA INDONESIA<br />AIRCRAFT SERVICES</div>
+            </div>
+            <div class="company">
+              <div class="bold">PT. DIRGANTARA INDONESIA</div>
+              <div class="bold">AIRCRAFT SERVICES</div>
+              <div>JL. PAJAJARAN NO. 154 BANDUNG, 40174</div>
+              <div>PHONE : 62-22-6043277 (HUNTING) EXT 501,534</div>
+              <div>FAX. NO. 62-22-6032088, 6031577, 6013732</div>
+            </div>
+          </div>
+          <div class="title"><h1>INTERNAL WORK ORDER</h1></div>
+        </div>
+      </div>
+
+      <!-- Addressed To -->
+      <div class="addressed">
+        <div class="addr-grid">
+          <div class="addr-label">ADDRESSED TO :</div>
+          <div>
+            <div class="chk-grid">
+              <div class="chk"><span class="box {% if part and part.shopArea == 'AVIONIC / ELECTRIC / INSTRUMENT SHOP' %}checked{% endif %}"></span> AVIONIC / ELECTRIC / INSTRUMENT SHOP</div>
+              <div class="chk"><span class="box {% if part and part.shopArea == 'NDT' %}checked{% endif %}"></span> NDT</div>
+              <div class="chk"><span class="box {% if part and part.shopArea == 'ACC & PLANT SHOP' %}checked{% endif %}"></span> ACC &amp; PLANT SHOP</div>
+              <div class="chk"><span class="box {% if part and part.shopArea == 'HYDRAULIC SHOP' %}checked{% endif %}"></span> HYDRAULIC SHOP</div>
+              <div class="chk"><span class="box {% if part and part.shopArea == 'TRANSMISSION SHOP' %}checked{% endif %}"></span> TRANSMISSION SHOP</div>
+              <div class="chk"><span class="box {% if part and part.shopArea == 'QUALITY CONTROL' %}checked{% endif %}"></span> QUALITY CONTROL</div>
+            </div>
+          </div>
+          <div class="addr-right">
+            <div class="stack-right">
+              <div class="row"><span class="box"></span><span class="dotted"></span></div>
+              <div class="row"><span class="box"></span><span class="dotted"></span></div>
+              <div class="row"><span class="box"></span><span class="dotted"></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- WO Date -->
+      <div class="wo-date">
+        <div class="wo-date-grid">
+          <div class="cell"><strong>PREVIOUS WO NO. :</strong> <span class="fill"></span></div>
+          <div class="cell"><strong>DATE:</strong> {{ part.iwoDate.strftime('%d-%b-%Y') if part and part.iwoDate else '' }}</div>
+        </div>
+      </div>
+
+      <!-- Tabel Utama -->
+      <div class="main-container">
+        <table class="main">
+          <thead>
+            <tr>
+              <th class="c-no">NO.</th>
+              <th class="c-wbs">WBS NO.</th>
+              <th class="c-qty">QTY</th>
+              <th class="c-desc">DESCRIPTION</th>
+              <th class="c-small">DEFECT</th>
+              <th class="c-small">F.TEST</th>
+              <th class="c-small">REPAIR</th>
+              <th class="c-small">OVH</th>
+              <th class="c-small">........</th>
+              <th class="c-iwo">IWO NO</th>
+              <th class="c-cust">CUSTOMER</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if part %}
+            <tr>
+              <td><b>1</b></td>
+              <td><b>{{ part.wbsNo or '' }}</b></td>
+              <td><b>1 EA</b></td>
+              <td class="desc">
+                <b>
+                  {{ part.tittle or '' }}<br />
+                  P/N: {{ part.partNumber or '' }}<br />
+                  S/N: {{ part.serialNumber or '' }}
+                </b>
+              </td>
+              <td>-</td>
+              <td><b>{% if part.jobType == 'F.Test' %}X{% endif %}</b></td>
+              <td><b>{% if part.jobType == 'Repair' %}X{% endif %}</b></td>
+              <td><b>{% if part.jobType == 'Overhaul' %}X{% endif %}</b></td>
+              <td></td>
+              <td><b>{{ part.iwoNo or '' }}</b></td>
+              <td><b>{{ part.customer or '' }}</b></td>
+            </tr>
+            {% else %}
+            <!-- Baris kosong jika tidak ada data -->
+            <tr>
+              <td>&nbsp;</td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+            {% endif %}
+
+            <!-- Baris kosong untuk mengisi sisa tabel -->
+            {% for i in range(5) %}
+            <tr>
+              <td>&nbsp;</td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Footer -->
+      <div class="footer">
+        <div>
+          <div class="classif">CLASIFICATION:</div>
+          <div class="classif-row">
+            <span class="chk"><span class="box {% if part and not part.is_urgent %}checked{% endif %}"></span> NORMAL</span>
+            <span class="chk"><span class="box {% if part and part.is_urgent %}checked{% endif %}"></span> URGENT</span>
+            <span class="chk"><span class="box"></span> A.O.G</span>
+          </div>
+          <div class="note">NOTE:</div>
+        </div>
+        <div style="display: flex; flex-direction: column">
+          <div class="sign-title">SPV</div>
+          <div style="margin-top: auto">
+            <div class="sign-line"></div>
+            <!-- Data SPV bisa ditambahkan dari database jika ada -->
+            <div class="sig"><b>APRIYAN DWI P</b><br /><span class="under">150162</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="place-date">BANDUNG, {{ part.preparedDate.strftime('%d-%b-%Y') if part and part.preparedDate else '' }}</div>
+          <div class="prepared-by"><b>PREPARED BY:</b></div>
+          <div style="margin-top: auto">
+            <div class="sign-line"></div>
+            <!-- Data Prepared By bisa ditambahkan dari database jika ada -->
+            <div class="sig"><b>ARIF RAHMAN</b><br /><span class="under">200156</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="code">QC-AS-0070</div>
+    </div>
+  </body>
+</html>

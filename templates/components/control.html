@@ -19,12 +19,12 @@
         <div class="flex flex-col sm:flex-row justify-between items-center border-b pb-3 mb-4 gap-4">
           <h3 class="text-xl font-semibold text-gray-800">Detail Control</h3>
           <div class="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-            <div class="relative w-full sm:w-64">
-              <input type="text" id="searchInput" class="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Cari IWO, Part Name, S/N..." />
+            <form method="GET" action="{{ url_for('control_page') }}" class="relative w-full sm:w-64">
+              <input type="text" name="q" value="{{ search_query or '' }}" class="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Cari IWO, Part Name, S/N..." />
               <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <i class="fas fa-search text-gray-400"></i>
               </div>
-            </div>
+            </form>
             <button id="download-excel-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg text-sm inline-flex items-center transition duration-300 w-full sm:w-auto justify-center">
               <i class="fas fa-file-excel mr-2"></i>
               <span>Download Excel</span>
@@ -40,16 +40,16 @@
                 <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
                 <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IWO No</th>
                 <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Incoming</th>
-                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Schedule</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Schedule Delivery On Time</th>
                 <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Finish Date</th>
-                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status [S/US]</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Part Name</th>
                 <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Serial Number</th>
                 <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">WBS No.</th>
                 <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Shop Area</th>
                 <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">C/O</th>
-                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">%TASE</th>
-                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">%TASe BDP</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">%TASE SHIPPING</th>
+                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">%TASE BDP</th>
                 <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">BDP Name</th>
                 <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">BDP Number</th>
                 <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">BDP Number Eqv.</th>
@@ -65,10 +65,10 @@
             </thead>
             <tbody id="tableBody" class="bg-white divide-y divide-gray-200">
               {% for group in control_data | groupby('mws_part.iwoNo') %} {% for item in group.list %}
-              <tr class="hover:bg-gray-50" data-group-id="{{ group.grouper }}">
+              <tr class="hover:bg-gray-50" data-iwo-no="{{ group.grouper }}">
                 {% if loop.first %}
                 <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 align-top border-r" rowspan="{{ group.list | length }}">
-                  <button type="button" class="view-detail-btn bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-3 rounded text-xs inline-flex items-center transition duration-300" data-iwo-no="{{ group.grouper }}">
+                  <button type="button" class="view-detail-btn bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-3 rounded text-xs inline-flex items-center transition duration-300">
                     <i class="fas fa-list-alt mr-1"></i>
                     Detail
                   </button>
@@ -80,7 +80,13 @@
                   {{ item.mws_part.schedule_delivery_on_time.strftime('%Y-%m-%d') if item.mws_part.schedule_delivery_on_time else '-' }}
                 </td>
                 <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 align-top border-r" rowspan="{{ group.list | length }}">{{ item.mws_part.finishDate.strftime('%Y-%m-%d') if item.mws_part.finishDate else '-' }}</td>
-                <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 align-top border-r" rowspan="{{ group.list | length }}">{{ item.mws_part.status_s_us or '-' }}</td>
+                <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 align-top border-r" rowspan="{{ group.list | length }}">
+                  <span>
+                    {%- if item.mws_part.status == 'in_progress' -%} ON PROCESS {%- elif item.mws_part.status == 'completed' -%} FINISHED {%- else -%} {{ item.mws_part.status | upper or '-' }} {%- endif -%} {%- if item.mws_part.status_s_us
+                    and item.mws_part.status_s_us != '-' -%} &nbsp;[{{ item.mws_part.status_s_us }}] {%- endif -%} {%- if item.mws_part.tanda_terima_fo_no and item.mws_part.tanda_terima_fo_no != '-' -%} , {{ item.mws_part.tanda_terima_fo_no
+                    }} {%- endif -%}
+                  </span>
+                </td>
                 <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 align-top border-r" rowspan="{{ group.list | length }}">{{ item.mws_part.tittle or '-' }}</td>
                 <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 align-top border-r" rowspan="{{ group.list | length }}">{{ item.mws_part.serialNumber or '-' }}</td>
                 <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 align-top border-r" rowspan="{{ group.list | length }}">{{ item.mws_part.wbsNo or '-' }}</td>
@@ -92,7 +98,7 @@
                 <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 {% if has_defect_data %}bg-yellow-200{% endif %}">{{ item.bdp_name or '-' }}</td>
                 <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 {% if has_defect_data %}bg-yellow-200{% endif %}">{{ item.bdp_number or '-' }}</td>
                 <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 {% if has_defect_data %}bg-yellow-200{% endif %}">{{ item.bdp_number_eqv or '-' }}</td>
-                <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 {% if has_defect_data %}bg-yellow-200{% endif %}">{{ item.qty or '-' }}</td>
+                <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 {% if has_defect_data %}bg-yellow-200{% endif %}">{{ item.qty if item.qty is not none else '-' }}</td>
                 <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 {% if has_defect_data %}bg-yellow-200{% endif %}">{{ item.op_number or '-' }}</td>
                 <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 {% if has_defect_data %}bg-yellow-200{% endif %}">{{ item.op_date.strftime('%Y-%m-%d') if item.op_date else '-' }}</td>
                 <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-500 {% if has_defect_data %}bg-yellow-200{% endif %}">{{ item.defect or '-' }}</td>
@@ -108,6 +114,32 @@
               {% endfor %}
             </tbody>
           </table>
+        </div>
+        <div class="mt-4 flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0">
+          <span class="text-sm text-gray-700"> Menampilkan <strong>{{ pagination.items|length }}</strong> dari {{ pagination.total }}Halaman {{ pagination.page }}dari <strong>{{ pagination.pages }}</strong>. </span>
+          <div class="flex items-center space-x-1">
+            <a
+              href="{{ url_for('control_page', page=pagination.prev_num, q=search_query) if pagination.has_prev else '#' }}"
+              class="px-3 py-1 rounded-md text-sm font-medium {{ 'bg-white text-gray-700 hover:bg-gray-100' if pagination.has_prev else 'bg-gray-200 text-gray-400 cursor-not-allowed' }}"
+            >
+              « Prev
+            </a>
+
+            {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %} {% if p %}
+            <a href="{{ url_for('control_page', page=p, q=search_query) }}" class="px-3 py-1 rounded-md text-sm font-medium {{ 'bg-blue-600 text-white' if p == pagination.page else 'bg-white text-gray-700 hover:bg-gray-100' }}">
+              {{ p }}
+            </a>
+            {% else %}
+            <span class="px-3 py-1 text-sm">...</span>
+            {% endif %} {% endfor %}
+
+            <a
+              href="{{ url_for('control_page', page=pagination.next_num, q=search_query) if pagination.has_next else '#' }}"
+              class="px-3 py-1 rounded-md text-sm font-medium {{ 'bg-white text-gray-700 hover:bg-gray-100' if pagination.has_next else 'bg-gray-200 text-gray-400 cursor-not-allowed' }}"
+            >
+              Next »
+            </a>
+          </div>
         </div>
       </div>
     </main>
@@ -128,22 +160,17 @@
     </div>
   </div>
 </div>
-
 <div id="logout-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
   <div id="logout-modal-overlay" class="absolute inset-0 bg-black bg-opacity-60"></div>
   <div id="logout-modal-panel" class="relative bg-white rounded-lg shadow-xl w-full max-w-md m-4">
     <div class="flex items-start justify-between p-5 border-b rounded-t">
       <h3 class="text-xl font-semibold text-gray-900">Konfirmasi Logout</h3>
-      <button type="button" id="logout-modal-close-button" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
-        <i class="fas fa-times w-5 h-5"></i>
-      </button>
+      <button type="button" id="logout-modal-close-button" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center"><i class="fas fa-times w-5 h-5"></i></button>
     </div>
-    <div class="p-6">
-      <p class="text-base leading-relaxed text-gray-600">Apakah Anda yakin ingin mengakhiri sesi Anda?</p>
-    </div>
+    <div class="p-6"><p class="text-base leading-relaxed text-gray-600">Apakah Anda yakin ingin mengakhiri sesi Anda?</p></div>
     <div class="flex items-center p-6 space-x-4 border-t border-gray-200 rounded-b">
-      <button id="logout-modal-confirm-button" type="button" class="text-white bg-red-600 hover:bg-red-700 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center">Ya, Logout</button>
-      <button
+      <button id="logout-modal-confirm-button" type="button" class="text-white bg-red-600 hover:bg-red-700 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center">Ya, Logout</button
+      ><button
         id="logout-modal-cancel-button"
         type="button"
         class="text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 hover:text-gray-900 focus:z-10"
@@ -154,64 +181,32 @@
   </div>
 </div>
 {% endblock %} {% block scripts %}
+<script src="{{ url_for('static', filename='js/notifikasi_logic.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/sidebar.js') }}"></script>
-<script src="{{ url_for('static', filename='js/info_mws_logic.js') }}"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-<script src="{{ url_for('static', filename='js/notifikasi_logic.js') }}"></script>
-
 <script>
   document.addEventListener("DOMContentLoaded", function () {
-    // Panggil fungsi setupDropdown untuk notifikasi
+    // Fungsi setup notifikasi dan logout modal tetap sama
     setupDropdown("notification-button", "notification-dropdown");
-
-    // ===================== KODE BARU: LOGIKA MODAL LOGOUT =====================
     const logoutButton = document.getElementById("logout-button-sidebar");
     const logoutModal = document.getElementById("logout-modal");
     if (logoutButton && logoutModal) {
       const confirmButton = document.getElementById("logout-modal-confirm-button");
       const cancelButton = document.getElementById("logout-modal-cancel-button");
       const closeButton = document.getElementById("logout-modal-close-button");
-      const overlay = document.getElementById("logout-modal-overlay");
-
       logoutButton.addEventListener("click", (e) => {
         e.preventDefault();
         logoutModal.classList.remove("hidden");
       });
-
-      const hideModalLogout = () => logoutModal.classList.add("hidden");
-
-      cancelButton.addEventListener("click", hideModalLogout);
-      closeButton.addEventListener("click", hideModalLogout);
-      overlay.addEventListener("click", hideModalLogout);
-
+      const hideLogoutModal = () => logoutModal.classList.add("hidden");
+      cancelButton.addEventListener("click", hideLogoutModal);
+      closeButton.addEventListener("click", hideLogoutModal);
       confirmButton.addEventListener("click", () => {
         window.location.href = "{{ url_for('logout') }}";
       });
     }
-    // ===================== AKHIR KODE BARU =====================
 
-    // Fungsi pencarian tetap berfungsi seperti biasa
-    const searchInput = document.getElementById("searchInput");
-    const tableBody = document.getElementById("tableBody");
-    if (searchInput && tableBody) {
-      const allGroupIds = [...new Set(Array.from(tableBody.querySelectorAll("tr"), (tr) => tr.dataset.groupId))];
-      searchInput.addEventListener("keyup", function () {
-        const filterText = searchInput.value.toUpperCase();
-        allGroupIds.forEach((groupId) => {
-          const firstRowOfGroup = tableBody.querySelector(`tr[data-group-id="${groupId}"]`);
-          if (!firstRowOfGroup) return;
-          const iwoNo = firstRowOfGroup.cells[2]?.textContent.toUpperCase() || "";
-          const partName = firstRowOfGroup.cells[8]?.textContent.toUpperCase() || "";
-          const serialNumber = firstRowOfGroup.cells[9]?.textContent.toUpperCase() || "";
-          const isMatch = iwoNo.includes(filterText) || partName.includes(filterText) || serialNumber.includes(filterText);
-          const rowsInGroup = tableBody.querySelectorAll(`tr[data-group-id="${groupId}"]`);
-          rowsInGroup.forEach((row) => {
-            row.style.display = isMatch ? "" : "none";
-          });
-        });
-      });
-    }
-
+    // Modal Logic
     const modal = document.getElementById("detailModal");
     const closeModalBtn = document.getElementById("closeModalBtn");
     const closeModalFooterBtn = document.getElementById("closeModalFooterBtn");
@@ -220,42 +215,34 @@
 
     function showModalWithData(iwoNo) {
       modalIwoNo.textContent = iwoNo;
-      modalBodyContent.innerHTML = ""; // Kosongkan konten modal sebelum diisi
+      modalBodyContent.innerHTML = "";
 
-      const firstRow = document.querySelector(`tr[data-group-id="${iwoNo}"]`);
+      const firstRow = document.querySelector(`tr[data-iwo-no="${iwoNo}"]`);
       if (!firstRow) return;
 
-      // Ambil data header dari baris pertama grup
       const customer = firstRow.cells[1]?.textContent || "-";
-      const partName = firstRow.cells[8]?.textContent || "-";
-      const serialNumber = firstRow.cells[9]?.textContent || "-";
       const incomingDate = firstRow.cells[3]?.textContent || "-";
       const scheduleDate = firstRow.cells[4]?.textContent || "-";
-      const status = firstRow.cells[6]?.textContent || "-";
+      const combinedStatus = firstRow.cells[6]?.innerHTML || "-"; // Get combined status from single cell
+      const partName = firstRow.cells[7]?.textContent || "-"; // Index updated
+      const serialNumber = firstRow.cells[8]?.textContent || "-"; // Index updated
 
-      // Buat elemen untuk header info di dalam modal
       const headerInfo = document.createElement("div");
       headerInfo.className = "p-4 border rounded-lg bg-blue-50 mb-4";
       headerInfo.innerHTML = `
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2 text-sm">
-            <div><strong>Customer:</strong> <span class="text-gray-700 font-semibold">${customer}</span></div>
-            <div><strong>Part Name:</strong> <span class="text-gray-700">${partName}</span></div>
-            <div><strong>Serial Number:</strong> <span class="text-gray-700">${serialNumber}</span></div>
-            <div><strong>Incoming:</strong> <span class="text-gray-700">${incomingDate}</span></div>
-            <div><strong>Schedule:</strong> <span class="text-gray-700">${scheduleDate}</span></div>
-            <div><strong>Status:</strong> <span class="text-gray-700 font-semibold">${status}</span></div>
-        </div>
-      `;
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2 text-sm">
+                <div><strong>Customer:</strong> <span class="text-gray-700 font-semibold">${customer}</span></div>
+                <div><strong>Part Name:</strong> <span class="text-gray-700">${partName}</span></div>
+                <div><strong>Serial Number:</strong> <span class="text-gray-700">${serialNumber}</span></div>
+                <div><strong>Incoming:</strong> <span class="text-gray-700">${incomingDate}</span></div>
+                <div><strong>Schedule:</strong> <span class="text-gray-700">${scheduleDate}</span></div>
+                <div class="lg:col-span-3"><strong>Status Details:</strong> <span class="text-gray-700">${combinedStatus}</span></div>
+            </div>`;
       modalBodyContent.appendChild(headerInfo);
 
-      // Ambil semua baris yang termasuk dalam grup IWO yang sama
-      const rows = document.querySelectorAll(`tr[data-group-id="${iwoNo}"]`);
+      const rows = document.querySelectorAll(`tr[data-iwo-no="${iwoNo}"]`);
       rows.forEach((row, index) => {
-        // Baris pertama (dengan rowspan) punya > 11 sel, data barang mulai dari indeks 14.
-        // Baris selanjutnya punya <= 11 sel, data barang mulai dari indeks 0.
-        const bdpDataStartIndex = row.cells.length > 11 ? 14 : 0;
-
-        // Ambil data dari sel dengan aman menggunakan optional chaining (?.)
+        const bdpDataStartIndex = row.cells.length > 11 ? 14 : 0; // Updated from 15 to 14
         const bdpName = row.cells[bdpDataStartIndex + 0]?.textContent || "-";
         const bdpNumber = row.cells[bdpDataStartIndex + 1]?.textContent || "-";
         const bdpNumberEqv = row.cells[bdpDataStartIndex + 2]?.textContent || "-";
@@ -268,49 +255,42 @@
         const mtDate = row.cells[bdpDataStartIndex + 9]?.textContent || "-";
         const remark = row.cells[bdpDataStartIndex + 10]?.textContent || "-";
 
-        // Buat kartu untuk setiap item/barang
         const card = document.createElement("div");
         card.className = "p-4 border rounded-lg shadow-sm bg-gray-50";
         card.innerHTML = `
-          <h4 class="font-bold text-lg text-gray-700 mb-3 border-b pb-2">Barang ke-${index + 1}: <span class="font-normal">${bdpName}</span></h4>
-          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 text-sm">
-            <div><strong>BDP Number:</strong> <span class="text-gray-600">${bdpNumber}</span></div>
-            <div><strong>BDP Number Eqv:</strong> <span class="text-gray-600">${bdpNumberEqv}</span></div>
-            <div><strong>QTY:</strong> <span class="text-gray-600 font-semibold">${qty}</span></div>
-            <div><strong>OP Number:</strong> <span class="text-gray-600">${opNumber}</span></div>
-            <div><strong>OP Date:</strong> <span class="text-gray-600">${opDate}</span></div>
-            <div><strong>Defect:</strong> <span class="text-gray-600">${defect}</span></div>
-            <div><strong>MT Number:</strong> <span class="text-gray-600">${mtNumber}</span></div>
-            <div><strong>MT Qty:</strong> <span class="text-gray-600">${mtQty}</span></div>
-            <div><strong>MT Date:</strong> <span class="text-gray-600">${mtDate}</span></div>
-            <div class="sm:col-span-2 md:col-span-3 mt-1"><strong>Remark:</strong> <span class="text-gray-600">${remark}</span></div>
-          </div>
-        `;
-
+                <h4 class="font-bold text-lg text-gray-700 mb-3 border-b pb-2">Barang ke-${index + 1}: <span class="font-normal">${bdpName}</span></h4>
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 text-sm">
+                    <div><strong>BDP Number:</strong> <span class="text-gray-600">${bdpNumber}</span></div>
+                    <div><strong>BDP Number Eqv:</strong> <span class="text-gray-600">${bdpNumberEqv}</span></div>
+                    <div><strong>QTY:</strong> <span class="text-gray-600 font-semibold">${qty}</span></div>
+                    <div><strong>OP Number:</strong> <span class="text-gray-600">${opNumber}</span></div>
+                    <div><strong>OP Date:</strong> <span class="text-gray-600">${opDate}</span></div>
+                    <div><strong>Defect:</strong> <span class="text-gray-600">${defect}</span></div>
+                    <div><strong>MT Number:</strong> <span class="text-gray-600">${mtNumber}</span></div>
+                    <div><strong>MT Qty:</strong> <span class="text-gray-600">${mtQty}</span></div>
+                    <div><strong>MT Date:</strong> <span class="text-gray-600">${mtDate}</span></div>
+                    <div class="sm:col-span-2 md:col-span-3 mt-1"><strong>Remark:</strong> <span class="text-gray-600">${remark}</span></div>
+                </div>`;
         modalBodyContent.appendChild(card);
       });
-
-      modal.classList.remove("hidden"); // Tampilkan modal
+      modal.classList.remove("hidden");
     }
 
     function hideModal() {
       modal.classList.add("hidden");
     }
 
-    // Tambahkan event listener ke seluruh body tabel untuk menangkap klik pada tombol detail
-    tableBody.addEventListener("click", function (event) {
+    document.getElementById("tableBody").addEventListener("click", function (event) {
       const button = event.target.closest(".view-detail-btn");
       if (button) {
-        const iwoNo = button.dataset.iwoNo;
+        const iwoNo = button.closest("tr").dataset.iwoNo;
         showModalWithData(iwoNo);
       }
     });
 
-    // Event listener untuk tombol tutup modal
     closeModalBtn.addEventListener("click", hideModal);
     closeModalFooterBtn.addEventListener("click", hideModal);
     modal.addEventListener("click", function (event) {
-      // Tutup modal jika klik di luar area konten modal
       if (event.target === modal) {
         hideModal();
       }

@@ -6,9 +6,6 @@ from sqlalchemy.orm import relationship # type: ignore
 from datetime import datetime, timedelta, date
 from .stripping import Stripping
 import holidays # type: ignore #
-
-# Inisialisasi daftar hari libur nasional Indonesia
-# Ini akan digunakan oleh semua fungsi di bawah
 id_holidays = holidays.ID() # type: ignore
 
 JOB_TYPE_WORKDAYS = {
@@ -182,6 +179,41 @@ class MwsPart(db.Model):
             if deadline.weekday() < 5 and deadline not in id_holidays:
                 work_days_added += 1
         return deadline
+    
+    def update_tase_stripping_from_deadline(self):
+        """
+        (LOGIKA BARU) Mengukur TASE stripping sebagai SKOR KINERJA AKHIR 
+        berdasarkan tanggal selesai aktual (stripping_report_date).
+        """
+        if self.jobType in ['Recharging', 'F.Test']:
+            self.tase_stripping = None
+            self.stripping_report_date = None
+            self.max_stripping_date = None  
+            self.selisih_stripping = None   
+            return
+
+        start_date = self._safe_parse_date(self.startDate)
+        report_date = self._safe_parse_date(self.stripping_report_date)
+        if not start_date or not report_date:
+            self.tase_stripping = None 
+            return
+        target_days = 20
+        actual_work_days = self.calculate_working_days_between(start_date, report_date)
+
+        if actual_work_days <= target_days:
+            percentage = 100
+        else:
+            try:
+                denominator = float(actual_work_days) 
+                if denominator == 0:
+                    percentage = 0
+                else:
+                    percentage = (float(target_days) / denominator) * 100
+            except (TypeError, ZeroDivisionError):
+                percentage = 0
+
+        # Menyimpan hasil sebagai TASE STRIPPING
+        self.tase_stripping = f'{max(0, round(percentage))}%'
 
     def update_stripping_deadline(self):
         """Memperbarui tanggal jatuh tempo DAN TASE stripping jika tanggal mulai berubah."""
@@ -189,9 +221,6 @@ class MwsPart(db.Model):
             self.max_stripping_date = self.calculate_stripping_deadline()
         else:
             self.max_stripping_date = None
-
-        # TAMBAHAN: Panggil kalkulasi TASE di sini agar selalu ter-update
-        # setiap kali startDate berubah.
         self.update_tase_stripping_from_deadline()
 
 
@@ -228,24 +257,7 @@ class MwsPart(db.Model):
                 unique_niks.update(mechanics_list)
         self.men_powers = str(len(unique_niks))
 
-    def update_tase_stripping_from_deadline(self):
-        """ Mengukur TASE stripping (persentase pencapaian) berdasarkan jumlah hari kerja yang sudah lewat dibanding target (20 hari kerja)"""
-        if self.jobType in ['Recharging', 'F.Test']:
-            self.tase_stripping = '100%'
-            return
-        start_date = self._safe_parse_date(self.startDate)
-        if not start_date:
-            self.tase_stripping = None
-            return
-        target_days = 20
-        today = date.today()
-        working_days_passed = self.calculate_working_days_between(start_date, today)
-        if working_days_passed < target_days:
-            percentage = 100
-        else:
-            overdue_days = working_days_passed - target_days
-            percentage = 100 - (overdue_days * 10)
-        self.tase_stripping = f'{max(0, round(percentage, 1))}%'
+   
 
     def get_stripping_status(self):
         """ Mengembalikan status stripping: Status (warning atau critical) Hari tersisa (days_remaining) Persentase Info tanggal deadline & jumlah hari kerja yang sudah lewat"""
@@ -313,6 +325,43 @@ class MwsPart(db.Model):
         final_minutes = total_minutes % 60
         self.total_duration = f"{final_hours:02d}:{final_minutes:02d}"
 
+    # def update_bdp_metrics(self):
+    #     """
+    #     Memperbarui metrik BDP dengan logika yang disempurnakan:
+    #     1. `stripping_report_date` diisi dengan tanggal OP_DATE paling BARU (terbesar).
+    #     2. `% Prosentase BDP` dan `qty_bdp` DIKALKULASI jika BDP_NAME sudah diisi.
+    #     """
+    #     stripping_records = self.stripping
+
+    #     # Logika 1: `stripping_report_date` diisi dengan tanggal OP_DATE paling BARU.
+    #     valid_op_dates = [s.op_date for s in stripping_records if s.op_date]
+    #     if valid_op_dates:
+    #         # ### PERUBAHAN ### Menggunakan max() untuk mengambil tanggal terbaru
+    #         self.stripping_report_date = max(valid_op_dates)
+    #     else:
+    #         self.stripping_report_date = None
+
+    #     # Logika 2: Kalkulasi BDP hanya untuk baris yang sudah punya BDP_NAME.
+    #     records_for_calc = [s for s in stripping_records if s.bdp_name and s.bdp_name.strip()]
+        
+    #     total_valid_records = len(records_for_calc)
+    #     self.qty_bdp = total_valid_records
+
+    #     if total_valid_records == 0:
+    #         self.prosentase_bdp = '0%'
+    #     else:
+    #         # Kelengkapan (numerator) dihitung dari isian mt_number pada baris yang valid.
+    #         complete_records = sum(1 for s in records_for_calc if s.mt_number)
+    #         try:
+    #             percentage = (complete_records / total_valid_records) * 100
+    #             self.prosentase_bdp = f'{round(percentage)}%'
+    #         except ZeroDivisionError:
+    #             self.prosentase_bdp = '0%'
+
+    #     self.update_stripping_selisih()
+    
+
+        # Ganti fungsi yang lama dengan yang ini
     def update_bdp_metrics(self):
         """
         Memperbarui metrik BDP dengan logika yang disempurnakan:
@@ -324,7 +373,6 @@ class MwsPart(db.Model):
         # Logika 1: `stripping_report_date` diisi dengan tanggal OP_DATE paling BARU.
         valid_op_dates = [s.op_date for s in stripping_records if s.op_date]
         if valid_op_dates:
-            # ### PERUBAHAN ### Menggunakan max() untuk mengambil tanggal terbaru
             self.stripping_report_date = max(valid_op_dates)
         else:
             self.stripping_report_date = None
@@ -338,8 +386,10 @@ class MwsPart(db.Model):
         if total_valid_records == 0:
             self.prosentase_bdp = '0%'
         else:
-            # Kelengkapan (numerator) dihitung dari isian mt_number pada baris yang valid.
-            complete_records = sum(1 for s in records_for_calc if s.mt_number)
+            # ### PERBAIKAN ###
+            # Kelengkapan (numerator) dihitung dari isian defect, mt_number, mt_qty, dan mt_date.
+            complete_records = sum(1 for s in records_for_calc if s.defect and s.mt_number and s.mt_qty is not None and s.mt_date)
+            
             try:
                 percentage = (complete_records / total_valid_records) * 100
                 self.prosentase_bdp = f'{round(percentage)}%'
@@ -347,7 +397,6 @@ class MwsPart(db.Model):
                 self.prosentase_bdp = '0%'
 
         self.update_stripping_selisih()
-
 
     def update_stripping_selisih(self):
         """
@@ -392,11 +441,13 @@ class MwsPart(db.Model):
                 'status': self.status,
                 'currentStep': self.currentStep,
                 'finishDate': format_date_en(self.finishDate),
+
                 'preparedBy': self.preparedBy or '',
                 'preparedDate': format_date_en(self.preparedDate),
                 'approvedBy': self.approvedBy or '',
                 'verifiedBy': self.verifiedBy or '',
                 'verifiedDate': format_date_en(self.verifiedDate),
+                
                 'is_urgent': self.is_urgent,
                 'urgent_request': self.urgent_request,
                 'urgent_request_by' : self.urgent_request_by or '',

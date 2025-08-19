@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Maintenance Work Sheet - Print</title>
+    <title>Maintenance Work Sheet</title>
     <style>
       .steps-table th,
       .steps-table td {
@@ -11,13 +11,12 @@
         padding: 4px;
         text-align: left;
         vertical-align: top;
-        height: 80px; /* Anda bisa sesuaikan tinggi ini jika perlu */
+        height: 60px;
       }
       @page {
         size: A4;
         margin: 0.5in;
       }
-
       *,
       *::before,
       *::after {
@@ -360,7 +359,7 @@
               <td class="step-tech">{{ step.technician or 'N/A' }}</td>
               <td class="step-insp">{{ step.inspector or 'N/A' }}</td>
             </tr>
-            {% endfor %} {# 2. Tambahkan baris kosong jika jumlah langkah kurang dari 10 #} {% if part.steps|length < 10 %} {% for i in range(10 - (part.steps|length)) %}
+            {% endfor %} {% if part.steps|length < 10 %} {% for i in range(10 - (part.steps|length)) %}
             <tr>
               <td class="step-no">&nbsp;</td>
               <td class="step-description">&nbsp;</td>
