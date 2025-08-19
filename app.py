@@ -1533,6 +1533,70 @@ def update_step_field():
         return jsonify({'success': False, 'error': 'Database error'}), 500
 
 
+# @app.route('/update_step_status', methods=['POST']) 
+# @login_required
+# @limiter.limit("40 per minute")
+# def update_step_status():
+#     try:
+#         req_data = request.get_json()
+#         part_id = req_data.get('partId')
+#         step_no = req_data.get('stepNo')
+#         new_status = req_data.get('status')
+        
+#         mws_part = MwsPart.query.filter_by(part_id=part_id).first()
+#         if not mws_part:
+#             return jsonify({'success': False, 'error': 'Part tidak ditemukan'}), 404
+#         is_ready, error_response, status_code = check_mws_readiness(mws_part)
+#         if not is_ready:
+#             return error_response, status_code
+#         step = MwsStep.query.filter_by(
+#             mws_part_id=mws_part.id,
+#             no=step_no
+#         ).first()
+        
+#         if not step:
+#             return jsonify({'success': False, 'error': 'Langkah kerja tidak ditemukan'}), 404
+        
+#         if current_user.role == 'mechanic' and new_status == 'in_progress':
+#             if not step.man or not step.hours:
+#                 return jsonify({'success': False, 'error': 'Server validation: Harap isi MAN dan Hours sebelum melakukan approval.'}), 400
+        
+#         step.status = new_status
+        
+#         if new_status == 'completed':
+#             step.completedBy = current_user.nik
+#             step.completedDate = datetime.now().strftime('%Y-%m-%d')
+#             if current_user.role == 'quality1':
+#                 if not mws_part.finishDate:
+#                     jakarta_tz = pytz.timezone('Asia/Jakarta')
+#                     mws_part.finishDate = datetime.now(jakarta_tz).date()
+#                 mws_part.update_schedule_performance()
+#                 mws_part.update_shipping_performance()
+
+
+#         elif new_status == 'in_progress':
+#             if mws_part.status == 'pending':
+#                 mws_part.status = 'in_progress'
+#             if step_no > mws_part.currentStep:
+#                 mws_part.currentStep = step_no
+                
+#         elif new_status == 'pending':
+#             step.tech = ""
+#             step.insp = ""
+#             step.completedBy = ""
+#             step.completedDate = ""
+#             print(f"Cleared approved text for step {step_no} when status changed to pending")
+        
+#         update_mws_status(mws_part)
+        
+#         db.session.commit()
+#         return jsonify({'success': True})
+        
+#     except Exception as e:
+#         db.session.rollback()
+#         print(f"Error updating step status: {e}")
+#         return jsonify({'success': False, 'error': 'Database error'}), 500
+
 @app.route('/update_step_status', methods=['POST']) 
 @login_required
 @limiter.limit("40 per minute")
@@ -1557,6 +1621,9 @@ def update_step_status():
         if not step:
             return jsonify({'success': False, 'error': 'Langkah kerja tidak ditemukan'}), 404
         
+        # --- LOGIKA BARU (1): Simpan status lama sebelum diubah ---
+        old_status = step.status
+
         if current_user.role == 'mechanic' and new_status == 'in_progress':
             if not step.man or not step.hours:
                 return jsonify({'success': False, 'error': 'Server validation: Harap isi MAN dan Hours sebelum melakukan approval.'}), 400
@@ -1567,12 +1634,12 @@ def update_step_status():
             step.completedBy = current_user.nik
             step.completedDate = datetime.now().strftime('%Y-%m-%d')
             if current_user.role == 'quality1':
-                if not mws_part.finishDate:
-                    jakarta_tz = pytz.timezone('Asia/Jakarta')
-                    mws_part.finishDate = datetime.now(jakarta_tz).date()
+                # Pengecekan ini di-pindah ke fungsi update_mws_status agar lebih konsisten
+                # if not mws_part.finishDate:
+                #     jakarta_tz = pytz.timezone('Asia/Jakarta')
+                #     mws_part.finishDate = datetime.now(jakarta_tz).date()
                 mws_part.update_schedule_performance()
                 mws_part.update_shipping_performance()
-
 
         elif new_status == 'in_progress':
             if mws_part.status == 'pending':
@@ -1584,9 +1651,30 @@ def update_step_status():
             step.tech = ""
             step.insp = ""
             step.completedBy = ""
-            step.completedDate = ""
+            step.completedDate = None # Gunakan None untuk tanggal
             print(f"Cleared approved text for step {step_no} when status changed to pending")
         
+        # --- LOGIKA BARU (2): Reset Final Inspection jika step lain di-unapprove ---
+        # Cek jika sebuah step yang SUDAH SELESAI (completed) dibatalkan statusnya
+        if old_status == 'completed' and new_status != 'completed':
+            # Cari step "Final Inspection" untuk MWS yang sama
+            final_inspection_step = MwsStep.query.filter(
+                MwsStep.mws_part_id == mws_part.id,
+                MwsStep.description.ilike('Final Inspection') # ilike() agar tidak case-sensitive
+            ).first()
+
+            # Jika step Final Inspection ada dan sudah 'completed', reset step tersebut
+            if final_inspection_step and final_inspection_step.status == 'completed':
+                final_inspection_step.status = 'in_progress' # Kembalikan ke in_progress
+                final_inspection_step.tech = ""              # Hapus approval tech
+                final_inspection_step.insp = ""              # Hapus approval insp
+                final_inspection_step.completedBy = ""
+                final_inspection_step.completedDate = None
+
+                # Reset juga status S/US (RAI, dll) di MWS utama
+                mws_part.status_s_us = None
+                app.logger.info(f"Final Inspection step for MWS {part_id} has been reset due to unapproval of step {step_no}.")
+
         update_mws_status(mws_part)
         
         db.session.commit()
@@ -1594,7 +1682,8 @@ def update_step_status():
         
     except Exception as e:
         db.session.rollback()
-        print(f"Error updating step status: {e}")
+        # Menggunakan app.logger untuk logging yang lebih baik
+        app.logger.error(f"Error updating step status: {e}", exc_info=True)
         return jsonify({'success': False, 'error': 'Database error'}), 500
     
 
