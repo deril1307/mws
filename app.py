@@ -1,4 +1,5 @@
 # type: ignore
+# type: ignore
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash
 from flask_wtf.csrf import CSRFProtect, validate_csrf
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
@@ -8,7 +9,7 @@ from flask_migrate import Migrate
 from flask_compress import Compress
 from wtforms import ValidationError
 
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload,selectinload
 import re
 import os
 from werkzeug.utils import secure_filename
@@ -204,6 +205,8 @@ def update_mws_status(mws_part):
         mws_part.status = 'pending'
         mws_part.currentStep = 1
         mws_part.finishDate = None
+        
+    mws_part.update_progress_percentage()
 
 def generate_iwo_number():
     """
@@ -2294,97 +2297,6 @@ def get_strep_data(part_id):
         return jsonify({'success': False, 'error': 'Terjadi kesalahan internal pada server.'}), 500
     
 
-# @app.route('/add_stripping/<part_id>', methods=['POST'])
-# @require_role('admin', 'superadmin')
-# @limiter.limit("30 per minute")
-# def add_stripping(part_id):
-#     """Menambahkan data stripping baru ke MWS part tertentu tanpa fungsi helper."""
-#     try:
-#         mws_part = MwsPart.query.filter_by(part_id=part_id).first()
-#         if not mws_part:
-#             return jsonify({'success': False, 'error': 'MWS Part tidak ditemukan.'}), 404
-#         data = request.get_json() or {}
-#         bdp_name = str(val).strip() if (val := data.get('bdp_name')) is not None and str(val).strip() else None
-#         bdp_number = str(val).strip() if (val := data.get('bdp_number')) is not None and str(val).strip() else None
-#         bdp_number_eqv = str(val).strip() if (val := data.get('bdp_number_eqv')) is not None and str(val).strip() else None
-#         unit = str(val).strip() if (val := data.get('unit')) is not None and str(val).strip() else None
-#         op_number = str(val).strip() if (val := data.get('op_number')) is not None and str(val).strip() else None
-#         defect = str(val).strip() if (val := data.get('defect')) is not None and str(val).strip() else None
-#         mt_number = str(val).strip() if (val := data.get('mt_number')) is not None and str(val).strip() else None
-#         remark_bdp = str(val).strip() if (val := data.get('remark_bdp')) is not None and str(val).strip() else None
-#         qty = None
-#         try:
-#             val = data.get('qty')
-#             if val is not None and str(val).strip():
-#                 qty = int(val)
-#         except (ValueError, TypeError):
-#             pass 
-        
-#         mt_qty = None
-#         try:
-#             val = data.get('mt_qty')
-#             if val is not None and str(val).strip():
-#                 mt_qty = int(val)
-#         except (ValueError, TypeError):
-#             pass # mt_qty tetap None jika konversi gagal
-
-#         # Konversi untuk field tanggal (menjadi None jika kosong atau format salah)
-#         op_date = None
-#         try:
-#             val = data.get('op_date')
-#             if val is not None and str(val).strip():
-#                 op_date = datetime.strptime(val, '%Y-%m-%d').date()
-#         except (ValueError, TypeError):
-#             pass # op_date tetap None
-
-#         mt_date = None
-#         try:
-#             val = data.get('mt_date')
-#             if val is not None and str(val).strip():
-#                 mt_date = datetime.strptime(val, '%Y-%m-%d').date()
-#         except (ValueError, TypeError):
-#             pass # mt_date tetap None
-            
-#         # --- Akhir Logika Inline ---
-
-#         new_strep = Stripping(
-#             mws_part_id=mws_part.id,
-#             bdp_name=bdp_name,
-#             bdp_number=bdp_number,
-#             bdp_number_eqv=bdp_number_eqv,
-#             qty=qty,
-#             unit=unit,
-#             op_number=op_number,
-#             op_date=op_date,
-#             defect=defect,
-#             mt_number=mt_number,
-#             mt_qty=mt_qty,
-#             mt_date=mt_date,
-#             remark_bdp=remark_bdp
-#         )
-
-#         db.session.add(new_strep)
-#         if new_strep.mt_number is None:
-#             new_strep.mt_qty = None
-#             new_strep.mt_date = None
-
-#         with db.session.no_autoflush:
-#             mws_part.update_bdp_metrics()
-
-#         db.session.commit()
-#         return jsonify({
-#             'success': True,
-#             'message': 'Data stripping berhasil ditambahkan.',
-#             'data': new_strep.to_dict()
-#         }), 201
-
-#     except Exception as e:
-#         db.session.rollback()
-#         app.logger.error(f"Error saat menambahkan data stripping: {e}", exc_info=True)
-#         return jsonify({'success': False, 'error': 'Terjadi kesalahan pada server.'}), 500
-
-
-
 @app.route('/add_stripping/<part_id>', methods=['POST'])
 @require_role('admin', 'superadmin')
 @limiter.limit("30 per minute")
@@ -2850,65 +2762,60 @@ def update_all_strep(part_id):
         app.logger.error(f"Error di /update_all_strep/{part_id}: {e}", exc_info=True)
         return jsonify({'success': False, 'error': 'Terjadi kesalahan internal pada server.'}), 500
     
-# =====================================================================
-# ROUTE UNTUK CONTROL
-# =====================================================================
+
+
 @app.route('/control')
 @login_required
 @limiter.limit("60 per minute")
+
 def control_page():
     """
-    Menampilkan halaman kontrol dengan data yang sudah dipaginasi dan difilter
-    langsung dari server.
-    --- OPTIMASI DITERAPKAN ---
-    Tidak lagi memuat semua MwsPart di awal. Variabel 'parts' dikirim sebagai
-    kamus kosong untuk konsistensi dengan notifikasi.
+    Menampilkan halaman kontrol dengan semua data MwsPart, baik yang sudah
+    memiliki data stripping maupun yang belum. Data dipaginasi dan dapat dicari.
     """
     try:
         page = request.args.get('page', 1, type=int)
         search_query = request.args.get('q', '', type=str).strip()
-        
-        per_page = 10 
+        per_page = 10  # Jumlah IWO per halaman
 
-        # Query dasar untuk mendapatkan ID MwsPart yang unik
-        mws_part_ids_query = db.session.query(Stripping.mws_part_id).distinct()
+        # Query dasar sekarang dimulai dari MwsPart
+        base_query = MwsPart.query.options(
+            selectinload(MwsPart.stripping)
+        )
 
         # Terapkan filter pencarian jika ada
         if search_query:
             search_term = f"%{search_query}%"
-            mws_part_ids_query = mws_part_ids_query.join(MwsPart).filter(
+            base_query = base_query.filter(
                 or_(
                     MwsPart.iwoNo.ilike(search_term),
-                    MwsPart.tittle.ilike(search_term),
+                    MwsPart.tittle.ilike(search_term), # Part Name
                     MwsPart.serialNumber.ilike(search_term),
                     MwsPart.customer.ilike(search_term)
                 )
             )
-        mws_part_ids_query = mws_part_ids_query.order_by(Stripping.mws_part_id.desc())
-        pagination = mws_part_ids_query.paginate(page=page, per_page=per_page, error_out=False)
-        mws_ids_on_page = [item.mws_part_id for item in pagination.items]
-        if not mws_ids_on_page:
-            control_data_on_page = []
-        else:
-            control_data_on_page = (
-                Stripping.query
-                .filter(Stripping.mws_part_id.in_(mws_ids_on_page))
-                .options(joinedload(Stripping.mws_part))
-                .order_by(Stripping.mws_part_id.desc(), Stripping.id.asc())
-                .all()
-            )
+        
+        # Urutkan berdasarkan IWO terbaru
+        ordered_query = base_query.order_by(MwsPart.iwoDate.desc(), MwsPart.id.desc())
+
+        # Lakukan paginasi pada query MwsPart
+        pagination = ordered_query.paginate(page=page, per_page=per_page, error_out=False)
+        
+        # Ambil item MwsPart untuk halaman saat ini
+        control_data_on_page = pagination.items
 
         return render_template(
             'components/control.html',
             control_data=control_data_on_page,
             pagination=pagination,
             search_query=search_query,
-            parts={} 
+            parts={} # Tetap ada untuk kompatibilitas notifikasi
         )
 
     except Exception as e:
         app.logger.error(f"Error rendering control page with pagination: {e}", exc_info=True)
         return render_error_page(e)
+    
 
 @app.route('/control/detail/<iwo_no>')
 @login_required
@@ -2932,6 +2839,7 @@ def detail_control(iwo_no):
 # =====================================================================
 @app.route('/internal-work-order')
 @login_required
+@require_role('admin', 'superadmin')
 @limiter.limit("60 per minute")
 def internal_work_order():
     """

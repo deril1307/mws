@@ -1,4 +1,3 @@
-# models/mws.py
 
 import json
 from . import db
@@ -41,6 +40,7 @@ class MwsPart(db.Model):
     revision = db.Column(db.String(50), default='1', name="REVISION")
     status = db.Column(db.String(50), default='pending', name="STATUS")
     currentStep = db.Column(db.Integer, default=0, name="CURRENT STEP")
+    progress_percentage = db.Column(db.Integer, default=0, name="PROGRESS PERCENTAGE")
     startDate = db.Column(db.Date, name="START DATE")
     finishDate = db.Column(db.Date, name="FINISH DATE")
     preparedBy = db.Column(db.String(100), name="PREPARED BY")
@@ -108,6 +108,25 @@ class MwsPart(db.Model):
             except (ValueError, TypeError):
                 return None
         return None
+
+    def update_progress_percentage(self):
+        """
+        Calculates the progress percentage based on completed steps.
+        """
+        all_steps = self.steps
+        total_steps = len(all_steps)
+        if total_steps == 0:
+            self.progress_percentage = 0
+            return
+
+        completed_steps = sum(1 for step in all_steps if step.status == 'completed')
+        
+        try:
+            percentage = (completed_steps / total_steps) * 100
+            self.progress_percentage = round(percentage)
+        except ZeroDivisionError:
+            self.progress_percentage = 0
+
 
     def update_schedule_fields(self):
         """
@@ -324,44 +343,7 @@ class MwsPart(db.Model):
         final_hours = total_minutes // 60
         final_minutes = total_minutes % 60
         self.total_duration = f"{final_hours:02d}:{final_minutes:02d}"
-
-    # def update_bdp_metrics(self):
-    #     """
-    #     Memperbarui metrik BDP dengan logika yang disempurnakan:
-    #     1. `stripping_report_date` diisi dengan tanggal OP_DATE paling BARU (terbesar).
-    #     2. `% Prosentase BDP` dan `qty_bdp` DIKALKULASI jika BDP_NAME sudah diisi.
-    #     """
-    #     stripping_records = self.stripping
-
-    #     # Logika 1: `stripping_report_date` diisi dengan tanggal OP_DATE paling BARU.
-    #     valid_op_dates = [s.op_date for s in stripping_records if s.op_date]
-    #     if valid_op_dates:
-    #         # ### PERUBAHAN ### Menggunakan max() untuk mengambil tanggal terbaru
-    #         self.stripping_report_date = max(valid_op_dates)
-    #     else:
-    #         self.stripping_report_date = None
-
-    #     # Logika 2: Kalkulasi BDP hanya untuk baris yang sudah punya BDP_NAME.
-    #     records_for_calc = [s for s in stripping_records if s.bdp_name and s.bdp_name.strip()]
-        
-    #     total_valid_records = len(records_for_calc)
-    #     self.qty_bdp = total_valid_records
-
-    #     if total_valid_records == 0:
-    #         self.prosentase_bdp = '0%'
-    #     else:
-    #         # Kelengkapan (numerator) dihitung dari isian mt_number pada baris yang valid.
-    #         complete_records = sum(1 for s in records_for_calc if s.mt_number)
-    #         try:
-    #             percentage = (complete_records / total_valid_records) * 100
-    #             self.prosentase_bdp = f'{round(percentage)}%'
-    #         except ZeroDivisionError:
-    #             self.prosentase_bdp = '0%'
-
-    #     self.update_stripping_selisih()
     
-
-        # Ganti fungsi yang lama dengan yang ini
     def update_bdp_metrics(self):
         """
         Memperbarui metrik BDP dengan logika yang disempurnakan:
@@ -440,6 +422,7 @@ class MwsPart(db.Model):
                 'revision': self.revision,
                 'status': self.status,
                 'currentStep': self.currentStep,
+                'progress_percentage': self.progress_percentage, # <-- NEW FIELD
                 'finishDate': format_date_en(self.finishDate),
 
                 'preparedBy': self.preparedBy or '',
